@@ -4,7 +4,7 @@ Last verified: 2026-08-02.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence foundation, implemented in `abc9a7a`, `0654c31`, and the current Order foundation slice.
+Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence foundation, implemented in `abc9a7a`, `0654c31`, and `7bf1692` (`feat(order): add persistence foundation`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 

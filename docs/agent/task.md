@@ -282,6 +282,7 @@ Evidence for 2.1:
 - Files: `src/Services/OrderService/MicroShop.OrderService/Domain/OrderStatuses.cs`, `Persistence/Entities/Order.cs`, `OrderItem.cs`, `OrderStateHistory.cs`.
 - Tests: `OrderDomainTests.CreateNormalizesCustomerEmailAndRecordsPendingState`, `AddItemsCalculatesTotalFromProductSnapshots`, `DuplicateProductIdsAreRejected`, `TransitionToConfirmedIncrementsVersionAndRecordsHistory`, `InvalidTransitionIsRejected`, and `RepeatedCancelledTransitionIsIdempotent`.
 - Commands: `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release`.
+- Commit: `7bf1692` (`feat(order): add persistence foundation`).
 - Notes: Order status transitions remain local domain behavior; no Product database or shared entity is referenced.
 
 ## 2.2 Order database
@@ -300,6 +301,7 @@ Evidence for 2.2:
 - Files: `Infrastructure/Database/OrderDatabaseOptions.cs`, `Persistence/OrderDbContext.cs`, `Persistence/OrderDbContextFactory.cs`, `Persistence/Configurations/`, `Persistence/Migrations/20260801204113_InitialOrderSchema.cs`, `deploy/postgres-init/001-create-service-databases.sh`, and `scripts/db-migrate-order.ps1/.sh`.
 - Tests: `OrderPersistenceTests.PersistsOrderItemsAndStateHistoryWithAuthoritativeSnapshots`, `DatabaseRejectsUnknownOrderStatus`, `OrderDatabaseCredentialsCannotConnectToProductDatabase`, and `OrderServiceStartsWithOwnedDatabaseAndReadiness`.
 - Commands: `dotnet-ef migrations script --project src/Services/OrderService/MicroShop.OrderService --startup-project src/Services/OrderService/MicroShop.OrderService`; fresh PostgreSQL Testcontainers migration; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release`.
+- Commit: `7bf1692` (`feat(order): add persistence foundation`).
 - Notes: The migration owns only Order tables; no outbox table or cross-service foreign key is introduced. Fresh bootstrap revokes database CONNECT from PUBLIC and grants it only to the owning role.
 
 ## 2.3 Order API foundation
@@ -336,6 +338,7 @@ Evidence for 2.4 (partial):
 - Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
 - Tests: 10 tests pass, including direct persistence of an Order with Product snapshot items and state history. HTTP Order creation/list/detail and transition concurrency remain unimplemented.
 - Commands: `dotnet test MicroShop.sln --configuration Release`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
+- Commit: `7bf1692` (`feat(order): add persistence foundation`).
 - Notes: The `[~]` creation item is intentionally limited to persistence because the Phase 2 HTTP API/fake Product client has not started.
 
 ## 2.5 Angular Order foundation
@@ -365,6 +368,7 @@ Evidence for 2.6 (partial Phase 2 gate):
 - Files: `src/Services/OrderService/MicroShop.OrderService/Program.cs`, Order migration, `tests/MicroShop.OrderService.Tests/`, and `.github/workflows/ci.yml`.
 - Tests: 10 Order foundation tests pass; readiness and OpenAPI are reachable with a fresh owned PostgreSQL database.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
+- Commit: `7bf1692` (`feat(order): add persistence foundation`).
 - Notes: Angular checkout and Order API are not complete; Product communication remains deferred to Phase 3.
 
 ---
