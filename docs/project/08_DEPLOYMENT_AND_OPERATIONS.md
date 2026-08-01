@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Environment model
 
-Phase 0 currently provides the PostgreSQL/RabbitMQ infrastructure slice only. The full `web`, Gateway, Product, Order, and Notification Compose services are introduced after their projects have real runtime behavior and migrations.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus a natively runnable Product Service slice. The full `web`, Gateway, Order, and Notification Compose services remain deferred until their projects have runtime behavior and migrations.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Each process receives only required configuration.
 
 ### Product Service
 
-- Product DB connection;
+- Product DB settings: `PRODUCT_DB_HOST`, `PRODUCT_DB_PORT`, `PRODUCT_DB_NAME`, `PRODUCT_DB_USER`, and local-only `PRODUCT_DB_PASSWORD` (or an untracked connection string override);
 - service name/environment;
 - health/telemetry settings.
 
@@ -163,6 +163,8 @@ For demo/VPS:
 
 Prefer backward-compatible expand/contract migrations for any future rolling deployment.
 
+For the current Product slice, apply `InitialProductSchema` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Normal Product startup validates database configuration and readiness but does not silently apply migrations.
+
 ## 8. Public deployment path
 
 Recommended simple VPS:
@@ -218,6 +220,8 @@ Checks process execution only.
 | Web | static server responds |
 
 Whether Order readiness fails when Product Service is down is a deliberate decision. Baseline may report not-ready because order creation cannot complete, while keeping liveness healthy.
+
+Product readiness is implemented with an EF Core database health check. A missing Product database password/connection configuration fails startup validation rather than silently selecting another service database.
 
 ## 11. Observability
 

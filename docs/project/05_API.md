@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Contract sources
 
-Phase 0 runtime status: each .NET host currently exposes bootstrap and `/health/live`/`/health/ready` endpoints. The `/api/v1` business contracts below are the target contracts and are not marked implemented until the owning service and tests exist.
+Runtime status: Product Service now implements and tests the catalog/detail/create subset below. Order, Notification, Gateway, internal inventory, and Angular-facing routes remain planned until their owning phases.
 
 Executable contract sources:
 
@@ -112,7 +112,7 @@ RFC 7807 Problem Details with stable extensions:
 
 ### `GET /api/v1/products`
 
-Purpose: list products.
+Purpose: list products. Implemented by Product Service; Gateway exposure is deferred to Phase 4.
 
 | Query | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -127,12 +127,16 @@ Default ordering: active first when included, then name, then ID.
 
 ### `GET /api/v1/products/{productId}`
 
+Implemented by Product Service.
+
 Response:
 
 - `200 ProductResponse`;
 - `404 PRODUCT_NOT_FOUND`.
 
 ### `POST /api/v1/products`
+
+Implemented by Product Service.
 
 Request:
 
@@ -155,6 +159,8 @@ Response:
 Location header points to the product detail endpoint.
 
 ### `PATCH /api/v1/products/{productId}`
+
+Planned for the next Product Service slice; the current service intentionally has no update or hard-delete endpoint.
 
 Request may contain:
 
@@ -464,6 +470,8 @@ Each HTTP process:
 | GET | `/swagger` | interactive docs in development |
 
 Notification Service includes a small read API, so normal HTTP health endpoints are available.
+
+Product Service serves `/openapi/v1.json` in non-production environments. Its `/health/ready` endpoint includes the owned Product PostgreSQL database check; `/health/live` checks only process liveness.
 
 ## 13. Validation behavior
 

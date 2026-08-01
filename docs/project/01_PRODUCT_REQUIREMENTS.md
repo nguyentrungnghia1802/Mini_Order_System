@@ -46,16 +46,16 @@ No authentication exists in the first baseline. Shopper and operator are UI mode
 
 | ID | Requirement | Initial status |
 | --- | --- | --- |
-| FR-PROD-001 | List active products for the shopper catalog | Specified |
-| FR-PROD-002 | Get one product by ID | Specified |
-| FR-PROD-003 | Create a product with name, optional description, unit price, and initial stock | Specified |
+| FR-PROD-001 | List active products for the shopper catalog | Partial |
+| FR-PROD-002 | Get one product by ID | Partial |
+| FR-PROD-003 | Create a product with name, optional description, unit price, and initial stock | Partial |
 | FR-PROD-004 | Update mutable product fields | Specified |
 | FR-PROD-005 | Activate or deactivate a product | Specified |
-| FR-PROD-006 | Reject negative price or stock | Specified |
-| FR-PROD-007 | Hide inactive products from the shopper list while retaining operator visibility | Specified |
-| FR-PROD-008 | Return current available stock | Specified |
+| FR-PROD-006 | Reject negative price or stock | Partial |
+| FR-PROD-007 | Hide inactive products from the shopper list while retaining operator visibility | Partial |
+| FR-PROD-008 | Return current available stock | Partial |
 | FR-PROD-009 | Preserve a product after it appears in an order; deletion is not required | Specified |
-| FR-PROD-010 | Support pagination with deterministic ordering for operator lists | Specified |
+| FR-PROD-010 | Support pagination with deterministic ordering for operator lists | Partial |
 
 ### Inventory reservation
 

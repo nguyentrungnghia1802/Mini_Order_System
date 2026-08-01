@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Source of truth
 
-Phase 0 has no business entities or migrations yet. The Compose bootstrap creates only the three logical databases and service users; Product, Order, and Notification tables must be introduced by migrations in their owning phases.
+The Compose bootstrap creates the three logical databases and service users. The Product Service now owns its first business schema migration; Order and Notification tables remain deferred to their owning phases.
 
 Each service owns its Entity Framework Core migration history.
 
@@ -15,6 +15,8 @@ src/Services/ProductService/Persistence/Migrations/
 src/Services/OrderService/Persistence/Migrations/
 src/Services/NotificationService/Persistence/Migrations/
 ```
+
+Implemented Product migration: `20260801194513_InitialProductSchema` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. It creates only the Product Service `products` table and its indexes/check constraints.
 
 Rules:
 
@@ -89,6 +91,8 @@ Indexes:
 
 - active catalog ordering index on `(is_active, name, id)`;
 - optional case-insensitive search index later.
+
+The executable configuration adds `ck_products_name_not_blank`, `ck_products_unit_price_nonnegative`, `ck_products_available_stock_nonnegative`, `ck_products_currency_vnd`, and `ix_products_active_name_id`. The explicit `version` column is configured as the EF concurrency token for the later update/reservation slices.
 
 ### `inventory_reservations`
 
@@ -395,6 +399,8 @@ dotnet ef database update \
 ```
 
 Repository scripts should wrap the exact paths.
+
+Current Product commands are available as `scripts/db-migrate-product.ps1`, `scripts/db-migrate-product.sh`, `scripts/db-seed-products.ps1`, and `scripts/db-seed-products.sh`. The seed command is explicit and runs migrations before inserting four deterministic development products; it does not run during normal service startup.
 
 Rules:
 

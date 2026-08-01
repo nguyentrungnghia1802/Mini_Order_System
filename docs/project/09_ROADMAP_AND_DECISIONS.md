@@ -27,7 +27,7 @@ Exit criteria:
 - infrastructure starts;
 - docs are linked from README.
 
-Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, and PostgreSQL/RabbitMQ Compose infrastructure are now present and validated locally. Empty-database migration validation and application image validation remain deferred because no business migrations or Dockerfiles exist yet.
+Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, PostgreSQL/RabbitMQ Compose infrastructure, and Product empty-database migration validation are present and validated locally. Application image validation remains deferred because no application Dockerfiles exist yet.
 
 ### Phase 1: Product Service
 
@@ -39,6 +39,8 @@ Phase 0 implementation status: the solution/projects, strict Angular workspace, 
 - Angular catalog/operator form.
 
 Learning objective: one independent .NET service with its own database.
+
+Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create service-native API, Problem Details, OpenAPI, readiness, unit tests, and PostgreSQL Testcontainers tests are implemented. Product update/activation, reservation/release, Gateway exposure, and Angular catalog/operator screens remain incomplete.
 
 ### Phase 2: Order Service without remote inventory
 

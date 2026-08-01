@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. In Phase 0, the repository contains independent ASP.NET Core host projects, a YARP-capable Gateway skeleton, an Angular workspace, and PostgreSQL/RabbitMQ infrastructure. Business routes, database schemas, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation plus the first Product Service slice: Product owns its EF Core model/migration and service-native catalog/create endpoints. Gateway routes, Order/Notification behavior, reservations, and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
@@ -81,6 +81,8 @@ Owns:
 - inventory reservations;
 - stock release;
 - authoritative product snapshots at reservation time.
+
+The current Phase 1 slice exposes only the public catalog/detail/create API and Product database readiness. Inventory reservation and release remain a later synchronous-communication slice.
 
 Must not own:
 

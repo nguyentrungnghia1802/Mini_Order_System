@@ -133,6 +133,8 @@ dotnet ef database update \
   --startup-project src/Services/ProductService/MicroShop.ProductService
 ```
 
+For the current Product slice, set `PRODUCT_DB_HOST`, `PRODUCT_DB_PORT`, `PRODUCT_DB_NAME`, `PRODUCT_DB_USER`, and the untracked `PRODUCT_DB_PASSWORD` environment variable before using `scripts/db-migrate-product.*` or `scripts/db-seed-products.*`. Install the pinned CLI with `dotnet tool install --tool-path <local-tool-dir> dotnet-ef --version 10.0.10` when `dotnet ef` is not already available.
+
 `db-reset-local` is destructive and must refuse production-like hosts unless explicitly overridden.
 
 ## 6. RabbitMQ inspection
@@ -191,15 +193,19 @@ Then integration/E2E:
 docker compose -f deploy/compose.test.yaml up --build --abort-on-container-exit
 ```
 
-During Phase 0, the available Compose smoke check is infrastructure-only:
+The current infrastructure and Product migration smoke checks are:
 
 ```bash
 docker compose --env-file .env.example -f deploy/compose.yaml config
 docker compose --env-file .env.example -f deploy/compose.yaml up -d
 docker compose --env-file .env.example -f deploy/compose.yaml ps
+
+dotnet ef database update \
+  --project src/Services/ProductService/MicroShop.ProductService \
+  --startup-project src/Services/ProductService/MicroShop.ProductService
 ```
 
-Application images, migrations, and `compose.test.yaml` are deferred until the owning roadmap phases.
+Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
 
 The exact scripts become source of truth when repository exists.
 
@@ -225,8 +231,9 @@ Use real PostgreSQL through Testcontainers.
 
 Required cases:
 
-- create/list/update product;
+- create/list product (implemented); update product (planned);
 - reject negative stock/price;
+- inactive Product visibility and database constraints;
 - reserve one item;
 - reserve multiple items atomically;
 - insufficient stock rolls back all;
@@ -234,6 +241,8 @@ Required cases:
 - duplicate mismatched reservation conflicts;
 - release restores once;
 - concurrent last-stock request permits one success.
+
+The implemented Product API tests use PostgreSQL Testcontainers and apply the real `InitialProductSchema` migration. EF Core InMemory is not used.
 
 ### Order integration tests
 

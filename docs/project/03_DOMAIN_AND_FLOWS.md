@@ -162,6 +162,8 @@ Rules:
 
 This flow demonstrates ordinary service-local CRUD and does not use RabbitMQ.
 
+The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests. Gateway routing and Angular screens are intentionally deferred until Phase 4 and the remaining Phase 1 frontend work.
+
 ## 10. Successful order creation flow
 
 ### Input

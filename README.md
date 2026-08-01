@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented as a runnable repository foundation. The .NET hosts currently expose only bootstrap and health endpoints; Product, Order, Notification business behavior and full-stack application containers are added in later roadmap phases.
+Phase 0 bootstrap is implemented, and the first Phase 1 Product Service slice is runnable. Product now has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 
@@ -49,7 +49,23 @@ docker compose --env-file .env -f deploy/compose.yaml up -d
 docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-The Phase 0 Compose file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; service migrations are deliberately deferred to their owning phases. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product's migration is applied explicitly by the Product command above, while Order/Notification migrations remain deferred. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+
+For the current Product slice, start infrastructure, set the untracked Product database password, apply the migration, and optionally seed demo products:
+
+```powershell
+$env:PRODUCT_DB_HOST = "localhost"
+$env:PRODUCT_DB_PORT = "5432"
+$env:PRODUCT_DB_NAME = "microshop_product"
+$env:PRODUCT_DB_USER = "product_app"
+$env:PRODUCT_DB_PASSWORD = "<local-password>"
+
+dotnet ef database update --project src/Services/ProductService/MicroShop.ProductService --startup-project src/Services/ProductService/MicroShop.ProductService
+./scripts/db-seed-products.ps1
+dotnet run --project src/Services/ProductService/MicroShop.ProductService
+```
+
+Use `scripts/db-migrate-product.ps1` or `.sh` for the explicit migration command. In non-production environments Product exposes `/api/v1/products` and `/openapi/v1.json`; `/health/ready` checks the owned Product database. The native-debug Compose override publishes PostgreSQL through `${POSTGRES_DEBUG_PORT:-5432}`; choose another local port if `5432` is already in use.
 
 For native application debugging, use the non-default override to publish PostgreSQL and RabbitMQ application ports:
 
@@ -71,6 +87,7 @@ src/
   Services/OrderService/MicroShop.OrderService/
   Services/NotificationService/MicroShop.NotificationService/
 tests/MicroShop.Architecture.Tests/
+tests/MicroShop.ProductService.Tests/
 web/microshop-ui/
 deploy/
 scripts/

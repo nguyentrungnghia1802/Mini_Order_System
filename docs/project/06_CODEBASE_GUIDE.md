@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Repository layout
 
-The Phase 0 repository now follows this layout. Empty future feature folders are intentionally omitted until their owning phase needs them.
+The repository follows this layout, with the Product Service folders now populated for the first Phase 1 vertical slice. Empty future feature folders remain intentionally omitted until their owning phase needs them.
 
 Recommended monorepo:
 
@@ -127,6 +127,8 @@ MicroShop.ProductService/
 ```
 
 A feature file may contain endpoint mapping, DTO, validator, and handler for a small vertical slice. Split only when a file becomes difficult to understand/test.
+
+Current Product implementation files are `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Persistence/ProductDbContext.cs`, `Persistence/Entities/Product.cs`, `Persistence/Configurations/ProductConfiguration.cs`, `Persistence/Migrations/`, `Persistence/ProductSeed.cs`, and `Infrastructure/Database/ProductDatabaseOptions.cs`. These files remain inside Product Service; no EF entity or business logic is placed in a shared project.
 
 ## 5. Dependency rules
 

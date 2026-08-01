@@ -100,7 +100,7 @@ Evidence for 0.3:
 
 - [x] Add CI for .NET restore/build/test.
 - [x] Add CI for Angular install/lint/test/build.
-- [~] Add migration validation against empty PostgreSQL databases.
+- [x] Add migration validation against empty PostgreSQL databases.
 - [~] Add Docker image build validation.
 - [x] Add secret scanning or equivalent repository protection.
 
@@ -109,8 +109,8 @@ Evidence for 0.4:
 - Files: `.github/workflows/ci.yml`.
 - Tests: workflow syntax reviewed; local constituent commands pass where configuration exists.
 - Commands: `dotnet restore`; `dotnet build`; `dotnet test`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; Compose config/up/ps.
-- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
-- Notes: Migration and image jobs are explicit deferred guards because Phase 0 has no migrations or application Dockerfiles; they must be upgraded before those artifacts are introduced.
+- Commit: `b2a924d` for the original CI foundation; Product migration validation is added in `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: The CI workflow now applies Product migrations to an empty PostgreSQL service database. Docker image validation remains deferred until application Dockerfiles exist.
 
 ## 0.5 Phase 0 validation gate
 
@@ -127,7 +127,7 @@ Evidence for 0.5:
 - Tests: .NET build/test, Angular lint/test/build, PostgreSQL health, RabbitMQ health, and Compose status pass locally.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `docker compose ... config/up/ps`.
 - Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
-- Notes: Full-stack image, migration, business integration, and E2E gates remain incomplete by design.
+- Notes: Full-stack image, Order/Notification migrations, business integration, and E2E gates remain incomplete by design.
 
 ---
 
@@ -135,8 +135,8 @@ Evidence for 0.5:
 
 ## 1.1 Product domain
 
-- [ ] Define Product entity.
-- [ ] Add fields:
+- [x] Define Product entity.
+- [x] Add fields:
   - ID
   - name
   - description
@@ -146,48 +146,80 @@ Evidence for 0.5:
   - active state
   - timestamps
   - concurrency token
-- [ ] Enforce nonnegative price.
-- [ ] Enforce nonnegative stock.
-- [ ] Use `decimal` for money.
-- [ ] Use UTC timestamps.
+- [x] Enforce nonnegative price.
+- [x] Enforce nonnegative stock.
+- [x] Use `decimal` for money.
+- [x] Use UTC timestamps.
+
+Evidence for 1.1:
+
+- Files: `src/Services/ProductService/MicroShop.ProductService/Persistence/Entities/Product.cs`, `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`.
+- Tests: `ProductValidationTests` covers required/bounded text, currency, nonnegative price/stock, and pagination bounds.
+- Commands: `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
+- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: `version` is an explicit EF concurrency token; update conflict behavior is reserved for the next Product slice.
 
 ## 1.2 Product database
 
-- [ ] Create Product DbContext.
-- [ ] Create EF Core entity configuration.
-- [ ] Configure PostgreSQL.
-- [ ] Create Product database migration.
-- [ ] Add required indexes.
-- [ ] Add database constraints.
-- [ ] Add Product database health check.
-- [ ] Add Product database seed script.
+- [x] Create Product DbContext.
+- [x] Create EF Core entity configuration.
+- [x] Configure PostgreSQL.
+- [x] Create Product database migration.
+- [x] Add required indexes.
+- [x] Add database constraints.
+- [x] Add Product database health check.
+- [x] Add Product database seed script.
+
+Evidence for 1.2:
+
+- Files: `Persistence/ProductDbContext.cs`, `Persistence/Configurations/ProductConfiguration.cs`, `Persistence/Migrations/20260801194513_InitialProductSchema.cs`, `Infrastructure/Database/ProductDatabaseOptions.cs`, `scripts/db-migrate-product.ps1`, `scripts/db-seed-products.ps1` and shell equivalents.
+- Tests: Product Testcontainers fixture applies the migration to a fresh PostgreSQL database; constraint test rejects negative stock.
+- Commands: `dotnet ef migrations script`; `dotnet ef database update`; `./scripts/db-seed-products.ps1` twice; `docker compose ... config/up/ps`.
+- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: Schema contains only Product-owned `products`; seed inserts four deterministic products and is idempotent. Existing developer volumes were preserved.
 
 ## 1.3 Product API
 
-- [ ] Implement `GET /api/v1/products`.
-- [ ] Implement pagination.
-- [ ] Implement active-only shopper listing.
-- [ ] Implement optional inactive Product listing.
-- [ ] Implement `GET /api/v1/products/{id}`.
-- [ ] Implement `POST /api/v1/products`.
+- [x] Implement `GET /api/v1/products`.
+- [x] Implement pagination.
+- [x] Implement active-only shopper listing.
+- [x] Implement optional inactive Product listing.
+- [x] Implement `GET /api/v1/products/{id}`.
+- [x] Implement `POST /api/v1/products`.
 - [ ] Implement `PATCH /api/v1/products/{id}`.
 - [ ] Implement activate/deactivate behavior.
-- [ ] Do not implement hard delete.
-- [ ] Add validation.
-- [ ] Add RFC 7807 Problem Details.
-- [ ] Add stable error codes.
-- [ ] Add OpenAPI documentation.
+- [x] Do not implement hard delete.
+- [x] Add validation.
+- [x] Add RFC 7807 Problem Details.
+- [x] Add stable error codes.
+- [x] Add OpenAPI documentation.
+
+Evidence for 1.3:
+
+- Files: `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Program.cs`.
+- Tests: `ProductApiTests.CreateGetAndListProductRoundTrip`, `InactiveProductIsHiddenByDefaultAndVisibleForOperatorListing`, and `InvalidProductRequestReturnsProblemDetailsWithStableCode`.
+- Commands: `dotnet test MicroShop.sln --configuration Release`; Development smoke verified `/api/v1/products` and `/openapi/v1.json`.
+- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: Service-native API is intentionally not routed through YARP yet. PATCH/activation are the next Product API slice.
 
 ## 1.4 Product tests
 
-- [ ] Unit-test Product validation.
-- [ ] Integration-test Product creation.
-- [ ] Integration-test Product listing.
+- [x] Unit-test Product validation.
+- [x] Integration-test Product creation.
+- [x] Integration-test Product listing.
 - [ ] Integration-test Product update.
-- [ ] Test inactive Product visibility.
-- [ ] Test database constraints.
+- [x] Test inactive Product visibility.
+- [x] Test database constraints.
 - [ ] Test Product concurrency conflict.
-- [ ] Use PostgreSQL Testcontainers.
+- [x] Use PostgreSQL Testcontainers.
+
+Evidence for 1.4:
+
+- Files: `tests/MicroShop.ProductService.Tests/ProductValidationTests.cs`, `ProductApiTests.cs`, `ProductApiFixture.cs`.
+- Tests: 7 tests pass, including real migration, create/list/detail, inactive filtering, Problem Details, and PostgreSQL check constraint behavior.
+- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: EF Core InMemory is not used. Update/concurrency tests remain incomplete because PATCH is outside this slice.
 
 ## 1.5 Angular Product screens
 
@@ -207,12 +239,20 @@ Evidence for 0.5:
 
 ## 1.6 Phase 1 validation gate
 
-- [ ] Product Service starts independently.
-- [ ] Product migration applies to an empty database.
-- [ ] Product API OpenAPI is reachable.
-- [ ] Product tests pass.
+- [x] Product Service starts independently.
+- [x] Product migration applies to an empty database.
+- [x] Product API OpenAPI is reachable.
+- [x] Product tests pass.
 - [ ] Angular Product UI works through the intended public route.
-- [ ] Product Service uses only its own database.
+- [x] Product Service uses only its own database.
+
+Evidence for 1.6 (partial Phase 1 gate):
+
+- Files: Product host, Product migration, `.github/workflows/ci.yml`, and `tests/MicroShop.ProductService.Tests/`.
+- Tests: Product PostgreSQL Testcontainers suite and native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`).
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `docker compose ... config/up/ps`.
+- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
+- Notes: Angular Product UI, Gateway routing, PATCH/activation, and inventory reservation are not complete, so Phase 1 remains partial.
 
 ---
 
