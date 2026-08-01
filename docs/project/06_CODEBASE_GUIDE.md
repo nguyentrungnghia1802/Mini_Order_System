@@ -201,6 +201,7 @@ Stable uppercase snake case:
 INSUFFICIENT_STOCK
 ORDER_STATE_CONFLICT
 PRODUCT_SERVICE_UNAVAILABLE
+PRODUCT_CONCURRENCY_CONFLICT
 ```
 
 ## 9. Adding a Product endpoint
@@ -216,6 +217,8 @@ PRODUCT_SERVICE_UNAVAILABLE
 9. Route through Gateway only if browser-facing.
 10. Add/update Angular client if used.
 11. Update docs and changelog.
+
+For a versioned Product update, use the `ETag` returned by GET/POST as `If-Match`, increment the explicit Product version only after validation, and cover competing requests with PostgreSQL rather than an in-memory provider.
 
 ## 10. Adding an Order behavior
 

@@ -4,7 +4,7 @@ Last verified: 2026-08-02.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product Service foundation and catalog API, implemented in `abc9a7a` (`feat(product): add catalog persistence slice`).
+Current implementation slice: Phase 1 Product Service catalog and optimistic update API, implemented in `abc9a7a` (`feat(product): add catalog persistence slice`) and `0654c31` (`feat(product): add optimistic catalog updates`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -43,7 +43,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Product PATCH/activation/concurrency behavior and Angular Product screens.
+- Angular Product screens.
 - Order and Notification business behavior, entities, migrations, and integration tests.
 - Public API contracts and YARP business routes.
 - MassTransit producer/consumer and transactional outbox.
@@ -55,7 +55,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 1 — Product PATCH/activate-deactivate plus update/concurrency tests, then Angular catalog/operator screens.
+Phase 1 — Angular catalog/operator screens, then Product reservation/release for the Phase 3 communication slice.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -65,7 +65,7 @@ Phase 1 — Product PATCH/activate-deactivate plus update/concurrency tests, the
 | Product database and migration | `[x]` | Product DbContext/configuration, `20260801194513_InitialProductSchema`, `products` constraints, and `ix_products_active_name_id` are committed. Fresh PostgreSQL migration passes. |
 | Product seed | `[x]` | Explicit PowerShell/shell seed scripts insert four deterministic products idempotently. |
 | Product catalog/create API | `[x]` | Service-native list/detail/create endpoints, pagination, active filtering, Problem Details, stable codes, and development OpenAPI are tested. |
-| Product update/activation | `[ ]` | PATCH and activate/deactivate remain the next slice. |
-| Product PostgreSQL integration tests | `[x]` | 7 Product tests pass using PostgreSQL Testcontainers; no EF InMemory provider. |
+| Product update/activation | `[x]` | PATCH supports mutable fields, direct stock adjustment, activation/deactivation, ETag/If-Match, and stable stale-update conflicts. |
+| Product PostgreSQL integration tests | `[x]` | 11 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle and competing PATCH requests; no EF InMemory provider. |
 | Product Angular screens | `[ ]` | Deferred until the service contract is stable and the intended Gateway route exists. |
-| Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/tests pass; Gateway/Angular and remaining Product behavior are incomplete. |
+| Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/update tests pass; Angular Product UI, Gateway exposure, and inventory reservation remain incomplete. |

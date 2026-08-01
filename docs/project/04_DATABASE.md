@@ -92,7 +92,15 @@ Indexes:
 - active catalog ordering index on `(is_active, name, id)`;
 - optional case-insensitive search index later.
 
-The executable configuration adds `ck_products_name_not_blank`, `ck_products_unit_price_nonnegative`, `ck_products_available_stock_nonnegative`, `ck_products_currency_vnd`, and `ix_products_active_name_id`. The explicit `version` column is configured as the EF concurrency token for the later update/reservation slices.
+The executable configuration adds `ck_products_name_not_blank`, `ck_products_unit_price_nonnegative`, `ck_products_available_stock_nonnegative`, `ck_products_currency_vnd`, and `ix_products_active_name_id`. The explicit `version` column is configured as the EF concurrency token used by Product updates and reserved for the later reservation slice.
+
+Product update behavior:
+
+- the service reads a tracked Product and requires the current version from `If-Match`;
+- EF emits an update predicate containing both `id` and the original `version`;
+- a successful update increments `version` and `updated_at_utc`;
+- zero affected rows are surfaced as a concurrency conflict rather than silently overwriting another update;
+- this slice changes no tables or migration because `version` was included in `InitialProductSchema`.
 
 ### `inventory_reservations`
 

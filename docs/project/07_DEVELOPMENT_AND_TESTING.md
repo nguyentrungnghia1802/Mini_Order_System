@@ -231,9 +231,10 @@ Use real PostgreSQL through Testcontainers.
 
 Required cases:
 
-- create/list product (implemented); update product (planned);
+- create/list/update Product and activate/deactivate lifecycle;
 - reject negative stock/price;
 - inactive Product visibility and database constraints;
+- stale or competing `If-Match` updates return a stable concurrency conflict;
 - reserve one item;
 - reserve multiple items atomically;
 - insufficient stock rolls back all;
@@ -242,7 +243,7 @@ Required cases:
 - release restores once;
 - concurrent last-stock request permits one success.
 
-The implemented Product API tests use PostgreSQL Testcontainers and apply the real `InitialProductSchema` migration. EF Core InMemory is not used.
+The implemented Product API tests use PostgreSQL Testcontainers and apply the real `InitialProductSchema` migration. They cover update rounding/versioning, activation filtering, and competing PATCH requests. EF Core InMemory is not used.
 
 ### Order integration tests
 

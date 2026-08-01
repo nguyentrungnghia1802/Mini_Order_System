@@ -157,7 +157,7 @@ Evidence for 1.1:
 - Tests: `ProductValidationTests` covers required/bounded text, currency, nonnegative price/stock, and pagination bounds.
 - Commands: `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
 - Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: `version` is an explicit EF concurrency token; update conflict behavior is reserved for the next Product slice.
+- Notes: `version` is an explicit EF concurrency token used by the Product PATCH contract; reservation concurrency remains a later slice.
 
 ## 1.2 Product database
 
@@ -186,8 +186,8 @@ Evidence for 1.2:
 - [x] Implement optional inactive Product listing.
 - [x] Implement `GET /api/v1/products/{id}`.
 - [x] Implement `POST /api/v1/products`.
-- [ ] Implement `PATCH /api/v1/products/{id}`.
-- [ ] Implement activate/deactivate behavior.
+- [x] Implement `PATCH /api/v1/products/{id}`.
+- [x] Implement activate/deactivate behavior.
 - [x] Do not implement hard delete.
 - [x] Add validation.
 - [x] Add RFC 7807 Problem Details.
@@ -197,29 +197,29 @@ Evidence for 1.2:
 Evidence for 1.3:
 
 - Files: `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Program.cs`.
-- Tests: `ProductApiTests.CreateGetAndListProductRoundTrip`, `InactiveProductIsHiddenByDefaultAndVisibleForOperatorListing`, and `InvalidProductRequestReturnsProblemDetailsWithStableCode`.
-- Commands: `dotnet test MicroShop.sln --configuration Release`; Development smoke verified `/api/v1/products` and `/openapi/v1.json`.
-- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: Service-native API is intentionally not routed through YARP yet. PATCH/activation are the next Product API slice.
+- Tests: `ProductApiTests.CreateGetAndListProductRoundTrip`, `InactiveProductIsHiddenByDefaultAndVisibleForOperatorListing`, `PatchUpdatesMutableFieldsAndReturnsNewVersion`, `PatchCanDeactivateAndReactivateProduct`, and `ConcurrentPatchesWithSameVersionProduceOneSuccessAndOneConflict`.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; Development smoke remains verified for `/api/v1/products` and `/openapi/v1.json`.
+- Commit: `0654c31` (`feat(product): add optimistic catalog updates`).
+- Notes: Service-native API is intentionally not routed through YARP yet. PATCH uses `If-Match`/`ETag`, increments the explicit version, and returns `409 PRODUCT_CONCURRENCY_CONFLICT` for stale or racing updates. There is still no hard-delete endpoint.
 
 ## 1.4 Product tests
 
 - [x] Unit-test Product validation.
 - [x] Integration-test Product creation.
 - [x] Integration-test Product listing.
-- [ ] Integration-test Product update.
+- [x] Integration-test Product update.
 - [x] Test inactive Product visibility.
 - [x] Test database constraints.
-- [ ] Test Product concurrency conflict.
+- [x] Test Product concurrency conflict.
 - [x] Use PostgreSQL Testcontainers.
 
 Evidence for 1.4:
 
 - Files: `tests/MicroShop.ProductService.Tests/ProductValidationTests.cs`, `ProductApiTests.cs`, `ProductApiFixture.cs`.
-- Tests: 7 tests pass, including real migration, create/list/detail, inactive filtering, Problem Details, and PostgreSQL check constraint behavior.
-- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: EF Core InMemory is not used. Update/concurrency tests remain incomplete because PATCH is outside this slice.
+- Tests: 11 tests pass, including real migration, create/list/detail, update/versioning, activation filtering, Problem Details, competing PATCH conflict, and PostgreSQL check constraint behavior.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `0654c31` (`feat(product): add optimistic catalog updates`).
+- Notes: EF Core InMemory is not used. The concurrency test uses two simultaneous HTTP PATCH requests against PostgreSQL; exactly one succeeds for the same initial version.
 
 ## 1.5 Angular Product screens
 
@@ -251,8 +251,8 @@ Evidence for 1.6 (partial Phase 1 gate):
 - Files: Product host, Product migration, `.github/workflows/ci.yml`, and `tests/MicroShop.ProductService.Tests/`.
 - Tests: Product PostgreSQL Testcontainers suite and native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`).
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `docker compose ... config/up/ps`.
-- Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: Angular Product UI, Gateway routing, PATCH/activation, and inventory reservation are not complete, so Phase 1 remains partial.
+- Commits: `abc9a7a` (`feat(product): add catalog persistence slice`), `0654c31` (`feat(product): add optimistic catalog updates`).
+- Notes: Angular Product UI, Gateway routing, and inventory reservation are not complete, so Phase 1 remains partial. Product PATCH/activation and update/concurrency behavior are implemented and tested in `0654c31`.
 
 ---
 

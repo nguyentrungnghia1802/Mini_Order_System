@@ -40,7 +40,7 @@ Phase 0 implementation status: the solution/projects, strict Angular workspace, 
 
 Learning objective: one independent .NET service with its own database.
 
-Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create service-native API, Problem Details, OpenAPI, readiness, unit tests, and PostgreSQL Testcontainers tests are implemented. Product update/activation, reservation/release, Gateway exposure, and Angular catalog/operator screens remain incomplete.
+Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create/update service-native API, activate/deactivate lifecycle, optimistic concurrency Problem Details, OpenAPI, readiness, unit tests, and PostgreSQL Testcontainers tests are implemented. Reservation/release, Gateway exposure, and Angular catalog/operator screens remain incomplete.
 
 ### Phase 2: Order Service without remote inventory
 

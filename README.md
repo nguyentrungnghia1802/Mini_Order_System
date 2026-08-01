@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented, and the first Phase 1 Product Service slice is runnable. Product now has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
+Phase 0 bootstrap is implemented, and the current Phase 1 Product Service slice is runnable. Product now has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 

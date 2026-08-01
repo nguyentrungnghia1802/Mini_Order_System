@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Contract sources
 
-Runtime status: Product Service now implements and tests the catalog/detail/create subset below. Order, Notification, Gateway, internal inventory, and Angular-facing routes remain planned until their owning phases.
+Runtime status: Product Service now implements and tests the catalog/detail/create/update/lifecycle subset below. Order, Notification, Gateway, internal inventory, and Angular-facing routes remain planned until their owning phases.
 
 Executable contract sources:
 
@@ -134,6 +134,8 @@ Response:
 - `200 ProductResponse`;
 - `404 PRODUCT_NOT_FOUND`.
 
+The response includes `ETag: "<version>"`, which is the version required for a subsequent update.
+
 ### `POST /api/v1/products`
 
 Implemented by Product Service.
@@ -157,10 +159,17 @@ Response:
 - `400 VALIDATION_ERROR`.
 
 Location header points to the product detail endpoint.
+The response also includes the initial `ETag: "1"`.
 
 ### `PATCH /api/v1/products/{productId}`
 
-Planned for the next Product Service slice; the current service intentionally has no update or hard-delete endpoint.
+Implemented by Product Service. Hard delete remains intentionally unavailable.
+
+The client must send the current entity tag from a Product detail response:
+
+```http
+If-Match: "1"
+```
 
 Request may contain:
 
@@ -174,13 +183,16 @@ Request may contain:
 }
 ```
 
+Omitted fields remain unchanged. An empty `description` clears the description. The baseline allows direct stock adjustment for learning; reservation-driven stock changes will use a separate internal flow.
+
 Response:
 
 - `200 ProductResponse`;
+- `400 VALIDATION_ERROR` for invalid fields or a missing/invalid `If-Match` header;
 - `404 PRODUCT_NOT_FOUND`;
 - `409 PRODUCT_CONCURRENCY_CONFLICT`.
 
-The baseline allows direct stock adjustment for learning. It must be clearly separate from reservation-driven stock changes in logs/history if stock movement auditing is added.
+The successful response returns the new version in both the body and `ETag`, for example `ETag: "2"`. A stale version must be re-read before retrying. Setting `isActive` to `false` deactivates a Product; setting it to `true` reactivates it.
 
 ## 7. Order endpoints
 

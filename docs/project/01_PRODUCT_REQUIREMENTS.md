@@ -49,8 +49,8 @@ No authentication exists in the first baseline. Shopper and operator are UI mode
 | FR-PROD-001 | List active products for the shopper catalog | Partial |
 | FR-PROD-002 | Get one product by ID | Partial |
 | FR-PROD-003 | Create a product with name, optional description, unit price, and initial stock | Partial |
-| FR-PROD-004 | Update mutable product fields | Specified |
-| FR-PROD-005 | Activate or deactivate a product | Specified |
+| FR-PROD-004 | Update mutable product fields | Implemented |
+| FR-PROD-005 | Activate or deactivate a product | Implemented |
 | FR-PROD-006 | Reject negative price or stock | Partial |
 | FR-PROD-007 | Hide inactive products from the shopper list while retaining operator visibility | Partial |
 | FR-PROD-008 | Return current available stock | Partial |
@@ -162,6 +162,8 @@ No authentication exists in the first baseline. Shopper and operator are UI mode
 6. Inactive products cannot be newly reserved.
 7. Existing order snapshots remain valid after a product is edited or deactivated.
 8. Hard deletion is deferred; deactivation is the normal lifecycle operation.
+9. Product updates require the current `version` through the HTTP `If-Match` header.
+10. A stale version returns `409 PRODUCT_CONCURRENCY_CONFLICT`; a successful update increments `version`.
 
 ### Order input rules
 

@@ -164,6 +164,17 @@ This flow demonstrates ordinary service-local CRUD and does not use RabbitMQ.
 
 The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests. Gateway routing and Angular screens are intentionally deferred until Phase 4 and the remaining Phase 1 frontend work.
 
+### Product update and lifecycle flow
+
+1. An operator reads the Product and receives its current `ETag`, such as `"1"`.
+2. The operator sends `PATCH /api/v1/products/{productId}` with the mutable fields and `If-Match: "1"`.
+3. Product Service validates the fields, loads the Product from its own database, and checks the expected version.
+4. PostgreSQL persists the update with an optimistic concurrency predicate on `id` and `version`; direct stock adjustment remains a learning-baseline operation and is separate from future reservation movements.
+5. A successful update returns `200`, the new Product representation, and the incremented `ETag`.
+6. A stale or racing update returns `409 PRODUCT_CONCURRENCY_CONFLICT`; the client must reload before retrying.
+
+Activation and deactivation use the same PATCH contract by changing `isActive`. Deactivation removes the Product from the default shopper list while retaining it for operator listing. Product records are never hard-deleted.
+
 ## 10. Successful order creation flow
 
 ### Input
