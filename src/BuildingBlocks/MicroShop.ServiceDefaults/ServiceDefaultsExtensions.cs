@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ public static class ServiceDefaultsExtensions
     public static IEndpointRouteBuilder MapMicroShopHealth(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
-        endpoints.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));
+        endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions());
         return endpoints;
     }
 }

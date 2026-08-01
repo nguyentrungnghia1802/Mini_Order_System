@@ -86,6 +86,51 @@ jobs:
         if: always()
         run: docker compose --env-file .env.example -f deploy/compose.yaml down
 
+  migrations:
+    name: Product migration validation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: microshop_product_ci
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d microshop_product_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Restore
+        run: dotnet restore MicroShop.sln
+
+      - name: Install EF CLI
+        shell: bash
+        run: dotnet tool install --tool-path "$RUNNER_TEMP/dotnet-tools" dotnet-ef --version 10.0.10
+
+      - name: Apply Product migration to empty PostgreSQL database
+        shell: bash
+        env:
+          PRODUCT_DB_HOST: localhost
+          PRODUCT_DB_PORT: 5432
+          PRODUCT_DB_NAME: microshop_product_ci
+          PRODUCT_DB_USER: postgres
+        run: >-
+          "$RUNNER_TEMP/dotnet-tools/dotnet-ef" database update
+          --project src/Services/ProductService/MicroShop.ProductService
+          --startup-project src/Services/ProductService/MicroShop.ProductService
+
   repository-safety:
     name: Repository safety checks
     runs-on: ubuntu-latest
@@ -117,21 +162,11 @@ jobs:
         run: git diff --check
 
   phase-gates:
-    name: Guard deferred Phase 0 gates
+    name: Guard deferred image gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Keep migration validation explicit
-        shell: bash
-        run: |
-          set -euo pipefail
-          if find src -type f -path '*/Migrations/*.cs' -print -quit | grep -q .; then
-            echo "Migrations now exist; add empty-database migration validation before enabling this gate."
-            exit 1
-          fi
-          echo "No migrations exist in Phase 0; migration validation remains deferred to the owning service phases."
 
       - name: Keep image validation explicit
         shell: bash

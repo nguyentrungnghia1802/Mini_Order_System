@@ -33,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroShop.Architecture.Tests", "tests\MicroShop.Architecture.Tests\MicroShop.Architecture.Tests.csproj", "{55091FFB-455E-423E-B487-F154CFAF7C37}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroShop.ProductService.Tests", "tests\MicroShop.ProductService.Tests\MicroShop.ProductService.Tests.csproj", "{61415D40-E4ED-4794-82D5-779DDAF68D49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -127,6 +129,18 @@ Global
 		{55091FFB-455E-423E-B487-F154CFAF7C37}.Release|x64.Build.0 = Release|Any CPU
 		{55091FFB-455E-423E-B487-F154CFAF7C37}.Release|x86.ActiveCfg = Release|Any CPU
 		{55091FFB-455E-423E-B487-F154CFAF7C37}.Release|x86.Build.0 = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|x64.Build.0 = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Debug|x86.Build.0 = Debug|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|x64.ActiveCfg = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|x64.Build.0 = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|x86.ActiveCfg = Release|Any CPU
+		{61415D40-E4ED-4794-82D5-779DDAF68D49}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -145,5 +159,6 @@ Global
 		{47931FAB-DBE1-FD8F-0AFF-2CD4B99C52C4} = {984BB9B3-3FA3-BE33-9484-CAC21695A33C}
 		{CABF0940-D334-4F58-9F07-FE0C399F680B} = {47931FAB-DBE1-FD8F-0AFF-2CD4B99C52C4}
 		{55091FFB-455E-423E-B487-F154CFAF7C37} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{61415D40-E4ED-4794-82D5-779DDAF68D49} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
