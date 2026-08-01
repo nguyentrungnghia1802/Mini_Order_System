@@ -27,6 +27,8 @@ Exit criteria:
 - infrastructure starts;
 - docs are linked from README.
 
+Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, and PostgreSQL/RabbitMQ Compose infrastructure are now present and validated locally. Empty-database migration validation and application image validation remain deferred because no business migrations or Dockerfiles exist yet.
+
 ### Phase 1: Product Service
 
 - Product DB and migrations;

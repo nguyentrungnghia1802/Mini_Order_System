@@ -1,0 +1,8 @@
+# Optional native-debug override. The base Compose file keeps application ports private.
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+  rabbitmq:
+    ports:
+      - "5672:5672"

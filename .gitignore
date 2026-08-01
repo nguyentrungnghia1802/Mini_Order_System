@@ -1,0 +1,44 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+TestResults/
+coverage/
+
+# Angular and Node
+node_modules/
+dist/
+.angular/cache/
+web/microshop-ui/.angular/cache/
+web/microshop-ui/dist/
+web/microshop-ui/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+
+# Local tooling/cache
+.dotnet/
+.nuget/
+.local/
+
+# Docker/local data; never commit service data or logs
+deploy/**/data/
+deploy/**/logs/
+*.dump
+*.sql.gz
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db

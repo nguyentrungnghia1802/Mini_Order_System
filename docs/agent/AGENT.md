@@ -83,6 +83,62 @@ Never bypass this rule with:
 
 Creating a replacement does not authorize deleting the original.
 
+
+---
+
+## Canonical task execution file
+
+`task.md` is the canonical implementation checklist for completing the project.
+
+For every autonomous implementation run:
+
+1. Read `task.md` immediately after reading `AGENT.md`.
+2. Compare task status with the actual repository before selecting work.
+3. Select the next highest-priority unblocked incomplete task or smallest coherent group of related tasks.
+4. Respect the Phase 0–8 execution order unless the user explicitly requests a different task.
+5. Implement the task completely.
+6. Run the relevant validation.
+7. Update canonical documentation.
+8. Update `task.md` in the same change:
+   - `[x]` only after implementation and validation;
+   - `[~]` for partial work;
+   - `[!]` for a verified blocker;
+   - `[ ]` for incomplete work.
+9. Add evidence beneath updated tasks:
+   - implementation files;
+   - tests;
+   - commands;
+   - commit hash;
+   - notes/blocker reason.
+10. Commit, merge, and push according to the Git workflow in this file.
+11. At handoff, state the next incomplete task.
+
+When the user says only:
+
+```text
+Read AGENT.md and continue the project.
+```
+
+the agent must understand this as:
+
+```text
+Read AGENT.md
+-> Read task.md
+-> Inspect actual repository state
+-> Select the next incomplete roadmap-aligned task
+-> Plan
+-> Implement
+-> Test
+-> Update docs
+-> Update task.md with evidence
+-> Commit
+-> Merge when safe
+-> Push
+-> Report the next task
+```
+
+Do not ask the user what to do next when `task.md` already determines the next task.
+
 ---
 
 ## 3. Read first
@@ -91,9 +147,10 @@ For every task, read:
 
 1. `README.md`
 2. `AGENT.md`
-3. `docs/PROJECT_COMPLETION_CHECKLIST.md`
-4. `docs/project/00_PROJECT_CONTEXT.md`
-5. relevant source files, tests, migrations, configuration, and recent Git history
+3. `task.md`
+4. `docs/PROJECT_COMPLETION_CHECKLIST.md` when present
+5. `docs/project/00_PROJECT_CONTEXT.md`
+6. relevant source files, tests, migrations, configuration, and recent Git history
 
 Read additional documents by task type:
 
@@ -115,7 +172,7 @@ The Mini Order System specifications and accepted ADRs are authoritative. Do not
 
 ## 4. Missing bootstrap files
 
-If any canonical file is missing:
+If any canonical file is missing, including `task.md`:
 
 - inspect the repository for an equivalent file first;
 - do not create duplicate sources of truth;

@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "chore/**", "feat/**", "fix/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dotnet:
+    name: .NET restore, format, build, test
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Restore
+        run: dotnet restore MicroShop.sln
+
+      - name: Verify formatting
+        run: dotnet format MicroShop.sln --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build MicroShop.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test MicroShop.sln --configuration Release --no-build
+
+  angular:
+    name: Angular install, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/microshop-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web/microshop-ui
+        run: npm ci
+
+      - name: Lint
+        working-directory: web/microshop-ui
+        run: npm run lint
+
+      - name: Test
+        working-directory: web/microshop-ui
+        run: npm run test -- --watch=false
+
+      - name: Build
+        working-directory: web/microshop-ui
+        run: npm run build
+
+  compose:
+    name: Compose infrastructure smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example -f deploy/compose.yaml config --quiet
+
+      - name: Start PostgreSQL and RabbitMQ
+        run: docker compose --env-file .env.example -f deploy/compose.yaml up -d --wait
+
+      - name: Show service status
+        if: always()
+        run: docker compose --env-file .env.example -f deploy/compose.yaml ps
+
+      - name: Stop infrastructure without removing volumes
+        if: always()
+        run: docker compose --env-file .env.example -f deploy/compose.yaml down
+
+  repository-safety:
+    name: Repository safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reject tracked environment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          tracked_env_files="$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -vE '(^|/)\.env\.example$' || true)"
+          if [[ -n "${tracked_env_files}" ]]; then
+            echo "Tracked environment files are not allowed:"
+            echo "${tracked_env_files}"
+            exit 1
+          fi
+
+      - name: Scan for common credential formats
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -I -E '(-----BEGIN [A-Z ]+PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,})' -- .; then
+            echo "A credential-like value was found in tracked content."
+            exit 1
+          fi
+
+      - name: Check whitespace errors
+        run: git diff --check
+
+  phase-gates:
+    name: Guard deferred Phase 0 gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Keep migration validation explicit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find src -type f -path '*/Migrations/*.cs' -print -quit | grep -q .; then
+            echo "Migrations now exist; add empty-database migration validation before enabling this gate."
+            exit 1
+          fi
+          echo "No migrations exist in Phase 0; migration validation remains deferred to the owning service phases."
+
+      - name: Keep image validation explicit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find . -type f -name Dockerfile -not -path './.git/*' -print -quit | grep -q .; then
+            echo "Dockerfiles now exist; add image build validation before enabling this gate."
+            exit 1
+          fi
+          echo "No application Dockerfiles exist in Phase 0; image validation remains deferred to Phase 6."

@@ -4,6 +4,8 @@ Last reviewed: 2026-08-02.
 
 ## 1. Architecture summary
 
+The target topology below is implemented incrementally. In Phase 0, the repository contains independent ASP.NET Core host projects, a YARP-capable Gateway skeleton, an Angular workspace, and PostgreSQL/RabbitMQ infrastructure. Business routes, database schemas, and message flows remain phase-scoped work.
+
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
 ```text

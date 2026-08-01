@@ -14,6 +14,8 @@ Recommended:
 - optional PostgreSQL client;
 - optional RabbitMQ management UI/browser.
 
+The repository pins .NET SDK `10.0.302`, Node.js `24.15.0`, and npm `11.12.1`. Angular 22.1.2 requires the pinned Node version or a compatible newer version.
+
 The repository must pin:
 
 - .NET SDK in `global.json`;
@@ -172,7 +174,7 @@ No real names/emails are used.
 Recommended CI/local validation order:
 
 ```bash
-dotnet format --verify-no-changes
+dotnet format MicroShop.sln --verify-no-changes
 dotnet build --configuration Release
 dotnet test --configuration Release
 
@@ -188,6 +190,16 @@ Then integration/E2E:
 ```bash
 docker compose -f deploy/compose.test.yaml up --build --abort-on-container-exit
 ```
+
+During Phase 0, the available Compose smoke check is infrastructure-only:
+
+```bash
+docker compose --env-file .env.example -f deploy/compose.yaml config
+docker compose --env-file .env.example -f deploy/compose.yaml up -d
+docker compose --env-file .env.example -f deploy/compose.yaml ps
+```
+
+Application images, migrations, and `compose.test.yaml` are deferred until the owning roadmap phases.
 
 The exact scripts become source of truth when repository exists.
 

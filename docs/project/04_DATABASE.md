@@ -4,6 +4,8 @@ Last reviewed: 2026-08-02.
 
 ## 1. Source of truth
 
+Phase 0 has no business entities or migrations yet. The Compose bootstrap creates only the three logical databases and service users; Product, Order, and Notification tables must be introduced by migrations in their owning phases.
+
 Each service owns its Entity Framework Core migration history.
 
 Expected migration locations:

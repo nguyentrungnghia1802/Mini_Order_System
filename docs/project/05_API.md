@@ -4,6 +4,8 @@ Last reviewed: 2026-08-02.
 
 ## 1. Contract sources
 
+Phase 0 runtime status: each .NET host currently exposes bootstrap and `/health/live`/`/health/ready` endpoints. The `/api/v1` business contracts below are the target contracts and are not marked implemented until the owning service and tests exist.
+
 Executable contract sources:
 
 - ASP.NET Core endpoint/controller definitions;

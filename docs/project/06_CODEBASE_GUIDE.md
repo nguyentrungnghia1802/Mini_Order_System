@@ -4,6 +4,8 @@ Last reviewed: 2026-08-02.
 
 ## 1. Repository layout
 
+The Phase 0 repository now follows this layout. Empty future feature folders are intentionally omitted until their owning phase needs them.
+
 Recommended monorepo:
 
 ```text

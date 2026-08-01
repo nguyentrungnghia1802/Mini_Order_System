@@ -4,6 +4,8 @@ Last reviewed: 2026-08-02.
 
 ## 1. Environment model
 
+Phase 0 currently provides the PostgreSQL/RabbitMQ infrastructure slice only. The full `web`, Gateway, Product, Order, and Notification Compose services are introduced after their projects have real runtime behavior and migrations.
+
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
 | Local native | Fast debugging | Apps native, PostgreSQL/RabbitMQ in Docker |

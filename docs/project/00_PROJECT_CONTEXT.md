@@ -156,23 +156,23 @@ A later phase may add selected items only when each addition has a clear learnin
 
 Package versions should be pinned by the repository and upgraded deliberately. Documentation names architectural dependencies; the project files remain the executable version source of truth.
 
-## 9. Initial project status
+## 9. Current project status
 
 This documentation describes the intended system before implementation.
 
 | Area | Status |
 | --- | --- |
 | Requirements and boundaries | Specified |
-| Repository | Not created |
-| Gateway | Planned |
-| Product Service | Planned |
-| Order Service | Planned |
-| Notification Service | Planned |
-| Angular frontend | Planned |
-| PostgreSQL databases | Planned |
-| RabbitMQ integration | Planned |
-| Docker Compose | Planned |
-| Tests | Planned |
+| Repository | Phase 0 bootstrap implemented; business slices remain planned |
+| Gateway | Bootstrap ASP.NET Core/YARP host implemented; public routes planned for Phase 4 |
+| Product Service | Independent bootstrap host and health endpoints implemented; Product domain planned for Phase 1 |
+| Order Service | Independent bootstrap host and health endpoints implemented; Order domain planned for Phase 2 |
+| Notification Service | Independent bootstrap host and health endpoints implemented; consumer/API planned for Phase 5 |
+| Angular frontend | Angular 22 strict workspace implemented; feature screens planned |
+| PostgreSQL databases | Compose creates three logical databases and users; business migrations planned |
+| RabbitMQ integration | Compose management broker implemented; MassTransit integration planned for Phase 5 |
+| Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose implemented; full stack planned for Phase 6 |
+| Tests | Bootstrap .NET and Angular tests implemented; service/integration/E2E tests planned |
 | Deployment | Optional after local completion |
 
 When implementation begins, this table must be updated only from verified runtime/repository behavior. Documentation must not describe planned features as implemented.

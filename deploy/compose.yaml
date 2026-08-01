@@ -1,0 +1,55 @@
+name: microshop
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?Copy .env.example to .env or provide an env file}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Provide a local PostgreSQL admin password}
+      POSTGRES_DB: ${POSTGRES_ADMIN_DB:?Provide the PostgreSQL bootstrap database name}
+      PRODUCT_DB_NAME: ${PRODUCT_DB_NAME:?Provide the Product database name}
+      PRODUCT_DB_USER: ${PRODUCT_DB_USER:?Provide the Product database user}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?Provide the Product database password}
+      ORDER_DB_NAME: ${ORDER_DB_NAME:?Provide the Order database name}
+      ORDER_DB_USER: ${ORDER_DB_USER:?Provide the Order database user}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Provide the Order database password}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:?Provide the Notification database name}
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:?Provide the Notification database user}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Provide the Notification database password}
+    volumes:
+      - microshop-postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - microshop
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Provide the RabbitMQ local user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Provide the RabbitMQ local password}
+    volumes:
+      - microshop-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - microshop
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  microshop-postgres-data:
+  microshop-rabbitmq-data:
+
+networks:
+  microshop:
+    name: microshop
