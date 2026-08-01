@@ -56,6 +56,7 @@ Evidence for 0.1:
 - Files: `MicroShop.sln`, `src/`, `tests/`, `web/microshop-ui/`, `deploy/`, `scripts/`, `docs/project/`, `README.md`, `docs/agent/AGENT.md`, `docs/agent/task.md`.
 - Tests: `MicroShop.Architecture.Tests` and Angular workspace test exist.
 - Commands: `dotnet restore MicroShop.sln`; `git status --short`; `rg --files`.
+- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 - Notes: Business features remain deferred to Phases 1–5.
 
 ## 0.2 Version pinning
@@ -73,6 +74,7 @@ Evidence for 0.2:
 - Files: `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.nvmrc`, `web/microshop-ui/package.json`, `web/microshop-ui/package-lock.json`, and seven `packages.lock.json` files.
 - Tests: restore completed with central package management and lock files.
 - Commands: `dotnet restore MicroShop.sln`; `npm ci`.
+- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 - Notes: SDK `10.0.302`, Node `24.15.0`, npm `11.12.1`; CI sets `TreatWarningsAsErrors`.
 
 ## 0.3 Code quality
@@ -91,6 +93,7 @@ Evidence for 0.3:
 - Files: `.editorconfig`, `.gitignore`, `.env.example`, `web/microshop-ui/eslint.config.js`, `web/microshop-ui/angular.json`.
 - Tests: `dotnet format --verify-no-changes` and Angular lint pass.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `npm run lint`.
+- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 - Notes: No `.env`, token, dump, log, or credential-bearing file is tracked.
 
 ## 0.4 Initial CI
@@ -106,6 +109,7 @@ Evidence for 0.4:
 - Files: `.github/workflows/ci.yml`.
 - Tests: workflow syntax reviewed; local constituent commands pass where configuration exists.
 - Commands: `dotnet restore`; `dotnet build`; `dotnet test`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; Compose config/up/ps.
+- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 - Notes: Migration and image jobs are explicit deferred guards because Phase 0 has no migrations or application Dockerfiles; they must be upgraded before those artifacts are introduced.
 
 ## 0.5 Phase 0 validation gate
@@ -122,6 +126,7 @@ Evidence for 0.5:
 - Files: `docs/PROJECT_COMPLETION_CHECKLIST.md`, `.github/workflows/ci.yml`, `deploy/compose.yaml`.
 - Tests: .NET build/test, Angular lint/test/build, PostgreSQL health, RabbitMQ health, and Compose status pass locally.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `docker compose ... config/up/ps`.
+- Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 - Notes: Full-stack image, migration, business integration, and E2E gates remain incomplete by design.
 
 ---

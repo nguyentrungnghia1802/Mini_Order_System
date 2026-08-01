@@ -2,6 +2,8 @@
 
 Last verified: 2026-08-02.
 
+Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
+
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
 ## Phase 0 — Repository Bootstrap and Standards
