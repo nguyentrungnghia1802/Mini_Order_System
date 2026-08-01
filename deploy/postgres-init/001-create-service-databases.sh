@@ -31,6 +31,13 @@ SQL
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 GRANT USAGE, CREATE ON SCHEMA public TO :"owner_name";
 SQL
+
+  psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    --set=database_name="$database_name" \
+    --set=owner_name="$owner_name" <<'SQL'
+REVOKE CONNECT ON DATABASE :"database_name" FROM PUBLIC;
+GRANT CONNECT ON DATABASE :"database_name" TO :"owner_name";
+SQL
 }
 
 create_role "$PRODUCT_DB_USER" "$PRODUCT_DB_PASSWORD"

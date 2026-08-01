@@ -4,7 +4,7 @@ Last verified: 2026-08-02.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product Service catalog and optimistic update API, implemented in `abc9a7a` (`feat(product): add catalog persistence slice`) and `0654c31` (`feat(product): add optimistic catalog updates`).
+Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence foundation, implemented in `abc9a7a`, `0654c31`, and the current Order foundation slice.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -44,7 +44,8 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Angular Product screens.
-- Order and Notification business behavior, entities, migrations, and integration tests.
+- Order HTTP API, fake Product client, and Angular checkout.
+- Notification business behavior, migration, and integration tests.
 - Public API contracts and YARP business routes.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
@@ -55,7 +56,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 1 — Angular catalog/operator screens, then Product reservation/release for the Phase 3 communication slice.
+Phase 2 — Order HTTP API foundation with a fake Product client; Angular Product UI remains blocked until the intended Gateway route exists.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -69,3 +70,14 @@ Phase 1 — Angular catalog/operator screens, then Product reservation/release f
 | Product PostgreSQL integration tests | `[x]` | 11 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle and competing PATCH requests; no EF InMemory provider. |
 | Product Angular screens | `[ ]` | Deferred until the service contract is stable and the intended Gateway route exists. |
 | Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/update tests pass; Angular Product UI, Gateway exposure, and inventory reservation remain incomplete. |
+
+## Phase 2 — Order Service foundation (partial)
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Order domain | `[x]` | `Order`, `OrderItem`, `OrderStateHistory`, six documented states, normalized email, snapshot totals, failure fields, timestamps, version token, and transition guard are implemented and unit-tested. |
+| Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
+| Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
+| Order HTTP API | `[ ]` | Request validation, fake Product client, create/list/detail endpoints remain the next Phase 2 slice. |
+| Order foundation tests | `[x]` | 10 Order tests pass: domain transitions/duplicates/totals, migration persistence, state history, status constraint, readiness/OpenAPI, and database credential isolation. |
+| Phase 2 validation gate | `[~]` | Order service/migration/foundation tests pass; HTTP API, Angular checkout, and Product communication remain incomplete. |

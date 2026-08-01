@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Source of truth
 
-The Compose bootstrap creates the three logical databases and service users. The Product Service now owns its first business schema migration; Order and Notification tables remain deferred to their owning phases.
+The Compose bootstrap creates the three logical databases and service users. Product and Order now own their first business schema migrations; Notification tables remain deferred to the owning phase.
 
 Each service owns its Entity Framework Core migration history.
 
@@ -17,6 +17,8 @@ src/Services/NotificationService/Persistence/Migrations/
 ```
 
 Implemented Product migration: `20260801194513_InitialProductSchema` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. It creates only the Product Service `products` table and its indexes/check constraints.
+
+Implemented Order migration: `20260801204113_InitialOrderSchema` under `src/Services/OrderService/MicroShop.OrderService/Persistence/Migrations/`. It creates only Order Service `orders`, `order_items`, and `order_state_history` with status/amount/quantity constraints and documented query indexes.
 
 Rules:
 
@@ -159,6 +161,8 @@ orders 1 --- * order_items
 orders 1 --- * order_state_history
 orders 1 --- * outbox_messages (logical association)
 ```
+
+The executable Order configuration uses `ck_orders_status_valid`, `ck_orders_currency_vnd`, `ck_orders_total_nonnegative`, `ck_orders_version_positive`, and the corresponding item/history constraints. The Order migration does not create an outbox table; durable event publication belongs to Phase 7.
 
 ### `orders`
 

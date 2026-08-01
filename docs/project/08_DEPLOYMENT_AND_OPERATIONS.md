@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus a natively runnable Product Service slice. The full `web`, Gateway, Order, and Notification Compose services remain deferred until their projects have runtime behavior and migrations.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order persistence slices. The full `web`, Gateway, and Notification Compose services remain deferred; Order API behavior is also still phase-scoped.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ Each process receives only required configuration.
 
 ### Order Service
 
-- Order DB connection;
+- Order DB connection (`ORDER_DB_HOST`, `ORDER_DB_PORT`, `ORDER_DB_NAME`, `ORDER_DB_USER`, and local-only `ORDER_DB_PASSWORD`, or an untracked connection string);
 - Product Service internal URL;
 - HTTP timeout/resilience settings;
 - RabbitMQ connection;
@@ -163,7 +163,7 @@ For demo/VPS:
 
 Prefer backward-compatible expand/contract migrations for any future rolling deployment.
 
-For the current Product slice, apply `InitialProductSchema` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Normal Product startup validates database configuration and readiness but does not silently apply migrations.
+For the current Product slice, apply `InitialProductSchema` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`. Normal Product and Order startup validates database configuration and readiness but does not silently apply migrations.
 
 ## 8. Public deployment path
 

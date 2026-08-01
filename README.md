@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented, and the current Phase 1 Product Service slice is runnable. Product now has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order now has its own domain model, state-history persistence, PostgreSQL migration, readiness, and PostgreSQL Testcontainers foundation tests. Order API, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 
@@ -66,6 +66,20 @@ dotnet run --project src/Services/ProductService/MicroShop.ProductService
 ```
 
 Use `scripts/db-migrate-product.ps1` or `.sh` for the explicit migration command. In non-production environments Product exposes `/api/v1/products` and `/openapi/v1.json`; `/health/ready` checks the owned Product database. The native-debug Compose override publishes PostgreSQL through `${POSTGRES_DEBUG_PORT:-5432}`; choose another local port if `5432` is already in use.
+
+The current Order slice has a separate migration and database owner. Set the untracked Order database password before running its migration wrapper or `dotnet run --project src/Services/OrderService/MicroShop.OrderService -- --migrate`:
+
+```powershell
+$env:ORDER_DB_HOST = "localhost"
+$env:ORDER_DB_PORT = "5432"
+$env:ORDER_DB_NAME = "microshop_order"
+$env:ORDER_DB_USER = "order_app"
+$env:ORDER_DB_PASSWORD = "<local-password>"
+
+./scripts/db-migrate-order.ps1
+```
+
+Order currently exposes persistence health/readiness and `/openapi/v1.json`; its HTTP order API is the next Phase 2 slice.
 
 For native application debugging, use the non-default override to publish PostgreSQL and RabbitMQ application ports:
 

@@ -260,33 +260,47 @@ Evidence for 1.6 (partial Phase 1 gate):
 
 ## 2.1 Order domain
 
-- [ ] Define Order entity.
-- [ ] Define OrderItem entity.
-- [ ] Define OrderStateHistory entity.
-- [ ] Add Order states:
+- [x] Define Order entity.
+- [x] Define OrderItem entity.
+- [x] Define OrderStateHistory entity.
+- [x] Add Order states:
   - `pending_inventory`
   - `confirmed`
   - `rejected`
   - `inventory_unknown`
   - `cancellation_pending`
   - `cancelled`
-- [ ] Add customer name and normalized email.
-- [ ] Add total and currency.
-- [ ] Add failure code/detail.
-- [ ] Add timestamps.
-- [ ] Add concurrency token.
-- [ ] Define valid state transitions.
+- [x] Add customer name and normalized email.
+- [x] Add total and currency.
+- [x] Add failure code/detail.
+- [x] Add timestamps.
+- [x] Add concurrency token.
+- [x] Define valid state transitions.
+
+Evidence for 2.1:
+
+- Files: `src/Services/OrderService/MicroShop.OrderService/Domain/OrderStatuses.cs`, `Persistence/Entities/Order.cs`, `OrderItem.cs`, `OrderStateHistory.cs`.
+- Tests: `OrderDomainTests.CreateNormalizesCustomerEmailAndRecordsPendingState`, `AddItemsCalculatesTotalFromProductSnapshots`, `DuplicateProductIdsAreRejected`, `TransitionToConfirmedIncrementsVersionAndRecordsHistory`, `InvalidTransitionIsRejected`, and `RepeatedCancelledTransitionIsIdempotent`.
+- Commands: `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release`.
+- Notes: Order status transitions remain local domain behavior; no Product database or shared entity is referenced.
 
 ## 2.2 Order database
 
-- [ ] Create Order DbContext.
-- [ ] Create EF entity configurations.
-- [ ] Configure PostgreSQL.
-- [ ] Create initial Order migration.
-- [ ] Add state constraints.
-- [ ] Add list/query indexes.
-- [ ] Add Order database health check.
-- [ ] Verify Order database credentials cannot access Product database.
+- [x] Create Order DbContext.
+- [x] Create EF entity configurations.
+- [x] Configure PostgreSQL.
+- [x] Create initial Order migration.
+- [x] Add state constraints.
+- [x] Add list/query indexes.
+- [x] Add Order database health check.
+- [x] Verify Order database credentials cannot access Product database.
+
+Evidence for 2.2:
+
+- Files: `Infrastructure/Database/OrderDatabaseOptions.cs`, `Persistence/OrderDbContext.cs`, `Persistence/OrderDbContextFactory.cs`, `Persistence/Configurations/`, `Persistence/Migrations/20260801204113_InitialOrderSchema.cs`, `deploy/postgres-init/001-create-service-databases.sh`, and `scripts/db-migrate-order.ps1/.sh`.
+- Tests: `OrderPersistenceTests.PersistsOrderItemsAndStateHistoryWithAuthoritativeSnapshots`, `DatabaseRejectsUnknownOrderStatus`, `OrderDatabaseCredentialsCannotConnectToProductDatabase`, and `OrderServiceStartsWithOwnedDatabaseAndReadiness`.
+- Commands: `dotnet-ef migrations script --project src/Services/OrderService/MicroShop.OrderService --startup-project src/Services/OrderService/MicroShop.OrderService`; fresh PostgreSQL Testcontainers migration; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release`.
+- Notes: The migration owns only Order tables; no outbox table or cross-service foreign key is introduced. Fresh bootstrap revokes database CONNECT from PUBLIC and grants it only to the owning role.
 
 ## 2.3 Order API foundation
 
@@ -308,14 +322,21 @@ Evidence for 1.6 (partial Phase 1 gate):
 
 ## 2.4 Order tests
 
-- [ ] Unit-test Order transition rules.
-- [ ] Unit-test duplicate Product ID rejection.
-- [ ] Unit-test total calculation from snapshots.
-- [ ] Integration-test Order creation.
+- [x] Unit-test Order transition rules.
+- [x] Unit-test duplicate Product ID rejection.
+- [x] Unit-test total calculation from snapshots.
+- [~] Integration-test Order creation.
 - [ ] Integration-test Order listing.
 - [ ] Integration-test Order detail.
-- [ ] Integration-test state-history persistence.
+- [x] Integration-test state-history persistence.
 - [ ] Test Order concurrency guard.
+
+Evidence for 2.4 (partial):
+
+- Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
+- Tests: 10 tests pass, including direct persistence of an Order with Product snapshot items and state history. HTTP Order creation/list/detail and transition concurrency remain unimplemented.
+- Commands: `dotnet test MicroShop.sln --configuration Release`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
+- Notes: The `[~]` creation item is intentionally limited to persistence because the Phase 2 HTTP API/fake Product client has not started.
 
 ## 2.5 Angular Order foundation
 
@@ -333,11 +354,18 @@ Evidence for 1.6 (partial Phase 1 gate):
 
 ## 2.6 Phase 2 validation gate
 
-- [ ] Order Service starts independently.
-- [ ] Order migration applies cleanly.
-- [ ] Order tests pass.
+- [x] Order Service starts independently.
+- [x] Order migration applies cleanly.
+- [x] Order tests pass.
 - [ ] Angular checkout works with fake Product client.
-- [ ] Order Service does not access Product database.
+- [x] Order Service does not access Product database.
+
+Evidence for 2.6 (partial Phase 2 gate):
+
+- Files: `src/Services/OrderService/MicroShop.OrderService/Program.cs`, Order migration, `tests/MicroShop.OrderService.Tests/`, and `.github/workflows/ci.yml`.
+- Tests: 10 Order foundation tests pass; readiness and OpenAPI are reachable with a fresh owned PostgreSQL database.
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
+- Notes: Angular checkout and Order API are not complete; Product communication remains deferred to Phase 3.
 
 ---
 

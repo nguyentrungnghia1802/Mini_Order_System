@@ -249,6 +249,8 @@ The implemented Product API tests use PostgreSQL Testcontainers and apply the re
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
+The current Order foundation tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, and verify an Order role cannot connect to a separately owned Product database. The HTTP API and remote Product-client cases remain planned.
+
 Cases:
 
 - pending -> confirmed;

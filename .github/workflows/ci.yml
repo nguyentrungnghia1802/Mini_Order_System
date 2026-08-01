@@ -119,6 +119,13 @@ jobs:
         shell: bash
         run: dotnet tool install --tool-path "$RUNNER_TEMP/dotnet-tools" dotnet-ef --version 10.0.10
 
+      - name: Create Order migration database
+        shell: bash
+        run: >-
+          psql -h localhost -U postgres -d microshop_product_ci
+          -v ON_ERROR_STOP=1
+          -c "CREATE DATABASE microshop_order_ci"
+
       - name: Apply Product migration to empty PostgreSQL database
         shell: bash
         env:
@@ -130,6 +137,18 @@ jobs:
           "$RUNNER_TEMP/dotnet-tools/dotnet-ef" database update
           --project src/Services/ProductService/MicroShop.ProductService
           --startup-project src/Services/ProductService/MicroShop.ProductService
+
+      - name: Apply Order migration to empty PostgreSQL database
+        shell: bash
+        env:
+          ORDER_DB_HOST: localhost
+          ORDER_DB_PORT: 5432
+          ORDER_DB_NAME: microshop_order_ci
+          ORDER_DB_USER: postgres
+        run: >-
+          "$RUNNER_TEMP/dotnet-tools/dotnet-ef" database update
+          --project src/Services/OrderService/MicroShop.OrderService
+          --startup-project src/Services/OrderService/MicroShop.OrderService
 
   repository-safety:
     name: Repository safety checks

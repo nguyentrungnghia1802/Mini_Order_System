@@ -52,6 +52,8 @@ Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, see
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
+Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, and foundation tests are implemented. Order HTTP API, fake Product client, listing/detail endpoints, and Angular checkout remain incomplete.
+
 ### Phase 3: Synchronous service communication
 
 - Product internal reservation/release endpoints;

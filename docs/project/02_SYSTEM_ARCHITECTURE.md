@@ -4,7 +4,7 @@ Last reviewed: 2026-08-02.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation plus the first Product Service slice: Product owns its EF Core model/migration and service-native catalog/create endpoints. Gateway routes, Order/Notification behavior, reservations, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update slice, and the Order Service persistence foundation. Product owns its EF Core model/migration and service-native catalog endpoints; Order owns its domain model, state history, and separate EF Core migration. Gateway routes, Order HTTP behavior, reservations, Notification behavior, and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
