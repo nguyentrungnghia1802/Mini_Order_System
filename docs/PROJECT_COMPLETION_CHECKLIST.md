@@ -30,6 +30,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - `npm run lint`
 - `npm run test -- --watch=false`
 - `npm run build`
+- `npm audit --omit=dev --audit-level=high` (no production vulnerabilities)
 - `docker compose --env-file .env.example -f deploy/compose.yaml config`
 - `docker compose --env-file .env.example -f deploy/compose.yaml up -d`
 - `docker compose --env-file .env.example -f deploy/compose.yaml ps`
@@ -42,6 +43,8 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - Application Dockerfiles and full-stack Compose services.
 - Empty-database migration validation and Docker image build validation.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
+
+Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. The remaining full-audit results are three moderate development-tool advisories in the Angular CLI dependency tree; no production dependency is affected, and no safe fix is available within the pinned Angular 22.1.2 line.
 
 ## Next recommended slice
 
