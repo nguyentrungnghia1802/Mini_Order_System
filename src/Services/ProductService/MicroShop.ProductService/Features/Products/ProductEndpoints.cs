@@ -1,3 +1,4 @@
+using System.Globalization;
 using MicroShop.ProductService.Persistence;
 using MicroShop.ProductService.Persistence.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,13 @@ public static class ProductEndpoints
             .WithName("CreateProduct")
             .Produces<ProductResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
+        group.MapPatch("/{productId:guid}", UpdateProductAsync)
+            .WithName("UpdateProduct")
+            .WithDescription("Updates mutable Product fields. The If-Match header must contain the current Product version.")
+            .Produces<ProductResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }
@@ -84,9 +92,13 @@ public static class ProductEndpoints
             .AsNoTracking()
             .SingleOrDefaultAsync(candidate => candidate.Id == productId, cancellationToken);
 
-        return product is null
-            ? ProductProblems.NotFound(httpContext, productId)
-            : Results.Ok(ToResponse(product));
+        if (product is null)
+        {
+            return ProductProblems.NotFound(httpContext, productId);
+        }
+
+        SetVersionHeader(httpContext, product.Version);
+        return Results.Ok(ToResponse(product));
     }
 
     private static async Task<IResult> CreateProductAsync(
@@ -119,7 +131,124 @@ public static class ProductEndpoints
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        SetVersionHeader(httpContext, product.Version);
         return Results.Created($"/api/v1/products/{product.Id}", ToResponse(product));
+    }
+
+    private static async Task<IResult> UpdateProductAsync(
+        Guid productId,
+        UpdateProductRequest? request,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        HttpContext httpContext,
+        ProductDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        var validationErrors = ProductValidator.ValidateUpdate(request);
+        if (validationErrors.Count > 0)
+        {
+            return ProductProblems.Validation(httpContext, validationErrors);
+        }
+
+        if (!TryParseVersion(ifMatch, out var expectedVersion))
+        {
+            return ProductProblems.Validation(
+                httpContext,
+                new Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["ifMatch"] = ["If-Match must contain a quoted positive Product version."]
+                });
+        }
+
+        var product = await dbContext.Products
+            .SingleOrDefaultAsync(candidate => candidate.Id == productId, cancellationToken);
+        if (product is null)
+        {
+            return ProductProblems.NotFound(httpContext, productId);
+        }
+
+        if (product.Version != expectedVersion)
+        {
+            return ProductProblems.ConcurrencyConflict(httpContext, product.Version);
+        }
+
+        var update = request!;
+        if (update.Name is not null)
+        {
+            product.Name = update.Name.Trim();
+        }
+
+        if (update.Description is not null)
+        {
+            product.Description = string.IsNullOrWhiteSpace(update.Description)
+                ? null
+                : update.Description.Trim();
+        }
+
+        if (update.UnitPrice is not null)
+        {
+            product.UnitPrice = decimal.Round(update.UnitPrice.Value, 2, MidpointRounding.ToEven);
+        }
+
+        if (update.AvailableStock is not null)
+        {
+            product.AvailableStock = update.AvailableStock.Value;
+        }
+
+        if (update.IsActive is not null)
+        {
+            product.IsActive = update.IsActive.Value;
+        }
+
+        product.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        product.Version++;
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            var currentVersion = await dbContext.Products
+                .AsNoTracking()
+                .Where(candidate => candidate.Id == productId)
+                .Select(candidate => (long?)candidate.Version)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            return currentVersion is null
+                ? ProductProblems.NotFound(httpContext, productId)
+                : ProductProblems.ConcurrencyConflict(httpContext, currentVersion.Value);
+        }
+
+        SetVersionHeader(httpContext, product.Version);
+        return Results.Ok(ToResponse(product));
+    }
+
+    private static bool TryParseVersion(string? ifMatch, out long version)
+    {
+        version = 0;
+        var value = ifMatch?.Trim();
+        if (string.IsNullOrWhiteSpace(value)
+            || value.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (value.Length < 2 || value[0] != '"' || value[^1] != '"')
+        {
+            return false;
+        }
+
+        return long.TryParse(
+                   value[1..^1],
+                   NumberStyles.None,
+                   CultureInfo.InvariantCulture,
+                   out version)
+               && version > 0;
+    }
+
+    private static void SetVersionHeader(HttpContext httpContext, long version)
+    {
+        httpContext.Response.Headers.ETag = $"\"{version}\"";
     }
 
     private static ProductResponse ToResponse(Product product)
@@ -162,6 +291,20 @@ internal static class ProductProblems
             $"Product '{productId}' was not found.",
             "PRODUCT_NOT_FOUND",
             new Dictionary<string, string[]>(StringComparer.Ordinal));
+    }
+
+    public static IResult ConcurrencyConflict(HttpContext httpContext, long currentVersion)
+    {
+        return Problem(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            "Product update conflict",
+            "The product was modified by another request. Reload it and retry with the current version.",
+            "PRODUCT_CONCURRENCY_CONFLICT",
+            new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["version"] = [$"The current Product version is {currentVersion}."]
+            });
     }
 
     private static IResult Problem(

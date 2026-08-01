@@ -8,6 +8,19 @@ public sealed record CreateProductRequest(
     int InitialStock,
     bool IsActive = true);
 
+public sealed class UpdateProductRequest
+{
+    public string? Name { get; init; }
+
+    public string? Description { get; init; }
+
+    public decimal? UnitPrice { get; init; }
+
+    public int? AvailableStock { get; init; }
+
+    public bool? IsActive { get; init; }
+}
+
 public sealed record ProductResponse(
     Guid Id,
     string Name,
@@ -95,6 +108,55 @@ public static class ProductValidator
         if (search is not null && search.Trim().Length > MaxSearchLength)
         {
             AddError(errors, "search", $"Search cannot exceed {MaxSearchLength} characters.");
+        }
+
+        return ToReadOnly(errors);
+    }
+
+    public static IReadOnlyDictionary<string, string[]> ValidateUpdate(UpdateProductRequest? request)
+    {
+        var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        if (request is null)
+        {
+            AddError(errors, "request", "A product update request is required.");
+            return ToReadOnly(errors);
+        }
+
+        if (request.Name is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                AddError(errors, "name", "Name cannot be blank.");
+            }
+            else if (request.Name.Trim().Length > MaxNameLength)
+            {
+                AddError(errors, "name", $"Name cannot exceed {MaxNameLength} characters.");
+            }
+        }
+
+        if (request.Description?.Length > MaxDescriptionLength)
+        {
+            AddError(errors, "description", $"Description cannot exceed {MaxDescriptionLength} characters.");
+        }
+
+        if (request.UnitPrice is < 0)
+        {
+            AddError(errors, "unitPrice", "Unit price cannot be negative.");
+        }
+
+        if (request.AvailableStock is < 0)
+        {
+            AddError(errors, "availableStock", "Available stock cannot be negative.");
+        }
+
+        if (request.Name is null
+            && request.Description is null
+            && request.UnitPrice is null
+            && request.AvailableStock is null
+            && request.IsActive is null)
+        {
+            AddError(errors, "request", "At least one mutable product field is required.");
         }
 
         return ToReadOnly(errors);

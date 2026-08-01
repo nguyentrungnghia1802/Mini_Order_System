@@ -48,4 +48,23 @@ public sealed class ProductValidationTests
 
         Assert.Empty(errors);
     }
+
+    [Fact]
+    public void UpdateRequestRejectsInvalidMutableFields()
+    {
+        var request = new UpdateProductRequest
+        {
+            Name = " ",
+            Description = new string('x', ProductValidator.MaxDescriptionLength + 1),
+            UnitPrice = -1m,
+            AvailableStock = -2
+        };
+
+        var errors = ProductValidator.ValidateUpdate(request);
+
+        Assert.Contains("name", errors.Keys);
+        Assert.Contains("description", errors.Keys);
+        Assert.Contains("unitPrice", errors.Keys);
+        Assert.Contains("availableStock", errors.Keys);
+    }
 }
