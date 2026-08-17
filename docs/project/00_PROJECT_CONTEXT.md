@@ -171,7 +171,7 @@ This status table is updated from verified repository code and runtime checks. T
 | Angular frontend | Angular 22 strict workspace, same-origin Gateway clients, Product catalog/operator screens, checkout, Order list/detail/cancellation screens, Notification route/list/refresh/polling UI, and UI tests implemented |
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
 | RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers publish/consume, retry/error queue, duplicate, restart, and queued recovery tests pass; full-stack validation remains |
-| Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose implemented; full stack planned for Phase 6 |
+| Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose and Phase 6.1 runtime image builds implemented; full stack planned for Phase 6.2 |
 | Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations implemented; Angular E2E tests remain |
 | Deployment | Optional after local completion |
 

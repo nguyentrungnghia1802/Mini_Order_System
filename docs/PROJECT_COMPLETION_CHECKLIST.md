@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, and the Phase 5 contract/transport/Notification persistence/read API/Angular UI slices, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, and Phase 6.1 runtime image builds, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -17,9 +17,9 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 | Angular workspace | `[x]` | Angular CLI 22.1.2 workspace with strict TypeScript/template settings, ESLint, Vitest, and committed `package-lock.json`. |
 | Version and package pinning | `[x]` | `global.json` pins SDK 10.0.302; `.nvmrc`/`package.json` pin Node/npm; central NuGet package management and per-project `packages.lock.json` files are committed. |
 | Code quality and secrets policy | `[x]` | `.editorconfig`, `.gitignore`, `.env.example`, Angular lint target, and CI credential-pattern guard exist. |
-| Initial CI | `[x]` | `.github/workflows/ci.yml` covers .NET, Angular, Compose infrastructure, whitespace, secret checks, and Product migration application to an empty PostgreSQL database. Image validation remains deferred. |
+| Initial CI | `[x]` | `.github/workflows/ci.yml` covers .NET, Angular, Compose infrastructure, whitespace, secret checks, and Product migration application to an empty PostgreSQL database. CI image execution remains a later Phase 6/8 validation item. |
 | PostgreSQL/RabbitMQ Compose | `[x]` | `deploy/compose.yaml` validates and starts; PostgreSQL creates three logical databases/users; RabbitMQ management is exposed for local learning. |
-| Phase 0 validation gate | `[~]` | Local .NET, Angular, Compose, and Product empty-database migration checks pass. Application image build remains deferred to Phase 6. |
+| Phase 0 validation gate | `[~]` | Local .NET, Angular, Compose, and Product empty-database migration checks pass. Application image builds are now verified in Phase 6.1; full-stack Compose remains incomplete. |
 
 ## Commands verified
 
@@ -45,15 +45,21 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
 - Transactional outbox and its outage/recovery behavior.
-- Application Dockerfiles and full-stack Compose services.
-- Docker image build validation.
+- Full-stack Compose services and application-container validation.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
 Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. `npm ci` currently reports one moderate and one high development-tool advisory in the Angular toolchain; `npm audit --omit=dev --audit-level=high` reports 0 production vulnerabilities. No production dependency is affected.
 
 ## Next recommended slice
 
-Phase 6 — add application images, full-stack Compose, and the remaining end-to-end flow.
+Phase 6.2 — wire the five verified runtime images into full-stack Compose and close the one-command startup flow.
+
+## Phase 6 — Docker Compose completion (partial)
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Runtime images | `[x]` | Five multi-stage Dockerfiles under `deploy/docker/` build successfully as `microshop-*:phase6`; .NET runtime images are SDK-free, non-root, port 8080 only, and the Web image serves `/health`. |
+| Full-stack Compose | `[ ]` | Application services, migration ordering, internal network isolation, and browser-to-broker eventual flow remain to be implemented and verified. |
 
 ## Phase 1 — Product Service foundation
 

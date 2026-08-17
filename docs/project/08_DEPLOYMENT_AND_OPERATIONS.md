@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, Notification, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application now includes the Notification screen and same-origin Gateway integration; application containers, full-stack broker recovery validation, and full-stack Compose execution remain deferred.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, Notification, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application now includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images; full-stack broker recovery validation and full-stack Compose execution remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -99,6 +99,8 @@ Image rules:
 - deterministic restore from lock/central versions;
 - health checks at Compose/orchestrator level;
 - labels/version metadata optional.
+
+The current implementation maps these images to `deploy/docker/product-service.Dockerfile`, `deploy/docker/order-service.Dockerfile`, `deploy/docker/notification-service.Dockerfile`, `deploy/docker/gateway.Dockerfile`, and `deploy/docker/web.Dockerfile`. The .NET images use SDK `10.0.302` only in the build stage, ASP.NET `10.0` in the runtime stage, UID 1654, and port 8080. The Web image uses Node `24.15.0` only in the build stage and unprivileged Nginx on port 8080. Local Phase 6.1 builds and the Web `/health` smoke check pass; Compose service wiring is 6.2.
 
 ## 5. Compose topology
 

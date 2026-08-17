@@ -110,7 +110,7 @@ Evidence for 0.4:
 - Tests: workflow syntax reviewed; local constituent commands pass where configuration exists.
 - Commands: `dotnet restore`; `dotnet build`; `dotnet test`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; Compose config/up/ps.
 - Commit: `b2a924d` for the original CI foundation; Product migration validation is added in `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: The CI workflow now applies Product migrations to an empty PostgreSQL service database. Docker image validation remains deferred until application Dockerfiles exist.
+- Notes: The CI workflow now applies Product migrations to an empty PostgreSQL service database. Phase 6.1 application images now build locally; adding image builds to CI and full-stack Compose validation remain later gates.
 
 ## 0.5 Phase 0 validation gate
 
@@ -827,14 +827,21 @@ Evidence for 5.9:
 
 ## 6.1 Container images
 
-- [ ] Add multi-stage Product Service Dockerfile.
-- [ ] Add multi-stage Order Service Dockerfile.
-- [ ] Add multi-stage Notification Service Dockerfile.
-- [ ] Add multi-stage Gateway Dockerfile.
-- [ ] Add Angular build/nginx Dockerfile.
-- [ ] Use runtime-only images.
-- [ ] Use non-root runtime users where practical.
-- [ ] Add image metadata/version labels if useful.
+- [x] Add multi-stage Product Service Dockerfile.
+- [x] Add multi-stage Order Service Dockerfile.
+- [x] Add multi-stage Notification Service Dockerfile.
+- [x] Add multi-stage Gateway Dockerfile.
+- [x] Add Angular build/nginx Dockerfile.
+- [x] Use runtime-only images.
+- [x] Use non-root runtime users where practical.
+- [x] Add image metadata/version labels if useful.
+
+Evidence for 6.1:
+
+- Files: `.dockerignore`, `deploy/docker/product-service.Dockerfile`, `deploy/docker/order-service.Dockerfile`, `deploy/docker/notification-service.Dockerfile`, `deploy/docker/gateway.Dockerfile`, `deploy/docker/web.Dockerfile`, and `deploy/docker/nginx.conf`.
+- Commands: five `docker build --file deploy/docker/... --tag microshop-*:phase6 .` commands; `docker image inspect`; a temporary `microshop-web:phase6` container health check at `/health`.
+- Result: all five images build successfully from locked .NET restores or `npm ci`; .NET images expose only port 8080 and run as UID 1654, while the Nginx image runs as its unprivileged image user and serves the Angular build.
+- Notes: image build output reports the known Angular development-tool advisories; no production dependency vulnerability was introduced. Full-stack Compose wiring remains 6.2.
 
 ## 6.2 Compose stack
 

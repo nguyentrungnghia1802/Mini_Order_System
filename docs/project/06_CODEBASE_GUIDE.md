@@ -36,7 +36,13 @@ Recommended monorepo:
 |   |-- compose.yaml
 |   |-- compose.override.yaml
 |   |-- postgres-init/
-|   \-- nginx/
+|   \-- docker/
+|       |-- product-service.Dockerfile
+|       |-- order-service.Dockerfile
+|       |-- notification-service.Dockerfile
+|       |-- gateway.Dockerfile
+|       |-- web.Dockerfile
+|       \-- nginx.conf
 |-- scripts/
 |-- docs/
 |-- .github/workflows/
@@ -65,6 +71,8 @@ The exact implementation may separate test or persistence projects later. Start 
 | service test projects | Unit/integration tests owned by each service |
 | contract tests | HTTP/event compatibility |
 | end-to-end tests | Browser/stack-level flows |
+
+Phase 6.1 adds only runtime packaging under `deploy/docker/`. Dockerfiles restore and publish the owning project in a build stage, then copy only published output into a non-root runtime stage. The Web image builds the strict Angular workspace with `npm ci` and serves it through unprivileged Nginx. The Dockerfiles do not introduce shared service entities, databases, or business logic.
 
 ## 3. Sharing rules
 

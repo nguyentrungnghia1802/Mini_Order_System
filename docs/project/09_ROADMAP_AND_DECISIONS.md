@@ -27,7 +27,7 @@ Exit criteria:
 - infrastructure starts;
 - docs are linked from README.
 
-Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, PostgreSQL/RabbitMQ Compose infrastructure, and Product empty-database migration validation are present and validated locally. Application image validation remains deferred because no application Dockerfiles exist yet.
+Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, PostgreSQL/RabbitMQ Compose infrastructure, and Product empty-database migration validation are present and validated locally. Phase 0 CI still does not execute application image builds; the first five application images are now implemented and validated in Phase 6.1.
 
 ### Phase 1: Product Service
 
@@ -106,6 +106,8 @@ Phase 5 status: contract, transport, direct-publish, Notification persistence, c
 - one-command demo.
 
 Learning objective: process isolation, service discovery, and operations.
+
+Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `deploy/docker/`: four SDK-free, non-root ASP.NET runtime images and one Angular build/unprivileged-Nginx image. All five images build locally with locked dependency installation, and the Web image passes its `/health` smoke check. Full-stack Compose wiring, migration ordering, private application topology, one-command operation, and browser-to-RabbitMQ validation remain 6.2–6.5 work.
 
 ### Phase 7: Reliability hardening
 
