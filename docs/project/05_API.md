@@ -1,10 +1,10 @@
 # API
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Contract sources
 
-Runtime status: Product Service now implements and tests the catalog/detail/create/update/lifecycle subset below. Order, Notification, Gateway, internal inventory, and Angular-facing routes remain planned until their owning phases.
+Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below. Order Service now implements and tests the native create/list/detail subset against a deterministic fake Product client. Notification, Gateway, internal inventory, and Angular-facing routes remain phase-scoped.
 
 Executable contract sources:
 
@@ -198,6 +198,8 @@ The successful response returns the new version in both the body and `ETag`, for
 
 ### `POST /api/v1/orders`
 
+Implemented by Order Service in the Phase 2 native slice. The request accepts only customer fields and Product IDs/quantities; the server obtains product name, price, and stock facts from `IProductCatalogClient`.
+
 Request:
 
 ```json
@@ -253,7 +255,11 @@ Possible errors:
 
 The order record may exist in a rejected/unknown state even when the public response is an error. Error details may include `orderId` so the learner can inspect it.
 
+In the current Phase 2 implementation, the deterministic fake catalog exercises `PRODUCT_NOT_FOUND`, `PRODUCT_INACTIVE`, and `INSUFFICIENT_STOCK`, returning a persisted rejected Order. It does not mutate Product stock. The `503` dependency outcomes and authoritative internal reservation response are Phase 3 behavior.
+
 ### `GET /api/v1/orders`
+
+Implemented by Order Service in the Phase 2 native slice. Results are ordered by newest creation time and then ID, and may be filtered by status or normalized customer email.
 
 | Query | Type | Default |
 | --- | --- | --- |
@@ -265,6 +271,8 @@ The order record may exist in a rejected/unknown state even when the public resp
 Response: `200 OrderPage`.
 
 ### `GET /api/v1/orders/{orderId}`
+
+Implemented by Order Service in the Phase 2 native slice.
 
 Response:
 

@@ -1,6 +1,6 @@
 # Roadmap and Decisions
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Roadmap principles
 
@@ -52,7 +52,7 @@ Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, see
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
-Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, and foundation tests are implemented. Order HTTP API, fake Product client, listing/detail endpoints, and Angular checkout remain incomplete.
+Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, deterministic fake Product client, and 18 PostgreSQL-backed tests are implemented. Real Product reservation communication, Angular checkout, and the remaining concurrency test remain incomplete.
 
 ### Phase 3: Synchronous service communication
 

@@ -1,10 +1,10 @@
 # Codebase Guide
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Repository layout
 
-The repository follows this layout, with the Product Service folders now populated for the first Phase 1 vertical slice. Empty future feature folders remain intentionally omitted until their owning phase needs them.
+The repository follows this layout, with Product and the Phase 2 Order native API folders populated. Empty future feature folders remain intentionally omitted until their owning phase needs them.
 
 Recommended monorepo:
 
@@ -129,6 +129,8 @@ MicroShop.ProductService/
 A feature file may contain endpoint mapping, DTO, validator, and handler for a small vertical slice. Split only when a file becomes difficult to understand/test.
 
 Current Product implementation files are `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Persistence/ProductDbContext.cs`, `Persistence/Entities/Product.cs`, `Persistence/Configurations/ProductConfiguration.cs`, `Persistence/Migrations/`, `Persistence/ProductSeed.cs`, and `Infrastructure/Database/ProductDatabaseOptions.cs`. These files remain inside Product Service; no EF entity or business logic is placed in a shared project.
+
+Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/IProductCatalogClient.cs`, `Infrastructure/Products/FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 boundary only; the typed Product HTTP client and reservation implementation are added in Phase 3. Order does not reference Product EF entities or its database.
 
 ## 5. Dependency rules
 

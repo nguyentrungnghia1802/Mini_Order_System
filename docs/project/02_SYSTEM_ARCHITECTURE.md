@@ -1,10 +1,10 @@
 # System Architecture
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update slice, and the Order Service persistence foundation. Product owns its EF Core model/migration and service-native catalog endpoints; Order owns its domain model, state history, and separate EF Core migration. Gateway routes, Order HTTP behavior, reservations, Notification behavior, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update slice, and the Order Service persistence plus fake HTTP API slice. Product owns its EF Core model/migration and service-native catalog endpoints; Order owns its domain model, state history, separate EF Core migration, and native create/list/detail API. Gateway routes, real reservations, Notification behavior, and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
@@ -38,6 +38,8 @@ The primary learning boundary is:
 
 - **HTTP request/response** when Order Service needs inventory confirmation before responding;
 - **broker event** when Order Service only announces that confirmation already happened.
+
+The current Phase 2 Order API uses `IProductCatalogClient` with a deterministic in-process fake catalog. It persists `pending_inventory` before resolving requested items, stores the returned authoritative snapshots, and transitions to `confirmed` or `rejected`. This fake client only validates active state and available stock; it does not decrement Product stock. The real cross-service reservation boundary starts in Phase 3.
 
 ## 2. Runtime boundaries
 
@@ -201,6 +203,8 @@ Notification Service:
 If processing throws, MassTransit retry/error behavior applies. Poison messages move to an error queue rather than blocking the main queue indefinitely.
 
 ## 6. Request flow: successful order
+
+The following is the target Phase 3+ flow after the Product reservation API and Gateway are implemented. The current Phase 2 native flow stops at the fake Product client described above.
 
 ```text
 1. Angular POST /api/orders

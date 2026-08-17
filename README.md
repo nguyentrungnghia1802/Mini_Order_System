@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order now has its own domain model, state-history persistence, PostgreSQL migration, readiness, and PostgreSQL Testcontainers foundation tests. Order API, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migration, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order now has its own domain model, state-history persistence, PostgreSQL migration, readiness, a native HTTP API backed by a deterministic fake Product client, and PostgreSQL Testcontainers tests. Real Product reservation, Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 
@@ -79,7 +79,7 @@ $env:ORDER_DB_PASSWORD = "<local-password>"
 ./scripts/db-migrate-order.ps1
 ```
 
-Order currently exposes persistence health/readiness and `/openapi/v1.json`; its HTTP order API is the next Phase 2 slice.
+Order exposes persistence health/readiness, `/openapi/v1.json`, and the Phase 2 native API under `/api/v1/orders` for create, paginated list, and detail. The fake client returns authoritative snapshots for the deterministic catalog and does not mutate Product stock; real reservation communication is the Phase 3 slice.
 
 For native application debugging, use the non-default override to publish PostgreSQL and RabbitMQ application ports:
 

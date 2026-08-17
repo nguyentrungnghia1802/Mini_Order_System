@@ -1,10 +1,10 @@
 # Verified Completion Snapshot
 
-Last verified: 2026-08-02.
+Last verified: 2026-08-17.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence foundation, implemented in `abc9a7a`, `0654c31`, and `7bf1692` (`feat(order): add persistence foundation`).
+Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence and fake HTTP API foundation, implemented in `abc9a7a`, `0654c31`, `7bf1692`, and `d694a5b` (`feat(order): add fake order API foundation`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -44,7 +44,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Angular Product screens.
-- Order HTTP API, fake Product client, and Angular checkout.
+- Angular Product screens and Angular checkout/order pages.
 - Notification business behavior, migration, and integration tests.
 - Public API contracts and YARP business routes.
 - MassTransit producer/consumer and transactional outbox.
@@ -56,7 +56,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 2 — Order HTTP API foundation with a fake Product client; Angular Product UI remains blocked until the intended Gateway route exists.
+Phase 3 — Product inventory reservation and typed Order-to-Product HTTP communication; Angular screens remain sequenced behind the intended Gateway route.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -78,6 +78,6 @@ Phase 2 — Order HTTP API foundation with a fake Product client; Angular Produc
 | Order domain | `[x]` | `Order`, `OrderItem`, `OrderStateHistory`, six documented states, normalized email, snapshot totals, failure fields, timestamps, version token, and transition guard are implemented and unit-tested. |
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
-| Order HTTP API | `[ ]` | Request validation, fake Product client, create/list/detail endpoints remain the next Phase 2 slice. |
-| Order foundation tests | `[x]` | 10 Order tests pass: domain transitions/duplicates/totals, migration persistence, state history, status constraint, readiness/OpenAPI, and database credential isolation. |
-| Phase 2 validation gate | `[~]` | Order service/migration/foundation tests pass; HTTP API, Angular checkout, and Product communication remain incomplete. |
+| Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, fake Product snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented in `d694a5b`. |
+| Order foundation tests | `[x]` | 18 Order tests pass: native API creation/rejection/list/detail plus domain transitions/duplicates/totals, migration persistence, state history, status constraint, readiness/OpenAPI, and database credential isolation. |
+| Phase 2 validation gate | `[~]` | Order service/migration/native API tests pass; Angular checkout and real Product communication remain incomplete. |

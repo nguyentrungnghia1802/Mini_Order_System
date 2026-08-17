@@ -1,6 +1,6 @@
 # Development and Testing
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Prerequisites
 
@@ -193,7 +193,7 @@ Then integration/E2E:
 docker compose -f deploy/compose.test.yaml up --build --abort-on-container-exit
 ```
 
-The current infrastructure and Product migration smoke checks are:
+The current infrastructure, Product migration, and native Order API smoke checks are:
 
 ```bash
 docker compose --env-file .env.example -f deploy/compose.yaml config
@@ -206,6 +206,8 @@ dotnet ef database update \
 ```
 
 Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
+
+The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, fake Product business failures, pagination, and stable Problem Details. It is intentionally a native service test; Gateway routing and real Product reservation tests are Phase 3/4 work.
 
 The exact scripts become source of truth when repository exists.
 
@@ -249,7 +251,7 @@ The implemented Product API tests use PostgreSQL Testcontainers and apply the re
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order foundation tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, and verify an Order role cannot connect to a separately owned Product database. The HTTP API and remote Product-client cases remain planned.
+The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the native fake-client API. The 18-test suite covers creation, rejection, listing, detail, pagination, and stable error codes. Remote Product-client cases remain planned.
 
 Cases:
 

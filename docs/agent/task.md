@@ -1,6 +1,6 @@
 # Mini Order System — Project Completion Tasks
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 This file is the canonical execution checklist for completing **Mini Order System / MicroShop**.
 
@@ -306,40 +306,48 @@ Evidence for 2.2:
 
 ## 2.3 Order API foundation
 
-- [ ] Implement request DTO containing customer and Product IDs/quantities only.
-- [ ] Reject browser-supplied price/name/total/status.
-- [ ] Reject duplicate Product IDs.
-- [ ] Enforce item-count limits.
-- [ ] Enforce quantity limits.
-- [ ] Implement `POST /api/v1/orders`.
-- [ ] Initially use a fake Product client behind an interface.
-- [ ] Persist `pending_inventory`.
-- [ ] Persist known fake Product snapshots.
-- [ ] Transition to `confirmed`.
-- [ ] Implement `GET /api/v1/orders`.
-- [ ] Implement `GET /api/v1/orders/{id}`.
-- [ ] Add pagination.
-- [ ] Add Problem Details and stable error codes.
-- [ ] Add OpenAPI.
+- [x] Implement request DTO containing customer and Product IDs/quantities only.
+- [x] Reject browser-supplied price/name/total/status.
+- [x] Reject duplicate Product IDs.
+- [x] Enforce item-count limits.
+- [x] Enforce quantity limits.
+- [x] Implement `POST /api/v1/orders`.
+- [x] Initially use a fake Product client behind an interface.
+- [x] Persist `pending_inventory`.
+- [x] Persist known fake Product snapshots.
+- [x] Transition to `confirmed`.
+- [x] Implement `GET /api/v1/orders`.
+- [x] Implement `GET /api/v1/orders/{id}`.
+- [x] Add pagination.
+- [x] Add Problem Details and stable error codes.
+- [x] Add OpenAPI.
+
+Evidence for 2.3:
+
+- Files: `Features/Orders/OrderContracts.cs`, `OrderApplicationService.cs`, `OrderEndpoints.cs`, `Infrastructure/Products/IProductCatalogClient.cs`, `FakeProductCatalogClient.cs`, `FakeProductCatalog.cs`, and `Program.cs`.
+- Tests: `OrderApiTests` covers authoritative request validation, duplicate/quantity rejection, pending-to-confirmed persistence, rejected fake Product outcomes, pagination, detail, and stable validation codes.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `git diff --check`.
+- Commit: `d694a5b` (`feat(order): add fake order API foundation`).
+- Notes: The deterministic fake catalog returns authoritative name/price/stock snapshots and never mutates Product data. Real atomic reservation, timeout ambiguity, and cancellation are Phase 3 work.
 
 ## 2.4 Order tests
 
 - [x] Unit-test Order transition rules.
 - [x] Unit-test duplicate Product ID rejection.
 - [x] Unit-test total calculation from snapshots.
-- [~] Integration-test Order creation.
-- [ ] Integration-test Order listing.
-- [ ] Integration-test Order detail.
+- [x] Integration-test Order creation.
+- [x] Integration-test Order listing.
+- [x] Integration-test Order detail.
 - [x] Integration-test state-history persistence.
 - [ ] Test Order concurrency guard.
 
 Evidence for 2.4 (partial):
 
-- Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
-- Tests: 10 tests pass, including direct persistence of an Order with Product snapshot items and state history. HTTP Order creation/list/detail and transition concurrency remain unimplemented.
-- Commands: `dotnet test MicroShop.sln --configuration Release`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
-- Commit: `7bf1692` (`feat(order): add persistence foundation`).
-- Notes: The `[~]` creation item is intentionally limited to persistence because the Phase 2 HTTP API/fake Product client has not started.
+- Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderApiTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
+- Tests: 18 Order tests pass, including HTTP creation, fake Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, and database credential isolation. Order transition concurrency remains unimplemented.
+- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
+- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
+- Notes: The HTTP creation, listing, and detail items are complete. The remaining concurrency guard test is intentionally deferred to the real Product reservation/orchestration slice.
 
 ## 2.5 Angular Order foundation
 
@@ -366,10 +374,10 @@ Evidence for 2.4 (partial):
 Evidence for 2.6 (partial Phase 2 gate):
 
 - Files: `src/Services/OrderService/MicroShop.OrderService/Program.cs`, Order migration, `tests/MicroShop.OrderService.Tests/`, and `.github/workflows/ci.yml`.
-- Tests: 10 Order foundation tests pass; readiness and OpenAPI are reachable with a fresh owned PostgreSQL database.
+- Tests: 18 Order tests pass; readiness, native Order API, and OpenAPI are reachable with a fresh owned PostgreSQL database.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
-- Commit: `7bf1692` (`feat(order): add persistence foundation`).
-- Notes: Angular checkout and Order API are not complete; Product communication remains deferred to Phase 3.
+- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
+- Notes: Angular checkout remains incomplete. The fake client is intentionally local to Phase 2; real Product HTTP communication and inventory reservation are Phase 3 work.
 
 ---
 

@@ -1,6 +1,6 @@
 # Domain and Flows
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Domain model
 
@@ -116,6 +116,10 @@ Forbidden examples:
 - `cancelled -> confirmed`;
 - `inventory_unknown -> confirmed` without reconciliation;
 - cancellation before confirmation.
+
+### Phase 2 native API behavior
+
+The implemented Phase 2 native Order API follows the first part of this state machine without a remote reservation. It creates and commits `pending_inventory`, resolves items through the deterministic `FakeProductCatalogClient`, stores authoritative fake name/price snapshots, and then commits `confirmed`; known fake Product failures commit `rejected` with a stable code. The fake client does not change Product stock. Product HTTP reservation, ambiguous outcomes, and cancellation are implemented in later phases.
 
 ## 7. Notification state
 

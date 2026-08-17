@@ -1,10 +1,10 @@
 # Deployment and Operations
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order persistence slices. The full `web`, Gateway, and Notification Compose services remain deferred; Order API behavior is also still phase-scoped.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Order includes a Phase 2 native create/list/detail API backed by a deterministic fake Product client. The full `web`, Gateway, Notification Compose services, and real reservation communication remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
