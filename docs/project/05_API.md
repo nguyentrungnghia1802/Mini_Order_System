@@ -433,6 +433,8 @@ A repeated release returns `200` with `idempotentReplay: true`.
 
 Used only for learning/reconciliation. It must not become a general cross-service query API.
 
+Implemented response fields include the reservation ID, order ID, `reserved`/`released` status, currency, authoritative total, immutable item snapshots, creation time, and release time when present. An unknown order ID returns `404 RESERVATION_NOT_FOUND`. The endpoint remains Product-owned and is intentionally excluded from the Gateway.
+
 ## 10. Integration event contract
 
 Contract name:

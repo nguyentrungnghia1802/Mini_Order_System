@@ -253,7 +253,7 @@ Flow:
 3. API returns `503 INVENTORY_OUTCOME_UNKNOWN`;
 4. log contains order ID and trace ID;
 5. developer inspects Product reservation by order ID;
-6. optional reconciliation endpoint/process determines final state.
+6. the internal reconciliation endpoint can inspect Product reservation state by order ID; a later operator process may use that result to determine final state.
 
 Because reserve is idempotent by order ID, a controlled reconciliation may repeat the same request and receive the existing result.
 

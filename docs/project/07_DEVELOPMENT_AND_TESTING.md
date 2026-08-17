@@ -249,7 +249,7 @@ Required cases:
 
 The implemented Product API tests use PostgreSQL Testcontainers and apply the real Product migrations. They cover update rounding/versioning, activation filtering, competing PATCH requests, atomic reservation failures, authoritative snapshots, replay/mismatch, idempotent release, and concurrent last-stock requests. EF Core InMemory is not used.
 
-The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite contains 38 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client and cancellation release flow.
+The current Product suite contains 21 passing tests and the reservation cases are implemented in `InventoryApiTests`, including controlled reservation lookup by order ID. The Order suite contains 39 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client and cancellation release flow.
 
 ### Order integration tests
 
@@ -290,7 +290,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 64 passing tests: 1 Architecture, 6 Gateway, 38 Order, and 19 Product.
+The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 67 passing tests: 1 Architecture, 6 Gateway, 39 Order, and 21 Product.
 
 ### Contract tests
 

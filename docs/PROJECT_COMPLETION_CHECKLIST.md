@@ -65,7 +65,7 @@ Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/con
 | Product seed | `[x]` | Explicit PowerShell/shell seed scripts insert four deterministic products idempotently. |
 | Product catalog/create API | `[x]` | Service-native list/detail/create endpoints, pagination, active filtering, Problem Details, stable codes, and development OpenAPI are tested. |
 | Product update/activation | `[x]` | PATCH supports mutable fields, direct stock adjustment, activation/deactivation, ETag/If-Match, and stable stale-update conflicts. |
-| Product PostgreSQL integration tests | `[x]` | 19 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle, reservation/release/replay, atomic failures, and competing stock requests; no EF InMemory provider. |
+| Product PostgreSQL integration tests | `[x]` | 21 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle, reservation/release/replay/lookup, atomic failures, and competing stock requests; no EF InMemory provider. |
 | Product inventory reservation boundary (Phase 3) | `[x]` | Product-owned reservation entities, migrations, internal reserve/release endpoints, authoritative snapshots, idempotency, atomic stock updates, and stable Product-ID row locks are implemented in `d2a885a`. |
 | Product Angular screens | `[x]` | Catalog route shows active Products with price/stock and loading/empty/error states; management route uses Reactive Forms for create/update/activate/deactivate and server validation mapping. |
 | Phase 1 validation gate | `[x]` | Product service, migration, OpenAPI, update/concurrency, Gateway route, and 11 Angular Product UI tests pass. |
@@ -88,7 +88,7 @@ Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/con
 | --- | --- | --- |
 | Reservation domain and schema | `[x]` | Product owns `inventory_reservations` and `inventory_reservation_items`, request hashes, reserved/released states, snapshots, constraints, and migrations `20260817164457_AddInventoryReservations` plus `20260817164536_AddInventoryReservationConstraints`. |
 | Internal reservation API | `[x]` | Native Product endpoints reserve/replay/mismatch and release idempotently; Gateway rejects `/internal/*` without forwarding. |
-| Reservation concurrency and failure tests | `[x]` | 19 Product tests pass, including no partial decrement and concurrent last-stock behavior on PostgreSQL Testcontainers. |
+| Reservation concurrency and failure tests | `[x]` | 21 Product tests pass, including no partial decrement, reservation lookup, and concurrent last-stock behavior on PostgreSQL Testcontainers. |
 | Order typed client/orchestration | `[x]` | `ProductInventoryClient` uses the internal URL, explicit <=5s timeout, traceparent/cancellation propagation, stable Product error mapping, no blind retry, stable `orderId`, authoritative snapshot verification, and `inventory_unknown` persistence in `e3c2b7c`. |
 | Order cancellation/release | `[x]` | `POST /api/v1/orders/{id}/cancel` guards state, calls idempotent Product release, confirms only after known release, and persists `cancellation_pending` for ambiguous outcomes in `27d57ef`. |
 | Phase 3 validation gate | `[x]` | Product reservation, Order-to-Product HTTP/orchestration, cancellation, and Gateway internal-route safety tests pass. |
@@ -107,4 +107,4 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 64 .NET tests pass (1 Architecture, 6 Gateway, 38 Order, 19 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 67 .NET tests pass (1 Architecture, 6 Gateway, 39 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
