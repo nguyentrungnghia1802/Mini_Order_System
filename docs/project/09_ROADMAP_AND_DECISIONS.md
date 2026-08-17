@@ -94,7 +94,7 @@ Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CO
 
 Learning objective: asynchronous event-driven communication and at-least-once delivery.
 
-Phase 5 status: contract foundation complete. `MicroShop.Contracts.Orders.OrderConfirmedV1` is implemented with message/order IDs, customer destination, totals, item snapshots, UTC occurrence time, schema version, and serialization tests. RabbitMQ wiring, producer/consumer, Notification persistence/API/UI, and recovery tests remain incomplete.
+Phase 5 status: contract and transport foundations complete. `MicroShop.Contracts.Orders.OrderConfirmedV1` is implemented with message/order IDs, customer destination, totals, item snapshots, UTC occurrence time, schema version, and serialization tests. MassTransit RabbitMQ options, bounded retry, durable Notification endpoint, environment credentials, and readiness registration are configured. Producer publish, consumer persistence/API/UI, and recovery tests remain incomplete.
 
 ### Phase 6: Docker Compose completion
 
