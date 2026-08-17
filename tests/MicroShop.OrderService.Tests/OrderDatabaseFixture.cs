@@ -1,6 +1,9 @@
+using System.Globalization;
+using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,11 +20,25 @@ public sealed class OrderDatabaseFixture : IAsyncLifetime, IDisposable
         .WithPassword(Guid.NewGuid().ToString("N"))
         .Build();
     private OrderApiFactory? _factory;
+    private readonly List<OrderApiFactory> _additionalFactories = [];
 
     public HttpClient Client => _factory?.CreateClient()
         ?? throw new InvalidOperationException("The Order API fixture has not started.");
 
     public string ConnectionString => _postgres.GetConnectionString();
+
+    public HttpClient CreateClientUsingProduct(
+        HttpClient productClient,
+        int timeoutMilliseconds = 5_000)
+    {
+        var factory = new OrderApiFactory(
+            ConnectionString,
+            useFakeProductClient: false,
+            productClient,
+            timeoutMilliseconds);
+        _additionalFactories.Add(factory);
+        return factory.CreateClient();
+    }
 
     public async Task InitializeAsync()
     {
@@ -92,6 +109,12 @@ public sealed class OrderDatabaseFixture : IAsyncLifetime, IDisposable
 
     public async Task DisposeAsync()
     {
+        foreach (var factory in _additionalFactories)
+        {
+            await factory.DisposeAsync();
+        }
+
+        _additionalFactories.Clear();
         if (_factory is not null)
         {
             await _factory.DisposeAsync();
@@ -103,6 +126,12 @@ public sealed class OrderDatabaseFixture : IAsyncLifetime, IDisposable
 
     public void Dispose()
     {
+        foreach (var factory in _additionalFactories)
+        {
+            factory.Dispose();
+        }
+
+        _additionalFactories.Clear();
         _factory?.Dispose();
         _factory = null;
     }
@@ -123,7 +152,11 @@ public sealed class OrderDatabaseFixture : IAsyncLifetime, IDisposable
         return $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
     }
 
-    private sealed class OrderApiFactory(string connectionString) : WebApplicationFactory<Program>
+    private sealed class OrderApiFactory(
+        string connectionString,
+        bool useFakeProductClient = true,
+        HttpClient? productClient = null,
+        int timeoutMilliseconds = 5_000) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -132,9 +165,55 @@ public sealed class OrderDatabaseFixture : IAsyncLifetime, IDisposable
             {
                 configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["OrderDatabase:ConnectionString"] = connectionString
+                    ["OrderDatabase:ConnectionString"] = connectionString,
+                    ["ProductService:UseFakeClient"] = useFakeProductClient.ToString(),
+                    ["ProductService:BaseUrl"] = "http://product.test",
+                    ["ProductService:TimeoutMilliseconds"] = timeoutMilliseconds.ToString(CultureInfo.InvariantCulture)
                 });
             });
+
+            if (productClient is not null)
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddHttpClient<ProductInventoryClient>()
+                        .ConfigurePrimaryHttpMessageHandler(
+                            () => new ProductForwardingHandler(productClient));
+                });
+            }
+        }
+    }
+
+    private sealed class ProductForwardingHandler(HttpClient productClient) : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            using var forwarded = new HttpRequestMessage(
+                request.Method,
+                new Uri(productClient.BaseAddress!, request.RequestUri!.PathAndQuery));
+            foreach (var header in request.Headers)
+            {
+                forwarded.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            if (request.Content is not null)
+            {
+                var content = new ByteArrayContent(
+                    await request.Content.ReadAsByteArrayAsync(cancellationToken));
+                foreach (var header in request.Content.Headers)
+                {
+                    content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+
+                forwarded.Content = content;
+            }
+
+            return await productClient.SendAsync(
+                forwarded,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
         }
     }
 }

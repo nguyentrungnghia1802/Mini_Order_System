@@ -25,7 +25,43 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<IProductCatalogClient, FakeProductCatalogClient>();
+builder.Services.AddOptions<ProductServiceOptions>()
+    .Configure(options =>
+    {
+        options.BaseUrl = configuration["PRODUCT_SERVICE_URL"]
+            ?? configuration["ProductService:BaseUrl"]
+            ?? options.BaseUrl;
+        options.TimeoutMilliseconds = ParseInt(
+            configuration["PRODUCT_SERVICE_TIMEOUT_MS"]
+                ?? configuration["ProductService:TimeoutMilliseconds"],
+            options.TimeoutMilliseconds);
+        options.UseFakeClient = ParseBool(
+            configuration["ORDER_PRODUCT_USE_FAKE"]
+                ?? configuration["ProductService:UseFakeClient"],
+            options.UseFakeClient);
+    })
+    .Validate(options =>
+    {
+        return Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }, "Product Service URL must be an absolute HTTP or HTTPS URL.")
+    .Validate(options => options.TimeoutMilliseconds is >= 1 and <= 5_000,
+        "Product Service timeout must be between 1 and 5000 milliseconds.")
+    .ValidateOnStart();
+builder.Services.AddHttpClient<ProductInventoryClient>((serviceProvider, httpClient) =>
+{
+    var productOptions = serviceProvider.GetRequiredService<IOptions<ProductServiceOptions>>().Value;
+    httpClient.BaseAddress = new Uri(productOptions.BaseUrl.TrimEnd('/') + "/");
+    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+});
+builder.Services.AddSingleton<FakeProductCatalogClient>();
+builder.Services.AddScoped<IProductInventoryClient>(serviceProvider =>
+{
+    var productOptions = serviceProvider.GetRequiredService<IOptions<ProductServiceOptions>>().Value;
+    return productOptions.UseFakeClient
+        ? serviceProvider.GetRequiredService<FakeProductCatalogClient>()
+        : serviceProvider.GetRequiredService<ProductInventoryClient>();
+});
 builder.Services.AddScoped<OrderApplicationService>();
 builder.Services.AddOptions<OrderDatabaseOptions>()
     .Configure(options =>
@@ -59,7 +95,7 @@ app.MapGet("/", () => Results.Ok(new
 {
     service = "order-service",
     status = "running",
-    message = "Order API is available under /api/v1/orders using the Phase 2 fake Product catalog."
+    message = "Order API is available under /api/v1/orders using the configured Product inventory client."
 }));
 OrderEndpoints.MapOrderEndpoints(app);
 
@@ -81,6 +117,16 @@ app.Run();
 static int ParsePort(string? value, int fallback)
 {
     return int.TryParse(value, out var port) ? port : fallback;
+}
+
+static int ParseInt(string? value, int fallback)
+{
+    return int.TryParse(value, out var parsed) ? parsed : fallback;
+}
+
+static bool ParseBool(string? value, bool fallback)
+{
+    return bool.TryParse(value, out var parsed) ? parsed : fallback;
 }
 
 public partial class Program

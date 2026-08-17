@@ -8,11 +8,12 @@ namespace MicroShop.OrderService.Features.Orders;
 
 public sealed class OrderApplicationService(
     OrderDbContext dbContext,
-    IProductCatalogClient productCatalogClient)
+    IProductInventoryClient productInventoryClient)
 {
     public async Task<CreateOrderOutcome> CreateAsync(
         CreateOrderRequest request,
         string traceId,
+        string? traceParent,
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
@@ -26,29 +27,60 @@ public sealed class OrderApplicationService(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var requestedItems = request.Items!
-            .Select(item => new FakeProductRequestItem(item.ProductId, item.Quantity))
+            .Select(item => new ProductReservationRequestItem(item.ProductId, item.Quantity))
             .ToArray();
-        var resolution = await productCatalogClient.ResolveAsync(requestedItems, cancellationToken);
+        var reservation = await productInventoryClient.ReserveAsync(
+            new ProductReservationRequest(order.Id, requestedItems, traceParent),
+            cancellationToken);
 
-        if (!resolution.IsSuccess)
+        if (!reservation.IsSuccess)
         {
-            var failure = MapFailure(resolution);
-            return await RejectAsync(
+            return await HandleReservationFailureAsync(
                 order,
-                failure.Code,
-                failure.Detail,
+                reservation,
                 traceId,
-                cancellationToken,
-                failure.StatusCode,
-                failure.Title);
+                cancellationToken);
         }
 
-        var total = decimal.Round(
-            resolution.Items.Sum(item => item.Subtotal),
-            2,
-            MidpointRounding.ToEven);
+        if (!TryValidateReservation(
+                reservation,
+                requestedItems,
+                out var total,
+                out var invalidReservationDetail))
+        {
+            return await MarkUnknownAsync(
+                order,
+                "INVENTORY_OUTCOME_UNKNOWN",
+                invalidReservationDetail,
+                traceId,
+                StatusCodes.Status503ServiceUnavailable,
+                "Inventory outcome unknown",
+                cancellationToken);
+        }
+
         if (total > OrderValidator.MaxOrderTotal)
         {
+            var release = await productInventoryClient.ReleaseAsync(
+                new ProductReleaseRequest(order.Id, traceParent),
+                cancellationToken);
+            if (!release.IsSuccess)
+            {
+                var releaseCode = release.Failure is ProductReservationFailure.DependencyUnavailable
+                    ? "PRODUCT_SERVICE_UNAVAILABLE"
+                    : "INVENTORY_OUTCOME_UNKNOWN";
+                var releaseDetail = release.Failure is ProductReservationFailure.DependencyUnavailable
+                    ? "The Product Service is unavailable while releasing the reservation."
+                    : "The inventory release outcome could not be determined safely.";
+                return await MarkUnknownAsync(
+                    order,
+                    releaseCode,
+                    releaseDetail,
+                    traceId,
+                    StatusCodes.Status503ServiceUnavailable,
+                    "Inventory outcome unknown",
+                    cancellationToken);
+            }
+
             return await RejectAsync(
                 order,
                 "ORDER_TOTAL_LIMIT_EXCEEDED",
@@ -59,7 +91,7 @@ public sealed class OrderApplicationService(
                 "Validation error");
         }
 
-        foreach (var snapshot in resolution.Items)
+        foreach (var snapshot in reservation.Items)
         {
             order.AddItem(OrderItem.Create(
                 snapshot.ProductId,
@@ -70,12 +102,103 @@ public sealed class OrderApplicationService(
 
         order.TransitionTo(
             OrderStatuses.Confirmed,
-            "FAKE_PRODUCT_CONFIRMED",
+            "PRODUCT_RESERVATION_CONFIRMED",
             traceId,
             DateTimeOffset.UtcNow);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return CreateOrderOutcome.Success(order);
+    }
+
+    private async Task<CreateOrderOutcome> HandleReservationFailureAsync(
+        Order order,
+        ProductReservationResult reservation,
+        string traceId,
+        CancellationToken cancellationToken)
+    {
+        return reservation.Failure switch
+        {
+            ProductReservationFailure.ProductNotFound => await RejectAsync(
+                order,
+                "PRODUCT_NOT_FOUND",
+                $"Product '{reservation.ProductId}' was not found.",
+                traceId,
+                cancellationToken,
+                StatusCodes.Status404NotFound,
+                "Product not found"),
+            ProductReservationFailure.ProductInactive => await RejectAsync(
+                order,
+                "PRODUCT_INACTIVE",
+                $"Product '{reservation.ProductId}' is inactive.",
+                traceId,
+                cancellationToken,
+                StatusCodes.Status409Conflict,
+                "Product inactive"),
+            ProductReservationFailure.InsufficientStock => await RejectAsync(
+                order,
+                "INSUFFICIENT_STOCK",
+                $"Product '{reservation.ProductId}' has only {reservation.AvailableStock} unit(s) available.",
+                traceId,
+                cancellationToken,
+                StatusCodes.Status409Conflict,
+                "Insufficient stock"),
+            ProductReservationFailure.RequestMismatch => await RejectAsync(
+                order,
+                "RESERVATION_REQUEST_MISMATCH",
+                reservation.Detail ?? "The reservation request does not match the existing order reservation.",
+                traceId,
+                cancellationToken,
+                StatusCodes.Status409Conflict,
+                "Reservation request mismatch"),
+            ProductReservationFailure.ReservationStateConflict => await RejectAsync(
+                order,
+                "RESERVATION_STATE_CONFLICT",
+                reservation.Detail ?? "The Product reservation is in an incompatible state.",
+                traceId,
+                cancellationToken,
+                StatusCodes.Status409Conflict,
+                "Reservation state conflict"),
+            ProductReservationFailure.DependencyUnavailable => await MarkUnknownAsync(
+                order,
+                "PRODUCT_SERVICE_UNAVAILABLE",
+                reservation.Detail ?? "The Product Service is unavailable.",
+                traceId,
+                StatusCodes.Status503ServiceUnavailable,
+                "Product Service unavailable",
+                cancellationToken),
+            ProductReservationFailure.OutcomeUnknown => await MarkUnknownAsync(
+                order,
+                "INVENTORY_OUTCOME_UNKNOWN",
+                reservation.Detail ?? "The inventory reservation outcome could not be determined safely.",
+                traceId,
+                StatusCodes.Status503ServiceUnavailable,
+                "Inventory outcome unknown",
+                cancellationToken),
+            _ => await MarkUnknownAsync(
+                order,
+                "INVENTORY_OUTCOME_UNKNOWN",
+                reservation.Detail ?? "The Product Service returned an invalid reservation result.",
+                traceId,
+                StatusCodes.Status503ServiceUnavailable,
+                "Inventory outcome unknown",
+                cancellationToken)
+        };
+    }
+
+    private async Task<CreateOrderOutcome> MarkUnknownAsync(
+        Order order,
+        string code,
+        string detail,
+        string traceId,
+        int statusCode,
+        string title,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        order.RecordFailure(code, detail, now);
+        order.TransitionTo(OrderStatuses.InventoryUnknown, code, traceId, now);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return CreateOrderOutcome.Failure(order, statusCode, title, detail, code);
     }
 
     private async Task<CreateOrderOutcome> RejectAsync(
@@ -94,28 +217,62 @@ public sealed class OrderApplicationService(
         return CreateOrderOutcome.Failure(order, statusCode, title, detail, code);
     }
 
-    private static (int StatusCode, string Title, string Code, string Detail) MapFailure(
-        FakeProductResolution resolution)
+    private static bool TryValidateReservation(
+        ProductReservationResult reservation,
+        ProductReservationRequestItem[] requestedItems,
+        out decimal total,
+        out string detail)
     {
-        return resolution.Failure switch
+        total = 0;
+        detail = "The Product Service returned an invalid reservation result.";
+        if (reservation.ReservationId is null
+            || reservation.ReservationId == Guid.Empty)
         {
-            FakeProductFailure.NotFound => (
-                StatusCodes.Status404NotFound,
-                "Product not found",
-                "PRODUCT_NOT_FOUND",
-                $"Product '{resolution.ProductId}' was not found in the fake Product catalog."),
-            FakeProductFailure.Inactive => (
-                StatusCodes.Status409Conflict,
-                "Product inactive",
-                "PRODUCT_INACTIVE",
-                $"Product '{resolution.ProductId}' is inactive in the fake Product catalog."),
-            FakeProductFailure.InsufficientStock => (
-                StatusCodes.Status409Conflict,
-                "Insufficient stock",
-                "INSUFFICIENT_STOCK",
-                $"Product '{resolution.ProductId}' has only {resolution.AvailableStock} unit(s) available."),
-            _ => throw new InvalidOperationException("The fake Product resolution is successful.")
-        };
+            detail = "The Product Service did not return a reservation ID.";
+            return false;
+        }
+
+        if (reservation.Items.Count != requestedItems.Length)
+        {
+            detail = "The Product Service returned a different number of reservation items.";
+            return false;
+        }
+
+        var requestedByProductId = requestedItems.ToDictionary(item => item.ProductId);
+        var returnedProductIds = new HashSet<Guid>();
+        foreach (var snapshot in reservation.Items)
+        {
+            if (!returnedProductIds.Add(snapshot.ProductId)
+                || !requestedByProductId.TryGetValue(snapshot.ProductId, out var requestedItem)
+                || requestedItem.Quantity != snapshot.Quantity
+                || string.IsNullOrWhiteSpace(snapshot.ProductName)
+                || snapshot.UnitPrice < 0)
+            {
+                detail = "The Product Service returned snapshots that do not match the order request.";
+                return false;
+            }
+
+            var expectedSubtotal = decimal.Round(
+                snapshot.UnitPrice * snapshot.Quantity,
+                2,
+                MidpointRounding.ToEven);
+            if (snapshot.Subtotal != expectedSubtotal)
+            {
+                detail = "The Product Service returned an invalid item subtotal.";
+                return false;
+            }
+
+            total += snapshot.Subtotal;
+        }
+
+        total = decimal.Round(total, 2, MidpointRounding.ToEven);
+        if (total != reservation.TotalAmount)
+        {
+            detail = "The Product Service returned a total that does not match its item snapshots.";
+            return false;
+        }
+
+        return true;
     }
 }
 

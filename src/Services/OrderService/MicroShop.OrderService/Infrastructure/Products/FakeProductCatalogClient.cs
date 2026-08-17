@@ -1,6 +1,6 @@
 namespace MicroShop.OrderService.Infrastructure.Products;
 
-public sealed class FakeProductCatalogClient : IProductCatalogClient
+public sealed class FakeProductCatalogClient : IProductCatalogClient, IProductInventoryClient
 {
     public Task<FakeProductResolution> ResolveAsync(
         IReadOnlyList<FakeProductRequestItem> requestedItems,
@@ -51,5 +51,65 @@ public sealed class FakeProductCatalogClient : IProductCatalogClient
             null,
             null,
             snapshots));
+    }
+
+    public async Task<ProductReservationResult> ReserveAsync(
+        ProductReservationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var resolution = await ResolveAsync(
+            request.Items
+                .Select(item => new FakeProductRequestItem(item.ProductId, item.Quantity))
+                .ToArray(),
+            cancellationToken);
+        if (!resolution.IsSuccess)
+        {
+            return new ProductReservationResult(
+                resolution.Failure switch
+                {
+                    FakeProductFailure.NotFound => ProductReservationFailure.ProductNotFound,
+                    FakeProductFailure.Inactive => ProductReservationFailure.ProductInactive,
+                    FakeProductFailure.InsufficientStock => ProductReservationFailure.InsufficientStock,
+                    _ => ProductReservationFailure.InvalidResponse
+                },
+                null,
+                [],
+                0,
+                resolution.ProductId,
+                resolution.AvailableStock,
+                "The deterministic fake Product catalog rejected the reservation.",
+                false,
+                false);
+        }
+
+        return new ProductReservationResult(
+            ProductReservationFailure.None,
+            request.OrderId,
+            resolution.Items
+                .Select(item => new ProductReservationSnapshot(
+                    item.ProductId,
+                    item.ProductName,
+                    item.UnitPrice,
+                    item.Quantity,
+                    item.Subtotal))
+                .ToArray(),
+            resolution.Items.Sum(item => item.Subtotal),
+            null,
+            null,
+            null,
+            true,
+            false);
+    }
+
+    public Task<ProductReleaseResult> ReleaseAsync(
+        ProductReleaseRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new ProductReleaseResult(
+            ProductReservationFailure.None,
+            request.OrderId,
+            null,
+            false));
     }
 }

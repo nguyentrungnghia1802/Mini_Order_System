@@ -17,7 +17,8 @@ public static class OrderEndpoints
             .Produces<OrderResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         group.MapGet("", ListOrdersAsync)
             .WithName("ListOrders")
             .Produces<OrderPageResponse>(StatusCodes.Status200OK)
@@ -45,6 +46,7 @@ public static class OrderEndpoints
         var outcome = await applicationService.CreateAsync(
             request!,
             httpContext.TraceIdentifier,
+            httpContext.Request.Headers.TraceParent.ToString(),
             cancellationToken);
         if (!outcome.IsSuccess)
         {
