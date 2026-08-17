@@ -1,11 +1,12 @@
 .git
 .github
-.angular
+.vscode
+.env
+.env.*
 **/bin
 **/obj
-**/node_modules
-**/dist
-**/TestResults
-.env
+web/microshop-ui/node_modules
+web/microshop-ui/.angular
+TestResults
 *.user
 *.suo
