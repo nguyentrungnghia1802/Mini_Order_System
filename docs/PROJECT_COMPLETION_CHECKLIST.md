@@ -44,7 +44,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Notification UI, Playwright end-to-end coverage, and the legacy fake-client compatibility gate for Angular checkout.
-- Notification business behavior, migration, and integration tests.
+- Notification read API/UI, broker-level publish/consume and recovery tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -54,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/consumer, and the remaining legacy fake-client compatibility decision.
+Phase 5 — implement the Notification read API/Gateway route/UI and broker-level recovery validation.
 
 ## Phase 1 — Product Service foundation
 
@@ -78,7 +78,7 @@ Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/con
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 39 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, and the optimistic-concurrency guard. |
+| Order foundation tests | `[x]` | 40 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and direct event publication. |
 | Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; 16 Angular tests pass. |
 | Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
@@ -107,7 +107,7 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 71 .NET tests pass (1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 74 .NET tests pass (1 Architecture, 2 Contracts, 4 Notification, 6 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 
@@ -116,5 +116,6 @@ Gateway evidence:
 | Shared `OrderConfirmedV1` contract | `[x]` | Versioned passive records and two JSON compatibility tests are implemented in `MicroShop.Contracts`. |
 | RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, and bus readiness health are configured. |
 | Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
-| Notification persistence/consumer/API/UI | `[ ]` | Deferred to the remaining Phase 5 vertical slice. |
-| Phase 5 validation gate | `[ ]` | Publishing, consuming, duplicate suppression, read API/UI, restart behavior, and eventual Notification flow remain unimplemented. |
+| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 4 PostgreSQL-backed Notification tests pass. |
+| Notification read API/UI | `[ ]` | Read API, Gateway Notification route, Angular screen, and bounded polling remain. |
+| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer and duplicate suppression are verified; broker-level restart/recovery, read API/UI, and full eventual-flow validation remain. |

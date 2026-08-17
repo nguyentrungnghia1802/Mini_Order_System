@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Repository layout
 
-The repository follows this layout, with Product and the Order native API plus synchronous Product-reservation folders populated. Empty future feature folders remain intentionally omitted until their owning phase needs them.
+The repository follows this layout, with Product, the Order native API plus synchronous Product-reservation folders, and the Notification persistence/consumer slice populated. Future read/API and end-to-end folders remain intentionally omitted until their owning phase needs them.
 
 Recommended monorepo:
 
@@ -133,6 +133,8 @@ Current Product implementation files are `Features/Products/ProductContracts.cs`
 Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/ProductInventoryContracts.cs`, `ProductInventoryClient.cs`, `ProductServiceOptions.cs`, `FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 compatibility boundary only; the default path is the typed Product HTTP client. Order does not reference Product EF entities or its database.
 
 Current Gateway implementation files are `BootstrapConfiguration.cs`, `Program.cs`, and `appsettings.json`. Gateway owns only YARP route/cluster configuration, public cross-cutting policy, health, trace-header forwarding, destination validation, and stable proxy errors; it does not contain Product or Order business logic. `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs` verifies the public route boundary and internal-route rejection.
+
+Current Notification implementation files are `Features/Messaging/OrderConfirmedConsumer.cs`, `Infrastructure/Database/NotificationDatabaseOptions.cs`, `Persistence/NotificationDbContext.cs`, `Persistence/Entities/ConsumedMessage.cs`, `Persistence/Entities/Notification.cs`, `Persistence/Configurations/`, and `Persistence/Migrations/`. Notification configures its own PostgreSQL connection, health check, EF migration, durable MassTransit consumer, and duplicate-safe transaction. It does not reference Product or Order implementation projects or databases. The Notification read API and UI remain the next slice.
 
 Current Angular API boundary files are `web/microshop-ui/src/app/core/api/api.paths.ts`, `api.models.ts`, `product-api.service.ts`, `order-api.service.ts`, `gateway-error.ts`, and `gateway-error.interceptor.ts`. They use same-origin `/api/products` and `/api/orders` paths only. Product UI components live under `web/microshop-ui/src/app/features/products/`; checkout and Order list/detail components live under `web/microshop-ui/src/app/features/orders/`. Notification UI remains the next frontend slice.
 

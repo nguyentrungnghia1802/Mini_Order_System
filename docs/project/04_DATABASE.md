@@ -1,10 +1,10 @@
 # Database
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Source of truth
 
-The Compose bootstrap creates the three logical databases and service users. Product and Order now own their first business schema migrations; Notification tables remain deferred to the owning phase.
+The Compose bootstrap creates the three logical databases and service users. Product, Order, and Notification each own their business schema migrations; no service migration creates tables in another service database.
 
 Each service owns its Entity Framework Core migration history.
 
@@ -19,6 +19,8 @@ src/Services/NotificationService/Persistence/Migrations/
 Implemented Product migrations: `20260801194513_InitialProductSchema`, `20260817164457_AddInventoryReservations`, and `20260817164536_AddInventoryReservationConstraints` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. They create only Product-owned `products`, `inventory_reservations`, and `inventory_reservation_items` tables with their indexes, local foreign keys, and check constraints.
 
 Implemented Order migration: `20260801204113_InitialOrderSchema` under `src/Services/OrderService/MicroShop.OrderService/Persistence/Migrations/`. It creates only Order Service `orders`, `order_items`, and `order_state_history` with status/amount/quantity constraints and documented query indexes.
+
+Implemented Notification migration: `20260817185808_InitialNotificationSchema` under `src/Services/NotificationService/MicroShop.NotificationService/Persistence/Migrations/`. It creates only Notification Service `consumed_messages` and `notifications`, including the local one-to-one relationship, unique message references, query indexes, and validation checks.
 
 Rules:
 
@@ -363,6 +365,8 @@ One Notification DB transaction:
 - insert/check consumed message;
 - insert notification when new;
 - commit.
+
+The implementation uses one EF Core `SaveChangesAsync` graph for the `ConsumedMessage` and generated `Notification`. A duplicate message ID returns without another side effect; a concurrent unique-key race is treated as an idempotent duplicate while other database failures remain retryable.
 
 ## 9. Concurrency strategy
 

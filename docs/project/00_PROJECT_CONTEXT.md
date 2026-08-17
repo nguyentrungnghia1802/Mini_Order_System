@@ -167,12 +167,12 @@ This status table is updated from verified repository code and runtime checks. T
 | Gateway | ASP.NET Core/YARP host, public Product/Order routes, internal-route rejection, and Gateway tests implemented; Notification route remains planned |
 | Product Service | Partial Phase 1/3: Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
 | Order Service | Partial Phase 2/3: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API, typed Product reservation client, authoritative snapshot orchestration, explicit timeout/availability mapping, `inventory_unknown`, and PostgreSQL integration tests implemented |
-| Notification Service | Independent bootstrap host and health endpoints implemented; consumer/API planned for Phase 5 |
+| Notification Service | Independent host, owned PostgreSQL schema/migration, durable `OrderConfirmedV1` consumer, duplicate suppression, and database-backed readiness implemented; read API/UI and broker recovery exercises remain |
 | Angular frontend | Angular 22 strict workspace, same-origin Gateway clients, Product catalog/operator screens, checkout, Order list/detail/cancellation screens, and UI tests implemented; Notification UI remains planned |
-| PostgreSQL databases | Compose creates three logical databases/users; Product reservation and Order migrations are implemented, Notification migration remains planned |
-| RabbitMQ integration | Compose management broker implemented; MassTransit integration planned for Phase 5 |
+| PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
+| RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; full-stack recovery validation remains |
 | Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose implemented; full stack planned for Phase 6 |
-| Tests | Bootstrap tests plus Product reservation and Order unit/API/PostgreSQL Testcontainers foundations implemented; remaining cross-service contract, messaging, and E2E tests planned |
+| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL Testcontainers foundations implemented; broker-level recovery and E2E tests remain |
 | Deployment | Optional after local completion |
 
 Documentation must continue to distinguish the verified Product/Gateway/Angular Product and Order UI slices plus synchronous reservation path from planned Notification, messaging, and end-to-end behavior.

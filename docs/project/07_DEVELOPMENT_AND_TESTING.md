@@ -255,7 +255,7 @@ The current Product suite contains 21 passing tests and the reservation cases ar
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 39-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, `cancellation_pending` persistence, and optimistic-concurrency rejection. The Angular suite has 16 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, and duplicate-submit suppression.
+The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 40-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, `cancellation_pending` persistence, optimistic-concurrency rejection, and direct `OrderConfirmedV1` publication behavior. The Angular suite has 16 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, and duplicate-submit suppression.
 
 Cases:
 
@@ -269,15 +269,14 @@ Cases:
 
 ### Notification integration tests
 
-Use RabbitMQ and PostgreSQL Testcontainers or Compose.
+The current `MicroShop.NotificationService.Tests` project starts a PostgreSQL 17 Testcontainer, applies `20260817185808_InitialNotificationSchema`, and verifies the host readiness check plus the consumer's persistence boundary:
 
-Cases:
+- consume event creates one Notification and one `ConsumedMessage`;
+- duplicate event creates one Notification;
+- unsupported schema fails before side effects;
+- customer email, order ID, amount, currency, body, and trace ID survive the readback.
 
-- consume event creates notification;
-- duplicate event creates one notification;
-- transient failure retries;
-- poison message enters error queue;
-- consumer restart processes queued message.
+RabbitMQ publish/consume, retry/error-queue, service restart, and queued-message recovery tests remain Compose-level work. The consumer uses only the Notification connection and EF model.
 
 ### Gateway integration tests
 
@@ -290,7 +289,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 71 passing tests: 1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification bootstrap suite verifies liveness/readiness with the test-only in-memory bus; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
+The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 74 passing tests: 1 Architecture, 2 Contracts, 4 Notification, 6 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness with the test-only in-memory bus and PostgreSQL-backed consumer persistence; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
 
 ### Contract tests
 

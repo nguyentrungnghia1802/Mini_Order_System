@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, and MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured; Notification consumption/persistence remains the next Phase 5 slice and the direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*` and `/api/orders/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management plus checkout, Order list/detail, and cancellation screens with loading/empty/error states. The fake Product client is test-only compatibility coverage. Notification behavior, full-stack application containers, and end-to-end coverage remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured, and Notification now owns its PostgreSQL schema/migration plus an idempotent consumer that persists simulated notifications. The direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*` and `/api/orders/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management plus checkout, Order list/detail, and cancellation screens with loading/empty/error states. The fake Product client is test-only compatibility coverage. Notification read API/UI, full-stack application containers, and end-to-end coverage remain later roadmap work.
 
 ## Target architecture
 
@@ -49,7 +49,7 @@ docker compose --env-file .env -f deploy/compose.yaml up -d
 docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product and Order migrations are applied explicitly by their service commands, while Notification migration and application containers remain deferred. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product, Order, and Notification migrations are applied explicitly by their service commands, while application containers remain deferred to Phase 6. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
 
 For the current Product slice, start infrastructure, set the untracked Product database password, apply the migration, and optionally seed demo products:
 
@@ -81,7 +81,21 @@ $env:ORDER_DB_PASSWORD = "<local-password>"
 
 Order exposes persistence health/readiness, `/openapi/v1.json`, and the native API under `/api/v1/orders` for create, paginated list, and detail. Runtime uses `ProductService:BaseUrl`/`PRODUCT_SERVICE_URL` and an explicit timeout no greater than five seconds to call Product's internal reservation API. Product returns authoritative snapshots and Order persists `confirmed`, known `rejected`, or infrastructure `inventory_unknown` outcomes. Set `ProductService:UseFakeClient=true` only for the legacy deterministic Phase 2 test fixture; the default runtime path is the typed HTTP client.
 
-For the current Gateway slice, run the native Gateway after Product and Order and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL` and `ORDER_SERVICE_URL`; Angular is not yet migrated and should not call service-native ports as a browser fallback.
+Notification has a separate database owner and applies its own migration explicitly. Set the untracked Notification database password before running its migration command:
+
+```powershell
+$env:NOTIFICATION_DB_HOST = "localhost"
+$env:NOTIFICATION_DB_PORT = "5432"
+$env:NOTIFICATION_DB_NAME = "microshop_notification"
+$env:NOTIFICATION_DB_USER = "notification_app"
+$env:NOTIFICATION_DB_PASSWORD = "<local-password>"
+
+dotnet run --project src/Services/NotificationService/MicroShop.NotificationService -- --migrate
+```
+
+The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, and suppresses duplicate message IDs. The read API and Angular Notification screen are the remaining Phase 5 feature work.
+
+For the current Gateway slice, run the native Gateway after Product and Order and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL` and `ORDER_SERVICE_URL`; Angular uses the same-origin Gateway paths and should not call service-native ports as a browser fallback.
 
 ```powershell
 dotnet run --project src/Gateway/MicroShop.Gateway
