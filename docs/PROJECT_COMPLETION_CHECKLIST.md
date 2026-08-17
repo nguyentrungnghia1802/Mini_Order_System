@@ -43,7 +43,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Angular checkout/order pages.
+- Notification UI, Playwright end-to-end coverage, and the legacy fake-client compatibility gate for Angular checkout.
 - Notification business behavior, migration, and integration tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
@@ -54,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 2.5 — build Angular checkout, order list/detail, and cancellation UI on the completed same-origin Gateway API clients.
+Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/consumer, and the remaining legacy fake-client compatibility decision.
 
 ## Phase 1 — Product Service foundation
 
@@ -79,7 +79,8 @@ Phase 2.5 — build Angular checkout, order list/detail, and cancellation UI on 
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
 | Order foundation tests | `[x]` | 38 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, and database credential isolation. |
-| Phase 2 validation gate | `[~]` | Order service, migration, native API, and real Product-client paths pass; Angular checkout remains incomplete. |
+| Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; 16 Angular tests pass. |
+| Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
 ## Phase 3 — Product reservation and Order communication (partial)
 
@@ -99,7 +100,7 @@ Phase 2.5 — build Angular checkout, order list/detail, and cancellation UI on 
 | Gateway foundation | `[x]` | YARP Product/Order clusters, public path transforms, Notification placeholder cluster, CORS, request limit, health, structured logging defaults, and trace forwarding are configured in `src/Gateway/MicroShop.Gateway/`. |
 | Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
 | Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
-| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; the expanded Angular suite has 11 passing tests. |
+| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; Gateway client coverage is included in the current 16-test Angular suite. |
 | Phase 4 validation gate | `[~]` | Gateway and frontend routing foundations pass; feature screens and application-container port isolation remain in later slices. |
 
 Gateway evidence:

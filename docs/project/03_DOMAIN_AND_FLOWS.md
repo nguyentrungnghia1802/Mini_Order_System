@@ -212,9 +212,9 @@ Activation and deactivation use the same PATCH contract by changing `isActive`. 
 14. Direct-publish milestone publishes the event after commit; outbox milestone writes event in the same transaction.
 15. Order Service returns `201 Created`.
 16. Angular navigates to order detail.
-17. Notification Service eventually consumes the event.
-18. Notification Service persists one notification and consumed-message ID.
-19. Angular notification page displays it after refresh.
+17. Notification Service eventually consumes the event (planned Phase 5 behavior).
+18. Notification Service persists one notification and consumed-message ID (planned Phase 5 behavior).
+19. Angular notification page displays it after refresh (planned Phase 5 behavior).
 
 ## 11. Insufficient stock flow
 

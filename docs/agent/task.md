@@ -260,7 +260,7 @@ Evidence for 1.6:
 - Tests: Product PostgreSQL Testcontainers suite, native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`), and 11 Angular Product UI tests pass.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `docker compose ... config/up/ps`.
 - Commits: `abc9a7a` (`feat(product): add catalog persistence slice`), `0654c31` (`feat(product): add optimistic catalog updates`), and `185a8cc` (`feat(ui): add product catalog management`).
-- Notes: Product native/API/database and Angular catalog/operator UI are complete through the Gateway route. Order/checkout UI belongs to Phase 2; the Product reservation boundary is implemented separately in Phase 3.
+- Notes: Product native/API/database and Angular catalog/operator UI are complete through the Gateway route. The Product reservation boundary is implemented separately in Phase 3; Angular checkout/Order UI is tracked and implemented under Phase 2.5.
 
 ---
 
@@ -359,33 +359,41 @@ Evidence for 2.4 (partial):
 
 ## 2.5 Angular Order foundation
 
-- [ ] Create checkout route.
-- [ ] Add customer form.
-- [ ] Add Product quantity selection.
-- [ ] Submit through Order API.
-- [ ] Display confirmed result.
-- [ ] Display rejected result.
-- [ ] Display dependency error.
-- [ ] Create Order list route.
-- [ ] Create Order detail route.
-- [ ] Handle loading/empty/error states.
-- [ ] Prevent duplicate UI submission while active.
+- [x] Create checkout route.
+- [x] Add customer form.
+- [x] Add Product quantity selection.
+- [x] Submit through Order API.
+- [x] Display confirmed result.
+- [x] Display rejected result.
+- [x] Display dependency error.
+- [x] Create Order list route.
+- [x] Create Order detail route.
+- [x] Handle loading/empty/error states.
+- [x] Prevent duplicate UI submission while active.
+
+Evidence for 2.5:
+
+- Files: `web/microshop-ui/src/app/app.routes.ts`, `features/orders/order-checkout.component.*`, `order-list.component.*`, `order-detail.component.*`, and `core/api/order-api.service.ts`.
+- Tests: 16 Angular tests pass, including checkout request/quantity mapping, confirmed/rejected/dependency outcomes, duplicate-submit suppression, Order list rendering, detail loading, and cancellation.
+- Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `git diff --check`.
+- Commit: `20bf3d8` (`feat(ui): add order checkout and history`).
+- Notes: All browser calls use same-origin `/api/orders` and `/api/products` Gateway paths. Known Product failures are shown as rejected; unavailable/ambiguous outcomes are shown as unknown dependency outcomes rather than false confirmation.
 
 ## 2.6 Phase 2 validation gate
 
 - [x] Order Service starts independently.
 - [x] Order migration applies cleanly.
 - [x] Order tests pass.
-- [ ] Angular checkout works with fake Product client.
+- [~] Angular checkout works through the real Product HTTP path.
 - [x] Order Service does not access Product database.
 
 Evidence for 2.6 (partial Phase 2 gate):
 
 - Files: `src/Services/OrderService/MicroShop.OrderService/Program.cs`, Order migration, `tests/MicroShop.OrderService.Tests/`, and `.github/workflows/ci.yml`.
-- Tests: 18 Order tests pass; readiness, native Order API, and OpenAPI are reachable with a fresh owned PostgreSQL database.
-- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
-- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: Angular checkout remains incomplete. The fake client is opt-in test compatibility; the default Order runtime uses real Product HTTP communication and persists explicit unknown outcomes.
+- Tests: 38 Order tests and 16 Angular tests pass; readiness, native Order API, OpenAPI, Gateway checkout contract, and Product HTTP orchestration are covered.
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`.
+- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`), and `20bf3d8` (`feat(ui): add order checkout and history`).
+- Notes: The legacy fake Product client remains opt-in compatibility coverage; the default runtime and Angular flow use real Product HTTP communication and explicit unknown outcomes. The exact fake-client Angular gate is retained as partial rather than being claimed by a frontend HTTP stub.
 
 ---
 
@@ -587,7 +595,7 @@ Evidence for 4.1:
 
 - [x] Ensure `/internal/*` is never routed.
 - [x] Ensure browser receives no internal hostname.
-- [ ] Ensure service-native ports are not required by Angular.
+- [x] Ensure service-native ports are not required by Angular.
 - [x] Handle downstream unavailable as gateway error.
 - [x] Validate configured clusters at startup.
 
@@ -597,7 +605,7 @@ Evidence for 4.2 (partial):
 - Tests: Internal Product paths return `404 GATEWAY_ROUTE_NOT_FOUND` without forwarding; unavailable destinations return `502 DOWNSTREAM_UNAVAILABLE`; invalid Product/Order destination schemes fail startup configuration.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore` (64 tests pass).
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
-- Notes: Angular still has no feature API clients, so removing all service-native browser requirements remains in 4.3.
+- Notes: Angular feature clients and screens use same-origin Gateway paths; service-native ports are not referenced by browser code. Full application-container port isolation remains a Phase 6 Compose validation item.
 
 ## 4.3 Angular migration to Gateway
 
@@ -610,9 +618,9 @@ Evidence for 4.2 (partial):
 Evidence for 4.3:
 
 - Files: `web/microshop-ui/src/app/core/api/api.paths.ts`, `product-api.service.ts`, `order-api.service.ts`, `gateway-error.ts`, `gateway-error.interceptor.ts`, `app.config.ts`, and `gateway-api.spec.ts`.
-- Tests: Product listing, Order create/cancel, same-origin paths, and `502 DOWNSTREAM_UNAVAILABLE` mapping are covered by 3 new Angular tests; the full Angular suite has 5 passing tests.
+- Tests: Product listing, Order create/cancel, same-origin paths, and `502 DOWNSTREAM_UNAVAILABLE` mapping are covered by the Gateway API tests; the full Angular suite has 16 passing tests.
 - Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `rg -n -i "product-service|order-service|notification-service|internal/v1|api/v1" web/microshop-ui/src` (no service/internal API matches).
-- Commit: `f750963` (`feat(ui): route api clients through gateway`).
+- Commits: `f750963` (`feat(ui): route api clients through gateway`), `185a8cc` (`feat(ui): add product catalog management`), and `20bf3d8` (`feat(ui): add order checkout and history`).
 - Notes: The workspace had no previous feature API clients or service URL configuration, so the migration creates the canonical relative client boundary for the upcoming Product and Order screens. External Angular documentation links in the generated placeholder are unrelated to service routing.
 
 ## 4.4 Gateway tests
@@ -634,18 +642,18 @@ Evidence for 4.4:
 
 ## 4.5 Phase 4 validation gate
 
-- [ ] Angular works using only Gateway.
+- [x] Angular works using only Gateway.
 - [x] Product and Order services are hidden from normal browser use.
 - [x] Internal inventory API cannot be reached through Gateway.
 - [x] Gateway tests pass.
 
-Evidence for 4.5 (partial):
+Evidence for 4.5:
 
 - Files: Gateway route configuration and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
-- Tests: 6 Gateway tests and the full 64-test .NET solution pass.
+- Tests: 6 Gateway tests, 16 Angular tests, and the full 64-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
-- Notes: Public routes, internal-route exclusion, and Angular same-origin API clients are complete. Feature screens and application-container port isolation remain before this gate can be complete.
+- Notes: Public routes, internal-route exclusion, Angular same-origin API clients, and Product/Order feature screens are complete. Application-container port isolation remains a Phase 6 Compose validation item.
 
 ---
 

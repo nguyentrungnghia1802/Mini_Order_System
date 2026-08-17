@@ -40,7 +40,7 @@ Phase 0 implementation status: the solution/projects, strict Angular workspace, 
 
 Learning objective: one independent .NET service with its own database.
 
-Phase 1 status: complete. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create/update service-native API, activate/deactivate lifecycle, optimistic concurrency Problem Details, OpenAPI, readiness, unit tests, PostgreSQL Testcontainers tests, and Angular catalog/operator screens through the Gateway are implemented. Product reservation/release is implemented in Phase 3 and exposed only through the native internal boundary. Checkout/order UI remains in Phase 2.
+Phase 1 status: complete. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create/update service-native API, activate/deactivate lifecycle, optimistic concurrency Problem Details, OpenAPI, readiness, unit tests, PostgreSQL Testcontainers tests, and Angular catalog/operator screens through the Gateway are implemented. Product reservation/release is implemented in Phase 3 and exposed only through the native internal boundary.
 
 ### Phase 2: Order Service without remote inventory
 
@@ -52,7 +52,7 @@ Phase 1 status: complete. Product domain/persistence, `InitialProductSchema`, se
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
-Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, and 33 PostgreSQL-backed tests are implemented. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration.
+Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, typed Product orchestration, cancellation, and Angular checkout/list/detail screens are implemented. The 38-test Order suite and 16-test Angular suite pass. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration. The exact legacy Angular-with-fake-client wording remains a documented partial gate.
 
 ### Phase 3: Synchronous service communication
 
@@ -80,7 +80,7 @@ Phase 3 status: complete. Product-owned reservation entities, migrations, atomic
 
 Learning objective: one entry point and hidden service topology.
 
-Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular Product/Order clients now use same-origin Gateway paths and map connectivity failures in `f750963`; feature screens and application-container port isolation remain incomplete.
+Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular Product/Order clients and feature screens now use same-origin Gateway paths and map connectivity failures in `f750963`, `185a8cc`, and `20bf3d8`; application-container port isolation and the final Gateway-only validation gate remain incomplete.
 
 ### Phase 5: RabbitMQ and Notification Service
 
