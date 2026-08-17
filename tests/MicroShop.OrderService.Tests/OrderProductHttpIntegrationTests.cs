@@ -132,6 +132,150 @@ public sealed class OrderProductHttpIntegrationTests(OrderDatabaseFixture fixtur
         Assert.Equal("INVENTORY_OUTCOME_UNKNOWN", order.FailureCode);
     }
 
+    [Fact]
+    public async Task CancellationReleasesReservationOnceAndRepeatedCancelIsIdempotent()
+    {
+        var productId = Guid.NewGuid();
+        var releaseCalls = 0;
+        using var productClient = CreateProductClient(async (request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/release", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref releaseCalls);
+                var pathSegments = request.RequestUri.AbsolutePath.Split(
+                    '/',
+                    StringSplitOptions.RemoveEmptyEntries);
+                var orderId = Guid.Parse(pathSegments[^2]);
+                return JsonResponse(HttpStatusCode.OK, new
+                {
+                    orderId,
+                    reservationId = Guid.NewGuid(),
+                    status = "released",
+                    idempotentReplay = false,
+                    releasedAtUtc = DateTimeOffset.UtcNow
+                });
+            }
+
+            var payload = await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken);
+            var orderIdFromReservation = payload.GetProperty("orderId").GetGuid();
+            return JsonResponse(HttpStatusCode.Created, new
+            {
+                reservationId = Guid.NewGuid(),
+                orderId = orderIdFromReservation,
+                status = "reserved",
+                currency = "VND",
+                totalAmount = 100m,
+                items = new[]
+                {
+                    new
+                    {
+                        productId,
+                        productName = "Cancellable Product",
+                        unitPrice = 100m,
+                        quantity = 1,
+                        subtotal = 100m
+                    }
+                },
+                idempotentReplay = false
+            });
+        });
+        using var orderClient = fixture.CreateClientUsingProduct(productClient);
+        using var createResponse = await orderClient.PostAsJsonAsync(
+            "/api/v1/orders",
+            new
+            {
+                customerName = "Cancellation User",
+                customerEmail = $"{Guid.NewGuid():N}@example.com",
+                items = new[] { new { productId, quantity = 1 } }
+            });
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var orderId = created.GetProperty("id").GetGuid();
+
+        using var cancelResponse = await orderClient.PostAsync(
+            $"/api/v1/orders/{orderId}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.OK, cancelResponse.StatusCode);
+        var cancelled = await cancelResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(OrderStatuses.Cancelled, cancelled.GetProperty("status").GetString());
+
+        using var repeatedResponse = await orderClient.PostAsync(
+            $"/api/v1/orders/{orderId}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.OK, repeatedResponse.StatusCode);
+        Assert.Equal(1, releaseCalls);
+    }
+
+    [Fact]
+    public async Task AmbiguousCancellationLeavesPendingAndDoesNotBlindlyReleaseAgain()
+    {
+        var productId = Guid.NewGuid();
+        var releaseCalls = 0;
+        using var productClient = CreateProductClient(async (request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/release", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref releaseCalls);
+                throw new HttpRequestException("Product release connection lost");
+            }
+
+            var payload = await request.Content!.ReadFromJsonAsync<JsonElement>(cancellationToken);
+            var orderId = payload.GetProperty("orderId").GetGuid();
+            return JsonResponse(HttpStatusCode.Created, new
+            {
+                reservationId = Guid.NewGuid(),
+                orderId,
+                status = "reserved",
+                currency = "VND",
+                totalAmount = 100m,
+                items = new[]
+                {
+                    new
+                    {
+                        productId,
+                        productName = "Pending Cancellation Product",
+                        unitPrice = 100m,
+                        quantity = 1,
+                        subtotal = 100m
+                    }
+                },
+                idempotentReplay = false
+            });
+        });
+        using var orderClient = fixture.CreateClientUsingProduct(productClient);
+        using var createResponse = await orderClient.PostAsJsonAsync(
+            "/api/v1/orders",
+            new
+            {
+                customerName = "Pending Cancellation User",
+                customerEmail = $"{Guid.NewGuid():N}@example.com",
+                items = new[] { new { productId, quantity = 1 } }
+            });
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var orderId = created.GetProperty("id").GetGuid();
+
+        using var cancelResponse = await orderClient.PostAsync(
+            $"/api/v1/orders/{orderId}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, cancelResponse.StatusCode);
+        var problem = await cancelResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("PRODUCT_SERVICE_UNAVAILABLE", problem.GetProperty("code").GetString());
+
+        using var repeatedResponse = await orderClient.PostAsync(
+            $"/api/v1/orders/{orderId}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.Conflict, repeatedResponse.StatusCode);
+        Assert.Equal("ORDER_STATE_CONFLICT", (await repeatedResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        Assert.Equal(1, releaseCalls);
+
+        await using var dbContext = fixture.CreateDbContext();
+        var order = await dbContext.Orders
+            .Include(candidate => candidate.StateHistory)
+            .SingleAsync(candidate => candidate.Id == orderId);
+        Assert.Equal(OrderStatuses.CancellationPending, order.Status);
+        Assert.Equal("PRODUCT_SERVICE_UNAVAILABLE", order.FailureCode);
+        Assert.Equal(3, order.StateHistory.Count);
+    }
+
     private static HttpClient CreateProductClient(
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> callback)
     {
@@ -157,9 +301,6 @@ public sealed class OrderProductHttpIntegrationTests(OrderDatabaseFixture fixtur
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            Assert.Equal(
-                "/internal/v1/inventory/reservations",
-                request.RequestUri!.AbsolutePath);
             return callback(request, cancellationToken);
         }
     }

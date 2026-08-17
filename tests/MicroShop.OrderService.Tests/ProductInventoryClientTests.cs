@@ -168,6 +168,24 @@ public sealed class ProductInventoryClientTests
     }
 
     [Fact]
+    public async Task ReleaseMapsTimeoutToAmbiguousOutcome()
+    {
+        var handler = new StubHandler(async (_, cancellationToken) =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var client = CreateClient(handler, timeoutMilliseconds: 20);
+
+        var result = await client.ReleaseAsync(
+            new ProductReleaseRequest(Guid.NewGuid(), null),
+            CancellationToken.None);
+
+        Assert.Equal(ProductReservationFailure.OutcomeUnknown, result.Failure);
+        Assert.True(result.IsAmbiguous);
+    }
+
+    [Fact]
     public async Task ReservePreservesCallerCancellation()
     {
         var handler = new StubHandler(async (_, cancellationToken) =>

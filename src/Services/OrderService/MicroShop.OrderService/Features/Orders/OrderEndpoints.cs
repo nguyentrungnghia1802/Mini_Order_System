@@ -27,6 +27,12 @@ public static class OrderEndpoints
             .WithName("GetOrder")
             .Produces<OrderResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapPost("/{orderId:guid}/cancel", CancelOrderAsync)
+            .WithName("CancelOrder")
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }
@@ -124,6 +130,36 @@ public static class OrderEndpoints
         return order is null
             ? OrderProblems.NotFound(httpContext, orderId)
             : Results.Ok(ToResponse(order));
+    }
+
+    private static async Task<IResult> CancelOrderAsync(
+        Guid orderId,
+        HttpContext httpContext,
+        OrderApplicationService applicationService,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await applicationService.CancelAsync(
+            orderId,
+            httpContext.TraceIdentifier,
+            httpContext.Request.Headers.TraceParent.ToString(),
+            cancellationToken);
+        if (outcome.Order is null)
+        {
+            return OrderProblems.NotFound(httpContext, orderId);
+        }
+
+        if (!outcome.IsSuccess)
+        {
+            return OrderProblems.Business(
+                httpContext,
+                outcome.StatusCode,
+                outcome.Title,
+                outcome.Detail,
+                outcome.Code,
+                outcome.Order.Id);
+        }
+
+        return Results.Ok(ToResponse(outcome.Order));
     }
 
     private static OrderResponse ToResponse(Order order)

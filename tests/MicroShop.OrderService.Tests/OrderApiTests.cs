@@ -100,6 +100,52 @@ public sealed class OrderApiTests(OrderDatabaseFixture fixture) : IClassFixture<
         Assert.Contains("items[1].productId", problem.Errors.Keys);
     }
 
+    [Fact]
+    public async Task CancelConfirmedOrderIsIdempotentAndDoesNotAddDuplicateHistory()
+    {
+        var created = await CreateSuccessAsync("cancel-confirmed@example.com");
+
+        using var firstResponse = await fixture.Client.PostAsync(
+            $"/api/v1/orders/{created.Id}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        var cancelled = await firstResponse.Content.ReadFromJsonAsync<OrderResponseDto>();
+        Assert.NotNull(cancelled);
+        Assert.Equal(OrderStatuses.Cancelled, cancelled.Status);
+        Assert.False(cancelled.CanCancel);
+        Assert.NotNull(cancelled.CancelledAtUtc);
+        Assert.Equal(4, cancelled.Version);
+
+        using var repeatedResponse = await fixture.Client.PostAsync(
+            $"/api/v1/orders/{created.Id}/cancel",
+            content: null);
+        Assert.Equal(HttpStatusCode.OK, repeatedResponse.StatusCode);
+        var repeated = await repeatedResponse.Content.ReadFromJsonAsync<OrderResponseDto>();
+        Assert.NotNull(repeated);
+        Assert.Equal(OrderStatuses.Cancelled, repeated.Status);
+        Assert.Equal(4, repeated.Version);
+
+        await using var dbContext = fixture.CreateDbContext();
+        var order = await dbContext.Orders
+            .Include(candidate => candidate.StateHistory)
+            .SingleAsync(candidate => candidate.Id == created.Id);
+        Assert.Equal(4, order.StateHistory.Count);
+        Assert.Equal("PRODUCT_RESERVATION_RELEASED", order.StateHistory.Last().ReasonCode);
+    }
+
+    [Fact]
+    public async Task CancelMissingOrderReturnsStableProblemDetails()
+    {
+        var missingOrderId = Guid.NewGuid();
+
+        using var response = await fixture.Client.PostAsync(
+            $"/api/v1/orders/{missingOrderId}/cancel",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("ORDER_NOT_FOUND", await ReadProblemCodeAsync(response));
+    }
+
     [Theory]
     [InlineData("PRODUCT_NOT_FOUND", "55555555-5555-5555-5555-555555555555")]
     [InlineData("PRODUCT_INACTIVE", "44444444-4444-4444-4444-444444444444")]

@@ -110,6 +110,81 @@ public sealed class OrderApplicationService(
         return CreateOrderOutcome.Success(order);
     }
 
+    public async Task<CancelOrderOutcome> CancelAsync(
+        Guid orderId,
+        string traceId,
+        string? traceParent,
+        CancellationToken cancellationToken)
+    {
+        var order = await dbContext.Orders
+            .Include(candidate => candidate.Items)
+            .SingleOrDefaultAsync(candidate => candidate.Id == orderId, cancellationToken);
+        if (order is null)
+        {
+            return CancelOrderOutcome.NotFound();
+        }
+
+        if (order.Status == OrderStatuses.Cancelled)
+        {
+            return CancelOrderOutcome.Success(order, idempotentReplay: true);
+        }
+
+        if (order.Status != OrderStatuses.Confirmed)
+        {
+            return CancelOrderOutcome.Failure(
+                order,
+                StatusCodes.Status409Conflict,
+                "Order state conflict",
+                "The order can only be cancelled from the confirmed state.",
+                "ORDER_STATE_CONFLICT");
+        }
+
+        var startedAtUtc = DateTimeOffset.UtcNow;
+        order.TransitionTo(
+            OrderStatuses.CancellationPending,
+            "CANCELLATION_STARTED",
+            traceId,
+            startedAtUtc);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return CancelOrderOutcome.Failure(
+                order,
+                StatusCodes.Status409Conflict,
+                "Order state conflict",
+                "The order changed while cancellation was starting.",
+                "ORDER_STATE_CONFLICT");
+        }
+
+        var release = await productInventoryClient.ReleaseAsync(
+            new ProductReleaseRequest(order.Id, traceParent),
+            cancellationToken);
+        if (!release.IsSuccess)
+        {
+            var failure = MapReleaseFailure(release);
+            var failedAtUtc = DateTimeOffset.UtcNow;
+            order.RecordFailure(failure.Code, failure.Detail, failedAtUtc);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return CancelOrderOutcome.Failure(
+                order,
+                failure.StatusCode,
+                failure.Title,
+                failure.Detail,
+                failure.Code);
+        }
+
+        order.TransitionTo(
+            OrderStatuses.Cancelled,
+            "PRODUCT_RESERVATION_RELEASED",
+            traceId,
+            DateTimeOffset.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return CancelOrderOutcome.Success(order, idempotentReplay: false);
+    }
+
     private async Task<CreateOrderOutcome> HandleReservationFailureAsync(
         Order order,
         ProductReservationResult reservation,
@@ -274,6 +349,24 @@ public sealed class OrderApplicationService(
 
         return true;
     }
+
+    private static (int StatusCode, string Title, string Code, string Detail) MapReleaseFailure(
+        ProductReleaseResult release)
+    {
+        return release.Failure switch
+        {
+            ProductReservationFailure.DependencyUnavailable => (
+                StatusCodes.Status503ServiceUnavailable,
+                "Product Service unavailable",
+                "PRODUCT_SERVICE_UNAVAILABLE",
+                release.Detail ?? "The Product Service is unavailable while releasing the reservation."),
+            _ => (
+                StatusCodes.Status503ServiceUnavailable,
+                "Inventory outcome unknown",
+                "INVENTORY_OUTCOME_UNKNOWN",
+                release.Detail ?? "The inventory release outcome could not be determined safely.")
+        };
+    }
 }
 
 public sealed record CreateOrderOutcome(
@@ -297,5 +390,35 @@ public sealed record CreateOrderOutcome(
         string code)
     {
         return new(false, order, statusCode, title, detail, code);
+    }
+}
+
+public sealed record CancelOrderOutcome(
+    bool IsSuccess,
+    Order? Order,
+    int StatusCode,
+    string Title,
+    string Detail,
+    string Code,
+    bool IdempotentReplay)
+{
+    public static CancelOrderOutcome Success(Order order, bool idempotentReplay)
+    {
+        return new(true, order, StatusCodes.Status200OK, string.Empty, string.Empty, string.Empty, idempotentReplay);
+    }
+
+    public static CancelOrderOutcome Failure(
+        Order order,
+        int statusCode,
+        string title,
+        string detail,
+        string code)
+    {
+        return new(false, order, statusCode, title, detail, code, false);
+    }
+
+    public static CancelOrderOutcome NotFound()
+    {
+        return new(false, null, StatusCodes.Status404NotFound, "Order not found", string.Empty, "ORDER_NOT_FOUND", false);
     }
 }
