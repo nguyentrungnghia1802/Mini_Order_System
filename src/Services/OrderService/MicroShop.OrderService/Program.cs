@@ -1,7 +1,9 @@
+using MassTransit;
 using MicroShop.OrderService.Features.Orders;
 using MicroShop.OrderService.Infrastructure.Database;
 using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
+using MicroShop.ServiceDefaults.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -9,6 +11,58 @@ var builder = WebApplication.CreateBuilder(args);
 MicroShop.ServiceDefaults.ServiceDefaultsExtensions.AddMicroShopServiceDefaults(builder.Services);
 
 var configuration = builder.Configuration;
+var useInMemoryMessaging = builder.Environment.IsEnvironment("Testing")
+    || ParseBool(
+        configuration["RABBITMQ_USE_IN_MEMORY"] ?? configuration["RabbitMq:UseInMemory"],
+        fallback: false);
+builder.Services.AddOptions<RabbitMqOptions>()
+    .Configure(options =>
+    {
+        options.Host = configuration["RABBITMQ_HOST"]
+            ?? configuration["RabbitMq:Host"]
+            ?? options.Host;
+        options.Port = ParsePort(
+            configuration["RABBITMQ_PORT"] ?? configuration["RabbitMq:Port"],
+            options.Port);
+        options.VirtualHost = configuration["RABBITMQ_VHOST"]
+            ?? configuration["RabbitMq:VirtualHost"]
+            ?? options.VirtualHost;
+        options.Username = configuration["RABBITMQ_USER"]
+            ?? configuration["RabbitMq:Username"]
+            ?? options.Username;
+        options.Password = configuration["RABBITMQ_PASSWORD"]
+            ?? configuration["RabbitMq:Password"]
+            ?? options.Password;
+        options.UseInMemory = useInMemoryMessaging;
+    })
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Host), "RabbitMQ host is required.")
+    .Validate(options => options.Port is >= 1 and <= 65_535, "RabbitMQ port must be between 1 and 65535.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.VirtualHost), "RabbitMQ virtual host is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "RabbitMQ username is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "RabbitMQ password is required.")
+    .ValidateOnStart();
+builder.Services.AddMassTransit(massTransit =>
+{
+    if (useInMemoryMessaging)
+    {
+        massTransit.UsingInMemory((context, bus) =>
+        {
+            bus.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromMilliseconds(250)));
+        });
+        return;
+    }
+
+    massTransit.UsingRabbitMq((context, bus) =>
+    {
+        var rabbitMq = context.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+        bus.Host(rabbitMq.Host, (ushort)rabbitMq.Port, rabbitMq.VirtualHost, host =>
+        {
+            host.Username(rabbitMq.Username);
+            host.Password(rabbitMq.Password);
+        });
+        bus.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromMilliseconds(250)));
+    });
+});
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>

@@ -2,6 +2,16 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "MassTransit.RabbitMQ": {
+        "type": "Direct",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "5aQGpJpeqRhRv+htkXfi6MfWu0dj/4Lcf1c6h2J3tYZClupGklqB1ixlP3IRdZExrH9BI/60uYoxR+7pg3s1oQ==",
+        "dependencies": {
+          "MassTransit": "8.5.10",
+          "RabbitMQ.Client": "7.2.1"
+        }
+      },
       "Microsoft.AspNetCore.OpenApi": {
         "type": "Direct",
         "requested": "[10.0.10, )",
@@ -52,6 +62,19 @@
         "type": "Transitive",
         "resolved": "2.14.1",
         "contentHash": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw=="
+      },
+      "MassTransit": {
+        "type": "Transitive",
+        "resolved": "8.5.10",
+        "contentHash": "TGi34UA8RftBIpYCHEdoIP5uSu2/pLWZRen4RUcg4CV1nr8MmCZMuFYjzvXXUyFcj0ZuRQxZZNhG7fB5/raSOg==",
+        "dependencies": {
+          "MassTransit.Abstractions": "8.5.10"
+        }
+      },
+      "MassTransit.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.5.10",
+        "contentHash": "nZnm2YNH+NcVwY6yC114sJy8J9LtKdFjfKUm/A5HfmzOlZ8ksjgHaPBg5XCG1VAqKDRDFnaudIcesVultKJD7g=="
       },
       "Microsoft.Build.Framework": {
         "type": "Transitive",
@@ -163,6 +186,11 @@
         "type": "Transitive",
         "resolved": "10.0.3",
         "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w=="
+      },
+      "RabbitMQ.Client": {
+        "type": "Transitive",
+        "resolved": "7.2.1",
+        "contentHash": "YKXEfg9fVQiTKgZlvIhAfPSFaamEgi8DsQmisCH0IAsU4FYLrtoguDrDj6JtJVGUt40QPnBLRH6fTQcAC4qsOg=="
       },
       "System.CodeDom": {
         "type": "Transitive",
