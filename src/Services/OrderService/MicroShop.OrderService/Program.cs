@@ -1,6 +1,7 @@
 using MassTransit;
 using MicroShop.OrderService.Features.Orders;
 using MicroShop.OrderService.Infrastructure.Database;
+using MicroShop.OrderService.Infrastructure.Messaging;
 using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
 using MicroShop.ServiceDefaults.Messaging;
@@ -117,6 +118,7 @@ builder.Services.AddScoped<IProductInventoryClient>(serviceProvider =>
         : serviceProvider.GetRequiredService<ProductInventoryClient>();
 });
 builder.Services.AddScoped<OrderApplicationService>();
+builder.Services.AddScoped<IOrderEventPublisher, MassTransitOrderEventPublisher>();
 builder.Services.AddOptions<OrderDatabaseOptions>()
     .Configure(options =>
     {

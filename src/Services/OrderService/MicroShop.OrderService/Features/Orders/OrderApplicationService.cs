@@ -1,4 +1,5 @@
 using MicroShop.OrderService.Domain;
+using MicroShop.OrderService.Infrastructure.Messaging;
 using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
 using MicroShop.OrderService.Persistence.Entities;
@@ -8,7 +9,8 @@ namespace MicroShop.OrderService.Features.Orders;
 
 public sealed class OrderApplicationService(
     OrderDbContext dbContext,
-    IProductInventoryClient productInventoryClient)
+    IProductInventoryClient productInventoryClient,
+    IOrderEventPublisher orderEventPublisher)
 {
     public async Task<CreateOrderOutcome> CreateAsync(
         CreateOrderRequest request,
@@ -106,6 +108,10 @@ public sealed class OrderApplicationService(
             traceId,
             DateTimeOffset.UtcNow);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await orderEventPublisher.PublishConfirmedAsync(
+            order,
+            traceParent,
+            cancellationToken);
 
         return CreateOrderOutcome.Success(order);
     }
