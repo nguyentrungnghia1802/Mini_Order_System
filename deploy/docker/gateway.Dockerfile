@@ -14,6 +14,9 @@ RUN dotnet publish src/Gateway/MicroShop.Gateway/MicroShop.Gateway.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 USER 1654

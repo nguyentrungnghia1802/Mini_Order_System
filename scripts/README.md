@@ -2,4 +2,18 @@
 
 This directory is reserved for explicit migration, seed, and local operations wrappers described in the project documentation.
 
-Product and Order migration wrappers now live beside their owning service migrations. Future Notification and aggregate migration wrappers should be added only with their owning schema and validation tests.
+Product, Order, and Notification migration wrappers live beside their owning service migrations. `db-migrate-all.*` runs the three Compose migration one-shots in order and requires an existing local env file; it does not delete data.
+
+PowerShell:
+
+```powershell
+./scripts/db-migrate-all.ps1 -EnvFile .env
+```
+
+POSIX shell:
+
+```bash
+./scripts/db-migrate-all.sh .env
+```
+
+`db-reset-local.*` is intentionally destructive. It refuses to run unless the caller supplies the explicit reset/volume-deletion flags, permits a non-Development environment when applicable, and types `DELETE MICROSHOP LOCAL VOLUMES`. Do not run it without owner approval; normal `docker compose down` preserves named volumes.
