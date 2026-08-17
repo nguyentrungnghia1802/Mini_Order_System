@@ -193,6 +193,18 @@ public sealed class InventoryReservationService(ProductDbContext dbContext)
         return InventoryReleaseOutcome.Success(ToReleaseResponse(reservation, idempotentReplay: false));
     }
 
+    public async Task<InventoryReservationQueryResponse?> GetByOrderIdAsync(
+        Guid orderId,
+        CancellationToken cancellationToken)
+    {
+        var reservation = await dbContext.InventoryReservations
+            .AsNoTracking()
+            .Include(candidate => candidate.Items)
+            .SingleOrDefaultAsync(candidate => candidate.OrderId == orderId, cancellationToken);
+
+        return reservation is null ? null : ToQueryResponse(reservation);
+    }
+
     private async Task<List<Product>> LockProductsAsync(
         IReadOnlyList<Guid> productIds,
         CancellationToken cancellationToken)
@@ -258,6 +270,28 @@ public sealed class InventoryReservationService(ProductDbContext dbContext)
             reservation.Id,
             reservation.Status,
             idempotentReplay,
+            reservation.ReleasedAtUtc);
+    }
+
+    private static InventoryReservationQueryResponse ToQueryResponse(
+        InventoryReservation reservation)
+    {
+        return new InventoryReservationQueryResponse(
+            reservation.Id,
+            reservation.OrderId,
+            reservation.Status,
+            reservation.Currency,
+            reservation.TotalAmount,
+            reservation.Items
+                .OrderBy(item => item.ProductId)
+                .Select(item => new InventoryReservationItemResponse(
+                    item.ProductId,
+                    item.ProductName,
+                    item.UnitPrice,
+                    item.Quantity,
+                    item.Subtotal))
+                .ToArray(),
+            reservation.CreatedAtUtc,
             reservation.ReleasedAtUtc);
     }
 

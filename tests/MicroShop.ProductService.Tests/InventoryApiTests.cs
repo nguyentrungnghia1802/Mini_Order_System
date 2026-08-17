@@ -202,6 +202,41 @@ public sealed class InventoryApiTests(ProductApiFixture fixture) : IClassFixture
     }
 
     [Fact]
+    public async Task ReservationQueryReturnsCurrentReservationByOrderId()
+    {
+        var product = await CreateProductAsync("Reconciliation Product", 17.50m, 4, isActive: true);
+        var orderId = Guid.NewGuid();
+
+        using var reserveResponse = await ReserveAsync(orderId, new ReserveItem(product.Id, 2));
+        Assert.Equal(HttpStatusCode.Created, reserveResponse.StatusCode);
+        var created = await reserveResponse.Content.ReadFromJsonAsync<InventoryReservationResponse>();
+        Assert.NotNull(created);
+
+        using var queryResponse = await fixture.Client.GetAsync(
+            $"/internal/v1/inventory/reservations/by-order/{orderId}");
+        Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
+        var queried = await queryResponse.Content.ReadFromJsonAsync<InventoryReservationQueryResponse>();
+        Assert.NotNull(queried);
+        Assert.Equal(created.ReservationId, queried.ReservationId);
+        Assert.Equal(orderId, queried.OrderId);
+        Assert.Equal("reserved", queried.Status);
+        Assert.Equal(35m, queried.TotalAmount);
+        Assert.Equal(created.Items, queried.Items);
+        Assert.NotEqual(default, queried.CreatedAtUtc);
+        Assert.Null(queried.ReleasedAtUtc);
+    }
+
+    [Fact]
+    public async Task ReservationQueryReturnsNotFoundForUnknownOrderId()
+    {
+        using var response = await fixture.Client.GetAsync(
+            $"/internal/v1/inventory/reservations/by-order/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("RESERVATION_NOT_FOUND", await ReadProblemCodeAsync(response));
+    }
+
+    [Fact]
     public async Task ConcurrentLastStockReservationsAllowOnlyOneSuccess()
     {
         var product = await CreateProductAsync("Concurrent Reservation Product", 10m, 1, isActive: true);

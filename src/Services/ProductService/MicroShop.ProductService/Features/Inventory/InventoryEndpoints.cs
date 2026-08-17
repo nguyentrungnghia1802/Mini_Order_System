@@ -18,6 +18,11 @@ public static class InventoryEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapGet("/reservations/by-order/{orderId:guid}", GetReservationByOrderAsync)
+            .WithName("GetInventoryReservationByOrder")
+            .WithDescription("Internal reconciliation query. This route must not be exposed through the public Gateway.")
+            .Produces<InventoryReservationQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
         group.MapPost("/reservations/{orderId:guid}/release", ReleaseInventoryAsync)
             .WithName("ReleaseInventory")
             .WithDescription("Internal service-to-service endpoint. Release is idempotent by order ID.")
@@ -26,6 +31,23 @@ public static class InventoryEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
+    }
+
+    private static async Task<IResult> GetReservationByOrderAsync(
+        Guid orderId,
+        HttpContext httpContext,
+        InventoryReservationService reservationService,
+        CancellationToken cancellationToken)
+    {
+        if (orderId == Guid.Empty)
+        {
+            return InventoryProblems.NotFound(httpContext, orderId);
+        }
+
+        var response = await reservationService.GetByOrderIdAsync(orderId, cancellationToken);
+        return response is null
+            ? InventoryProblems.NotFound(httpContext, orderId)
+            : Results.Ok(response);
     }
 
     private static async Task<IResult> ReserveInventoryAsync(
@@ -71,6 +93,17 @@ public static class InventoryEndpoints
 
 internal static class InventoryProblems
 {
+    public static IResult NotFound(HttpContext httpContext, Guid orderId)
+    {
+        return Problem(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            "Reservation not found",
+            $"No reservation exists for order '{orderId}'.",
+            "RESERVATION_NOT_FOUND",
+            new Dictionary<string, string[]>(StringComparer.Ordinal));
+    }
+
     public static IResult Validation(
         HttpContext httpContext,
         IReadOnlyDictionary<string, string[]> errors)

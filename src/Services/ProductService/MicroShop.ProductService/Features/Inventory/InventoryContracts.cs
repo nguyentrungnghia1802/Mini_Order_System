@@ -39,6 +39,16 @@ public sealed record InventoryReservationResponse(
     IReadOnlyList<InventoryReservationItemResponse> Items,
     bool IdempotentReplay);
 
+public sealed record InventoryReservationQueryResponse(
+    Guid ReservationId,
+    Guid OrderId,
+    string Status,
+    string Currency,
+    decimal TotalAmount,
+    IReadOnlyList<InventoryReservationItemResponse> Items,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? ReleasedAtUtc);
+
 public sealed record InventoryReleaseResponse(
     Guid OrderId,
     Guid ReservationId,
