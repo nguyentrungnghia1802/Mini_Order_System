@@ -4,7 +4,7 @@ Last verified: 2026-08-17.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Phase 2 Order persistence and fake HTTP API foundation, implemented in `abc9a7a`, `0654c31`, `7bf1692`, and `d694a5b` (`feat(order): add fake order API foundation`).
+Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/fake HTTP API, and the Product-owned Phase 3 reservation boundary, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, and `d2a885a` (`feat(product): add atomic inventory reservations`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -43,10 +43,10 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Angular Product screens.
 - Angular Product screens and Angular checkout/order pages.
 - Notification business behavior, migration, and integration tests.
 - Public API contracts and YARP business routes.
+- Order typed Product client, real orchestration, and cancellation.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -56,7 +56,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 3 — Product inventory reservation and typed Order-to-Product HTTP communication; Angular screens remain sequenced behind the intended Gateway route.
+Phase 3 — Connect Order to the Product reservation API with a typed client, explicit timeout mapping, and cancellation; Angular screens remain sequenced behind the intended Gateway route.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -67,9 +67,10 @@ Phase 3 — Product inventory reservation and typed Order-to-Product HTTP commun
 | Product seed | `[x]` | Explicit PowerShell/shell seed scripts insert four deterministic products idempotently. |
 | Product catalog/create API | `[x]` | Service-native list/detail/create endpoints, pagination, active filtering, Problem Details, stable codes, and development OpenAPI are tested. |
 | Product update/activation | `[x]` | PATCH supports mutable fields, direct stock adjustment, activation/deactivation, ETag/If-Match, and stable stale-update conflicts. |
-| Product PostgreSQL integration tests | `[x]` | 11 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle and competing PATCH requests; no EF InMemory provider. |
+| Product PostgreSQL integration tests | `[x]` | 19 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle, reservation/release/replay, atomic failures, and competing stock requests; no EF InMemory provider. |
+| Product inventory reservation boundary (Phase 3) | `[x]` | Product-owned reservation entities, migrations, internal reserve/release endpoints, authoritative snapshots, idempotency, atomic stock updates, and stable Product-ID row locks are implemented in `d2a885a`. |
 | Product Angular screens | `[ ]` | Deferred until the service contract is stable and the intended Gateway route exists. |
-| Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/update tests pass; Angular Product UI, Gateway exposure, and inventory reservation remain incomplete. |
+| Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/update/reservation tests pass; Angular Product UI and Gateway exposure remain incomplete. |
 
 ## Phase 2 — Order Service foundation (partial)
 
@@ -81,3 +82,13 @@ Phase 3 — Product inventory reservation and typed Order-to-Product HTTP commun
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, fake Product snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented in `d694a5b`. |
 | Order foundation tests | `[x]` | 18 Order tests pass: native API creation/rejection/list/detail plus domain transitions/duplicates/totals, migration persistence, state history, status constraint, readiness/OpenAPI, and database credential isolation. |
 | Phase 2 validation gate | `[~]` | Order service/migration/native API tests pass; Angular checkout and real Product communication remain incomplete. |
+
+## Phase 3 — Product reservation boundary (partial)
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Reservation domain and schema | `[x]` | Product owns `inventory_reservations` and `inventory_reservation_items`, request hashes, reserved/released states, snapshots, constraints, and migrations `20260817164457_AddInventoryReservations` plus `20260817164536_AddInventoryReservationConstraints`. |
+| Internal reservation API | `[x]` | Native Product endpoints reserve/replay/mismatch and release idempotently; `/internal/*` is not yet routed by the empty Gateway. |
+| Reservation concurrency and failure tests | `[x]` | 19 Product tests pass, including no partial decrement and concurrent last-stock behavior on PostgreSQL Testcontainers. |
+| Order typed client/orchestration | `[ ]` | Next slice: replace the Phase 2 fake client with real Product HTTP communication, timeout/error mapping, and `inventory_unknown`. |
+| Phase 3 validation gate | `[~]` | Product reservation boundary is green; Order integration, cancellation, and final internal-route safety tests remain incomplete. |

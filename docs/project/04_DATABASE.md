@@ -1,6 +1,6 @@
 # Database
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-17.
 
 ## 1. Source of truth
 
@@ -16,7 +16,7 @@ src/Services/OrderService/Persistence/Migrations/
 src/Services/NotificationService/Persistence/Migrations/
 ```
 
-Implemented Product migration: `20260801194513_InitialProductSchema` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. It creates only the Product Service `products` table and its indexes/check constraints.
+Implemented Product migrations: `20260801194513_InitialProductSchema`, `20260817164457_AddInventoryReservations`, and `20260817164536_AddInventoryReservationConstraints` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. They create only Product-owned `products`, `inventory_reservations`, and `inventory_reservation_items` tables with their indexes, local foreign keys, and check constraints.
 
 Implemented Order migration: `20260801204113_InitialOrderSchema` under `src/Services/OrderService/MicroShop.OrderService/Persistence/Migrations/`. It creates only Order Service `orders`, `order_items`, and `order_state_history` with status/amount/quantity constraints and documented query indexes.
 
@@ -94,7 +94,7 @@ Indexes:
 - active catalog ordering index on `(is_active, name, id)`;
 - optional case-insensitive search index later.
 
-The executable configuration adds `ck_products_name_not_blank`, `ck_products_unit_price_nonnegative`, `ck_products_available_stock_nonnegative`, `ck_products_currency_vnd`, and `ix_products_active_name_id`. The explicit `version` column is configured as the EF concurrency token used by Product updates and reserved for the later reservation slice.
+The executable configuration adds `ck_products_name_not_blank`, `ck_products_unit_price_nonnegative`, `ck_products_available_stock_nonnegative`, `ck_products_currency_vnd`, and `ix_products_active_name_id`. The explicit `version` column is configured as the EF concurrency token used by Product updates and stock reservation/release updates.
 
 Product update behavior:
 
@@ -113,7 +113,7 @@ Product update behavior:
 | `request_hash` | varchar | canonical item-set hash |
 | `status` | varchar | `reserved`, `released` |
 | `created_at_utc` | timestamptz | required |
-| `released_at_utc` | timestamptz | nullable |
+| `released_at_utc` | timestamptz | nullable; required when released |
 
 Constraints:
 
@@ -132,12 +132,17 @@ Constraints:
 | `unit_price` | numeric(18,2) | snapshot |
 | `quantity` | integer | positive |
 | `subtotal` | numeric(18,2) | nonnegative |
+| `status` | varchar | `reserved`, `released` |
 
 Constraints:
 
 - unique `(reservation_id, product_id)`;
+- local FK `product_id -> products.id` with restricted delete;
 - positive quantity;
-- subtotal uses fixed decimal semantics.
+- unit price/subtotal use fixed decimal semantics;
+- item status check.
+
+The reservation application service acquires a transaction-scoped PostgreSQL advisory lock for the order ID, then locks all requested Product rows with `ORDER BY id FOR UPDATE`. It validates the complete set before decrementing stock, writes snapshots and the reservation in the same transaction, and increments the Product concurrency version for each stock change. Release uses the same stable lock order and is idempotent.
 
 ### Optional `product_stock_movements`
 

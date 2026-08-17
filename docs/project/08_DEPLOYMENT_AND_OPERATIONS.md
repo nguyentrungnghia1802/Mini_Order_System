@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Order includes a Phase 2 native create/list/detail API backed by a deterministic fake Product client. The full `web`, Gateway, Notification Compose services, and real reservation communication remain deferred.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Product includes a Product-owned internal reservation/release API; Order includes a Phase 2 native create/list/detail API backed by a deterministic fake Product client. The full `web`, Gateway, Notification Compose services, and Order's real reservation communication remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -163,7 +163,7 @@ For demo/VPS:
 
 Prefer backward-compatible expand/contract migrations for any future rolling deployment.
 
-For the current Product slice, apply `InitialProductSchema` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`. Normal Product and Order startup validates database configuration and readiness but does not silently apply migrations.
+For the current Product slice, apply `InitialProductSchema`, `AddInventoryReservations`, and `AddInventoryReservationConstraints` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`. Normal Product and Order startup validates database configuration and readiness but does not silently apply migrations.
 
 ## 8. Public deployment path
 

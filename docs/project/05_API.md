@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Contract sources
 
-Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below. Order Service now implements and tests the native create/list/detail subset against a deterministic fake Product client. Notification, Gateway, internal inventory, and Angular-facing routes remain phase-scoped.
+Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail subset against a deterministic fake Product client. Notification, Gateway, the Order typed client, and Angular-facing routes remain phase-scoped.
 
 Executable contract sources:
 
@@ -341,6 +341,8 @@ Response:
 
 These contracts are service-to-service only.
 
+The Product Service implementation now exposes the two reservation commands below on its native port. They are not routed by the current Gateway and must not be called by Angular.
+
 ### `POST /internal/v1/inventory/reservations`
 
 Headers:
@@ -393,6 +395,8 @@ Status behavior:
 - `409 PRODUCT_INACTIVE`;
 - `409 INSUFFICIENT_STOCK`;
 - `409 RESERVATION_REQUEST_MISMATCH`.
+
+The current Product integration suite verifies authoritative snapshots, total calculation, all-or-nothing validation, deterministic canonical replay, and concurrent last-stock behavior against PostgreSQL.
 
 ### `POST /internal/v1/inventory/reservations/{orderId}/release`
 

@@ -157,7 +157,7 @@ Evidence for 1.1:
 - Tests: `ProductValidationTests` covers required/bounded text, currency, nonnegative price/stock, and pagination bounds.
 - Commands: `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
 - Commit: `abc9a7a` (`feat(product): add catalog persistence slice`).
-- Notes: `version` is an explicit EF concurrency token used by the Product PATCH contract; reservation concurrency remains a later slice.
+- Notes: `version` is an explicit EF concurrency token used by the Product PATCH contract; Product reservation concurrency is implemented in the Phase 3 slice `d2a885a`.
 
 ## 1.2 Product database
 
@@ -252,7 +252,7 @@ Evidence for 1.6 (partial Phase 1 gate):
 - Tests: Product PostgreSQL Testcontainers suite and native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`).
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `docker compose ... config/up/ps`.
 - Commits: `abc9a7a` (`feat(product): add catalog persistence slice`), `0654c31` (`feat(product): add optimistic catalog updates`).
-- Notes: Angular Product UI, Gateway routing, and inventory reservation are not complete, so Phase 1 remains partial. Product PATCH/activation and update/concurrency behavior are implemented and tested in `0654c31`.
+- Notes: Angular Product UI and Gateway routing are not complete, so Phase 1 remains partial. Product PATCH/activation and update/concurrency behavior are implemented and tested in `0654c31`; the Product reservation boundary is implemented separately in Phase 3.
 
 ---
 
@@ -377,7 +377,7 @@ Evidence for 2.6 (partial Phase 2 gate):
 - Tests: 18 Order tests pass; readiness, native Order API, and OpenAPI are reachable with a fresh owned PostgreSQL database.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
 - Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: Angular checkout remains incomplete. The fake client is intentionally local to Phase 2; real Product HTTP communication and inventory reservation are Phase 3 work.
+- Notes: Angular checkout remains incomplete. The fake client is intentionally local to Phase 2; real Product HTTP communication and Order orchestration remain Phase 3 work.
 
 ---
 
@@ -385,40 +385,64 @@ Evidence for 2.6 (partial Phase 2 gate):
 
 ## 3.1 Inventory reservation domain
 
-- [ ] Define InventoryReservation entity.
-- [ ] Define InventoryReservationItem entity.
-- [ ] Add reservation states:
+- [x] Define InventoryReservation entity.
+- [x] Define InventoryReservationItem entity.
+- [x] Add reservation states:
   - `reserved`
   - `released`
-- [ ] Add `orderId` unique constraint.
-- [ ] Add canonical request hash.
-- [ ] Add Product snapshot fields.
-- [ ] Add reservation timestamps.
+- [x] Add `orderId` unique constraint.
+- [x] Add canonical request hash.
+- [x] Add Product snapshot fields.
+- [x] Add reservation timestamps.
+
+Evidence for 3.1:
+
+- Files: `Domain/InventoryReservationStatuses.cs`, `Persistence/Entities/InventoryReservation.cs`, and `InventoryReservationItem.cs`.
+- Tests: `InventoryApiTests` verifies reserved/released lifecycle, immutable Product snapshots, canonical replay, and release timestamps.
+- Commands: `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.ProductService.Tests/MicroShop.ProductService.Tests.csproj --configuration Release --no-restore`.
+- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
+- Notes: Reservation identity is Product-owned; `orderId` is a scalar idempotency key and is not a foreign key to the Order database.
 
 ## 3.2 Inventory reservation database
 
-- [ ] Create migration for reservation tables.
-- [ ] Add unique `(reservationId, productId)` constraint.
-- [ ] Add unique `orderId`.
-- [ ] Add status constraints.
-- [ ] Add indexes for order lookup.
-- [ ] Add concurrency-safe stock update strategy.
-- [ ] Lock rows in stable Product-ID order.
+- [x] Create migration for reservation tables.
+- [x] Add unique `(reservationId, productId)` constraint.
+- [x] Add unique `orderId`.
+- [x] Add status constraints.
+- [x] Add indexes for order lookup.
+- [x] Add concurrency-safe stock update strategy.
+- [x] Lock rows in stable Product-ID order.
+
+Evidence for 3.2:
+
+- Files: `Persistence/Configurations/InventoryReservationConfiguration.cs`, `InventoryReservationItemConfiguration.cs`, `Persistence/Migrations/20260817164457_AddInventoryReservations.cs`, and `20260817164536_AddInventoryReservationConstraints.cs`.
+- Tests: Product PostgreSQL Testcontainers apply both reservation migrations to a fresh database; concurrent last-stock and release tests verify transactional stock behavior.
+- Commands: `dotnet-ef migrations script --project src/Services/ProductService/MicroShop.ProductService --startup-project src/Services/ProductService/MicroShop.ProductService`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
+- Notes: PostgreSQL advisory locks serialize an order ID, while `SELECT ... ORDER BY id FOR UPDATE` locks Product rows in stable ID order. No Order database table or cross-service foreign key is created.
 
 ## 3.3 Internal Product API
 
-- [ ] Implement `POST /internal/v1/inventory/reservations`.
-- [ ] Implement atomic multi-item reservation.
-- [ ] Reject full reservation on any invalid item.
-- [ ] Return authoritative Product snapshots.
-- [ ] Return total amount.
-- [ ] Return `201` for new reservation.
-- [ ] Return `200` for idempotent replay.
-- [ ] Return `RESERVATION_REQUEST_MISMATCH` for same order with different items.
-- [ ] Implement `POST /internal/v1/inventory/reservations/{orderId}/release`.
-- [ ] Make release idempotent.
+- [x] Implement `POST /internal/v1/inventory/reservations`.
+- [x] Implement atomic multi-item reservation.
+- [x] Reject full reservation on any invalid item.
+- [x] Return authoritative Product snapshots.
+- [x] Return total amount.
+- [x] Return `201` for new reservation.
+- [x] Return `200` for idempotent replay.
+- [x] Return `RESERVATION_REQUEST_MISMATCH` for same order with different items.
+- [x] Implement `POST /internal/v1/inventory/reservations/{orderId}/release`.
+- [x] Make release idempotent.
 - [ ] Optionally implement internal reservation query for reconciliation.
 - [ ] Ensure Gateway does not expose internal endpoints.
+
+Evidence for 3.3 (partial):
+
+- Files: `Features/Inventory/InventoryContracts.cs`, `InventoryReservationService.cs`, `InventoryEndpoints.cs`, and `Program.cs`.
+- Tests: `InventoryApiTests` covers `201` creation, authoritative snapshots/totals, `404 PRODUCT_NOT_FOUND`, `409 PRODUCT_INACTIVE`, `409 INSUFFICIENT_STOCK`, replay, mismatch, release, and idempotent release.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
+- Notes: The API is intentionally service-native and internal. Gateway exclusion is verified with the Phase 4 route work; the optional reconciliation query remains deferred.
 
 ## 3.4 Order Product client
 
@@ -458,21 +482,29 @@ Evidence for 2.6 (partial Phase 2 gate):
 
 ## 3.7 Synchronous communication tests
 
-- [ ] Test successful reservation.
-- [ ] Test insufficient stock.
-- [ ] Test Product not found.
-- [ ] Test inactive Product.
-- [ ] Test reservation replay.
-- [ ] Test reservation mismatch.
-- [ ] Test idempotent release.
-- [ ] Test concurrent last-stock purchase.
+- [x] Test successful reservation.
+- [x] Test insufficient stock.
+- [x] Test Product not found.
+- [x] Test inactive Product.
+- [x] Test reservation replay.
+- [x] Test reservation mismatch.
+- [x] Test idempotent release.
+- [x] Test concurrent last-stock purchase.
 - [ ] Test Product Service unavailable.
 - [ ] Test timeout with ambiguous outcome.
 - [ ] Test cancellation.
 - [ ] Test repeated cancellation.
 - [ ] Test `cancellation_pending`.
-- [ ] Verify no partial stock decrement.
-- [ ] Verify stock never becomes negative.
+- [x] Verify no partial stock decrement.
+- [x] Verify stock never becomes negative.
+
+Evidence for 3.7 (partial):
+
+- Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs` and `ProductApiFixture.cs`.
+- Tests: 19 Product tests pass, including atomic reservation/release, known Product failures, replay/mismatch, concurrent last-stock, and the existing catalog/update suite. Order-to-Product HTTP, timeout, cancellation, and unknown-outcome cases remain deferred.
+- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
+- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
+- Notes: The completed items cover the Product-owned reservation boundary only; Phase 3 remains partial until Order uses the real typed client.
 
 ## 3.8 Phase 3 validation gate
 

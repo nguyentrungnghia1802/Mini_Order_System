@@ -165,14 +165,14 @@ This status table is updated from verified repository code and runtime checks. T
 | Requirements and boundaries | Specified |
 | Repository | Phase 0 bootstrap, Product vertical slice, and Order persistence plus fake Order API slices implemented |
 | Gateway | Bootstrap ASP.NET Core/YARP host implemented; public routes planned for Phase 4 |
-| Product Service | Partial Phase 1: Product domain, PostgreSQL schema/migration, seed, catalog/create API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
+| Product Service | Partial Phase 1/3: Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
 | Order Service | Partial Phase 2: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API with a deterministic fake Product client, and PostgreSQL integration tests implemented; real reservation communication planned |
 | Notification Service | Independent bootstrap host and health endpoints implemented; consumer/API planned for Phase 5 |
 | Angular frontend | Angular 22 strict workspace implemented; feature screens planned |
-| PostgreSQL databases | Compose creates three logical databases/users; Product and Order migrations are implemented, Notification migration remains planned |
+| PostgreSQL databases | Compose creates three logical databases/users; Product reservation and Order migrations are implemented, Notification migration remains planned |
 | RabbitMQ integration | Compose management broker implemented; MassTransit integration planned for Phase 5 |
 | Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose implemented; full stack planned for Phase 6 |
-| Tests | Bootstrap tests plus Product and Order unit/API/PostgreSQL Testcontainers foundations implemented; remaining contract, reservation, messaging, and E2E tests planned |
+| Tests | Bootstrap tests plus Product reservation and Order unit/API/PostgreSQL Testcontainers foundations implemented; remaining cross-service contract, messaging, and E2E tests planned |
 | Deployment | Optional after local completion |
 
 Documentation must continue to distinguish the verified Product and Order native slices from planned Gateway, real reservation, Notification, Angular, and end-to-end behavior.

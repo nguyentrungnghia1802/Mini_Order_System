@@ -207,7 +207,7 @@ dotnet ef database update \
 
 Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
 
-The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, fake Product business failures, pagination, and stable Problem Details. It is intentionally a native service test; Gateway routing and real Product reservation tests are Phase 3/4 work.
+The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, fake Product business failures, pagination, and stable Problem Details. It is intentionally a native service test; Gateway routing and the Order-to-Product client remain Phase 3/4 work.
 
 The exact scripts become source of truth when repository exists.
 
@@ -245,7 +245,9 @@ Required cases:
 - release restores once;
 - concurrent last-stock request permits one success.
 
-The implemented Product API tests use PostgreSQL Testcontainers and apply the real `InitialProductSchema` migration. They cover update rounding/versioning, activation filtering, and competing PATCH requests. EF Core InMemory is not used.
+The implemented Product API tests use PostgreSQL Testcontainers and apply the real Product migrations. They cover update rounding/versioning, activation filtering, competing PATCH requests, atomic reservation failures, authoritative snapshots, replay/mismatch, idempotent release, and concurrent last-stock requests. EF Core InMemory is not used.
+
+The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite still uses the Phase 2 fake client until the typed Product HTTP client slice is complete.
 
 ### Order integration tests
 

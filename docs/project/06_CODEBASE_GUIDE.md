@@ -128,9 +128,9 @@ MicroShop.ProductService/
 
 A feature file may contain endpoint mapping, DTO, validator, and handler for a small vertical slice. Split only when a file becomes difficult to understand/test.
 
-Current Product implementation files are `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Persistence/ProductDbContext.cs`, `Persistence/Entities/Product.cs`, `Persistence/Configurations/ProductConfiguration.cs`, `Persistence/Migrations/`, `Persistence/ProductSeed.cs`, and `Infrastructure/Database/ProductDatabaseOptions.cs`. These files remain inside Product Service; no EF entity or business logic is placed in a shared project.
+Current Product implementation files are `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Features/Inventory/InventoryContracts.cs`, `Features/Inventory/InventoryEndpoints.cs`, `Features/Inventory/InventoryReservationService.cs`, `Persistence/ProductDbContext.cs`, `Persistence/Entities/`, `Persistence/Configurations/`, `Persistence/Migrations/`, `Persistence/ProductSeed.cs`, and `Infrastructure/Database/ProductDatabaseOptions.cs`. These files remain inside Product Service; no EF entity or business logic is placed in a shared project.
 
-Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/IProductCatalogClient.cs`, `Infrastructure/Products/FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 boundary only; the typed Product HTTP client and reservation implementation are added in Phase 3. Order does not reference Product EF entities or its database.
+Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/IProductCatalogClient.cs`, `Infrastructure/Products/FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 boundary only; the typed Product HTTP client remains the next Phase 3 slice. Order does not reference Product EF entities or its database.
 
 ## 5. Dependency rules
 
