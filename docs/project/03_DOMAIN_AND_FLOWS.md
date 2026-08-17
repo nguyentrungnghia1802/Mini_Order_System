@@ -166,7 +166,7 @@ Rules:
 
 This flow demonstrates ordinary service-local CRUD and does not use RabbitMQ.
 
-The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests, verifies the Gateway `/api/products` transform with an in-process downstream test, and provides an Angular same-origin Product client. Angular catalog/operator screens remain deferred to the next frontend slice.
+The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests, verifies the Gateway `/api/products` transform with an in-process downstream test, and provides Angular catalog/operator screens through the same-origin Product client. Checkout/order screens remain a Phase 2 slice.
 
 ### Product update and lifecycle flow
 

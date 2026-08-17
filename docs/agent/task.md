@@ -200,7 +200,7 @@ Evidence for 1.3:
 - Tests: `ProductApiTests.CreateGetAndListProductRoundTrip`, `InactiveProductIsHiddenByDefaultAndVisibleForOperatorListing`, `PatchUpdatesMutableFieldsAndReturnsNewVersion`, `PatchCanDeactivateAndReactivateProduct`, and `ConcurrentPatchesWithSameVersionProduceOneSuccessAndOneConflict`.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; Development smoke remains verified for `/api/v1/products` and `/openapi/v1.json`.
 - Commit: `0654c31` (`feat(product): add optimistic catalog updates`).
-- Notes: Service-native API is intentionally not routed through YARP yet. PATCH uses `If-Match`/`ETag`, increments the explicit version, and returns `409 PRODUCT_CONCURRENCY_CONFLICT` for stale or racing updates. There is still no hard-delete endpoint.
+- Notes: PATCH uses `If-Match`/`ETag`, increments the explicit version, and returns `409 PRODUCT_CONCURRENCY_CONFLICT` for stale or racing updates. The browser-facing `/api/products` mapping is implemented in Gateway; there is still no hard-delete endpoint.
 
 ## 1.4 Product tests
 
@@ -223,19 +223,27 @@ Evidence for 1.4:
 
 ## 1.5 Angular Product screens
 
-- [ ] Create Product catalog route.
-- [ ] Display active Product list.
-- [ ] Display price and available stock.
-- [ ] Handle loading state.
-- [ ] Handle empty state.
-- [ ] Handle API error state.
-- [ ] Create Product management route.
-- [ ] Create Product form using Reactive Forms.
-- [ ] Add create Product UI.
-- [ ] Add update Product UI.
-- [ ] Add activate/deactivate UI.
-- [ ] Map server validation errors to controls.
-- [ ] Ensure responsive layout and keyboard use.
+- [x] Create Product catalog route.
+- [x] Display active Product list.
+- [x] Display price and available stock.
+- [x] Handle loading state.
+- [x] Handle empty state.
+- [x] Handle API error state.
+- [x] Create Product management route.
+- [x] Create Product form using Reactive Forms.
+- [x] Add create Product UI.
+- [x] Add update Product UI.
+- [x] Add activate/deactivate UI.
+- [x] Map server validation errors to controls.
+- [x] Ensure responsive layout and keyboard use.
+
+Evidence for 1.5:
+
+- Files: `web/microshop-ui/src/app/app.routes.ts`, `app.ts`, `app.html`, `features/products/product-catalog.component.*`, `product-management.component.*`, and `core/api/product-api.service.ts`.
+- Tests: 11 Angular tests pass, covering Gateway Product listing, catalog ready/empty/error states, Product create request mapping, `If-Match` update, activation/deactivation, and server validation mapping.
+- Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `git diff --check`.
+- Commit: `185a8cc` (`feat(ui): add product catalog management`).
+- Notes: The catalog uses active-only `/api/products`; the operator view explicitly requests `includeInactive=true`. Product updates send the current body version as the quoted `If-Match` header, and the UI disables active mutations/submission while saving.
 
 ## 1.6 Phase 1 validation gate
 
@@ -243,16 +251,16 @@ Evidence for 1.4:
 - [x] Product migration applies to an empty database.
 - [x] Product API OpenAPI is reachable.
 - [x] Product tests pass.
-- [ ] Angular Product UI works through the intended public route.
+- [x] Angular Product UI works through the intended public route.
 - [x] Product Service uses only its own database.
 
-Evidence for 1.6 (partial Phase 1 gate):
+Evidence for 1.6:
 
 - Files: Product host, Product migration, `.github/workflows/ci.yml`, and `tests/MicroShop.ProductService.Tests/`.
-- Tests: Product PostgreSQL Testcontainers suite and native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`).
-- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `docker compose ... config/up/ps`.
-- Commits: `abc9a7a` (`feat(product): add catalog persistence slice`), `0654c31` (`feat(product): add optimistic catalog updates`).
-- Notes: Angular Product UI and Gateway routing are not complete, so Phase 1 remains partial. Product PATCH/activation and update/concurrency behavior are implemented and tested in `0654c31`; the Product reservation boundary is implemented separately in Phase 3.
+- Tests: Product PostgreSQL Testcontainers suite, native smoke (`/health/live=200`, `/health/ready=200`, catalog `200`, OpenAPI `200`), and 11 Angular Product UI tests pass.
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `docker compose ... config/up/ps`.
+- Commits: `abc9a7a` (`feat(product): add catalog persistence slice`), `0654c31` (`feat(product): add optimistic catalog updates`), and `185a8cc` (`feat(ui): add product catalog management`).
+- Notes: Product native/API/database and Angular catalog/operator UI are complete through the Gateway route. Order/checkout UI belongs to Phase 2; the Product reservation boundary is implemented separately in Phase 3.
 
 ---
 

@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, and Phase 4 Gateway routing/safety/test slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, `27d57ef`, and `569af30` (`feat(gateway): add public yarp routes`).
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, and Phase 4 Gateway routing/safety/frontend client slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, `27d57ef`, `569af30`, `f750963`, and `185a8cc` (`feat(ui): add product catalog management`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -43,20 +43,20 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Angular Product/catalog/operator screens and checkout/order pages.
+- Angular checkout/order pages.
 - Notification business behavior, migration, and integration tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
-Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. The remaining full-audit results are three moderate development-tool advisories in the Angular CLI dependency tree; no production dependency is affected, and no safe fix is available within the pinned Angular 22.1.2 line.
+Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. `npm ci` currently reports one moderate and one high development-tool advisory in the Angular toolchain; `npm audit --omit=dev --audit-level=high` reports 0 production vulnerabilities. No production dependency is affected.
 
 ## Next recommended slice
 
-Phase 1.4 — build the first Angular Product catalog/operator screen on the completed same-origin Gateway API clients.
+Phase 2.5 — build Angular checkout, order list/detail, and cancellation UI on the completed same-origin Gateway API clients.
 
-## Phase 1 — Product Service foundation (partial)
+## Phase 1 — Product Service foundation
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
@@ -67,8 +67,8 @@ Phase 1.4 — build the first Angular Product catalog/operator screen on the com
 | Product update/activation | `[x]` | PATCH supports mutable fields, direct stock adjustment, activation/deactivation, ETag/If-Match, and stable stale-update conflicts. |
 | Product PostgreSQL integration tests | `[x]` | 19 Product tests pass using PostgreSQL Testcontainers, including update/lifecycle, reservation/release/replay, atomic failures, and competing stock requests; no EF InMemory provider. |
 | Product inventory reservation boundary (Phase 3) | `[x]` | Product-owned reservation entities, migrations, internal reserve/release endpoints, authoritative snapshots, idempotency, atomic stock updates, and stable Product-ID row locks are implemented in `d2a885a`. |
-| Product Angular screens | `[ ]` | Deferred until the service contract is stable and the intended Gateway route exists. |
-| Phase 1 validation gate | `[~]` | Product service/migration/OpenAPI/update/reservation tests pass; Angular Product UI and Gateway exposure remain incomplete. |
+| Product Angular screens | `[x]` | Catalog route shows active Products with price/stock and loading/empty/error states; management route uses Reactive Forms for create/update/activate/deactivate and server validation mapping. |
+| Phase 1 validation gate | `[x]` | Product service, migration, OpenAPI, update/concurrency, Gateway route, and 11 Angular Product UI tests pass. |
 
 ## Phase 2 — Order Service foundation (partial)
 
@@ -99,7 +99,7 @@ Phase 1.4 — build the first Angular Product catalog/operator screen on the com
 | Gateway foundation | `[x]` | YARP Product/Order clusters, public path transforms, Notification placeholder cluster, CORS, request limit, health, structured logging defaults, and trace forwarding are configured in `src/Gateway/MicroShop.Gateway/`. |
 | Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
 | Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
-| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; 5 Angular tests pass. |
+| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; the expanded Angular suite has 11 passing tests. |
 | Phase 4 validation gate | `[~]` | Gateway and frontend routing foundations pass; feature screens and application-container port isolation remain in later slices. |
 
 Gateway evidence:
