@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/API, and Phase 3 Product reservation plus Order typed-client/orchestration slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, and `e3c2b7c` (`feat(order): integrate product inventory client`).
+Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/API, and Phase 3 Product reservation plus Order typed-client/orchestration/cancellation slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, and `27d57ef` (`feat(order): add reservation cancellation`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -46,7 +46,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - Angular Product screens and Angular checkout/order pages.
 - Notification business behavior, migration, and integration tests.
 - Public API contracts and YARP business routes.
-- Order cancellation and cancellation ambiguity handling.
+- Gateway public routes and internal-route exclusion.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -56,7 +56,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 3 cancellation — release Product reservations from confirmed orders and model `cancellation_pending`; Angular screens remain sequenced behind the intended Gateway route.
+Phase 4 — configure YARP public Product/Order routes and prove internal Product reservation routes are not exposed; Angular screens remain sequenced behind the Gateway route.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -80,7 +80,7 @@ Phase 3 cancellation — release Product reservations from confirmed orders and 
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 33 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, and database credential isolation. |
+| Order foundation tests | `[x]` | 38 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, and database credential isolation. |
 | Phase 2 validation gate | `[~]` | Order service, migration, native API, and real Product-client paths pass; Angular checkout remains incomplete. |
 
 ## Phase 3 — Product reservation and Order communication (partial)
@@ -91,4 +91,5 @@ Phase 3 cancellation — release Product reservations from confirmed orders and 
 | Internal reservation API | `[x]` | Native Product endpoints reserve/replay/mismatch and release idempotently; `/internal/*` is not yet routed by the empty Gateway. |
 | Reservation concurrency and failure tests | `[x]` | 19 Product tests pass, including no partial decrement and concurrent last-stock behavior on PostgreSQL Testcontainers. |
 | Order typed client/orchestration | `[x]` | `ProductInventoryClient` uses the internal URL, explicit <=5s timeout, traceparent/cancellation propagation, stable Product error mapping, no blind retry, stable `orderId`, authoritative snapshot verification, and `inventory_unknown` persistence in `e3c2b7c`. |
-| Phase 3 validation gate | `[~]` | Product reservation and Order-to-Product HTTP/orchestration tests pass; cancellation and final Gateway internal-route safety remain incomplete. |
+| Order cancellation/release | `[x]` | `POST /api/v1/orders/{id}/cancel` guards state, calls idempotent Product release, confirms only after known release, and persists `cancellation_pending` for ambiguous outcomes in `27d57ef`. |
+| Phase 3 validation gate | `[~]` | Product reservation, Order-to-Product HTTP/orchestration, and cancellation tests pass; final Gateway internal-route safety remains incomplete. |

@@ -328,7 +328,7 @@ Evidence for 2.3:
 - Tests: `OrderApiTests` covers authoritative request validation, duplicate/quantity rejection, pending-to-confirmed persistence, rejected fake Product outcomes, pagination, detail, and stable validation codes.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `git diff --check`.
 - Commit: `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: The deterministic fake catalog remains available only for explicit Phase 2 compatibility tests. Runtime Order creation now uses the typed Product reservation client; cancellation remains Phase 3 work.
+- Notes: The deterministic fake catalog remains available only for explicit Phase 2 compatibility tests. Runtime Order creation now uses the typed Product reservation client; cancellation is implemented in the Phase 3 slice.
 
 ## 2.4 Order tests
 
@@ -344,7 +344,7 @@ Evidence for 2.3:
 Evidence for 2.4 (partial):
 
 - Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderApiTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
-- Tests: 33 Order tests pass, including HTTP creation, known Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, database credential isolation, typed Product HTTP mapping, timeout/unavailable handling, and real orchestration state mapping. Order transition concurrency remains unimplemented.
+- Tests: 38 Order tests pass, including HTTP creation, known Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, database credential isolation, typed Product HTTP mapping, timeout/unavailable handling, real orchestration state mapping, and cancellation release/idempotency. Order transition concurrency remains unimplemented.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
 - Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
 - Notes: The HTTP creation, listing, and detail items are complete. The real Product reservation/orchestration slice is implemented; the separate Order transition concurrency guard remains deferred.
@@ -488,13 +488,21 @@ Evidence for 3.5:
 
 ## 3.6 Cancellation
 
-- [ ] Implement `POST /api/v1/orders/{id}/cancel`.
-- [ ] Allow only from `confirmed`.
-- [ ] Call Product release.
-- [ ] Mark `cancelled` only after known release.
-- [ ] Mark `cancellation_pending` for ambiguous release.
-- [ ] Ensure repeated cancellation never restores stock twice.
-- [ ] Return `canCancel` from Order responses.
+- [x] Implement `POST /api/v1/orders/{id}/cancel`.
+- [x] Allow only from `confirmed`.
+- [x] Call Product release.
+- [x] Mark `cancelled` only after known release.
+- [x] Mark `cancellation_pending` for ambiguous release.
+- [x] Ensure repeated cancellation never restores stock twice.
+- [x] Return `canCancel` from Order responses.
+
+Evidence for 3.6:
+
+- Files: `Features/Orders/OrderApplicationService.cs`, `OrderEndpoints.cs`, `Infrastructure/Products/ProductInventoryClient.cs`, and `tests/MicroShop.OrderService.Tests/OrderApiTests.cs` plus `OrderProductHttpIntegrationTests.cs`.
+- Tests: cancellation succeeds only after Product release, repeated cancellation returns the cancelled order without another release, unavailable release persists `cancellation_pending`, and a second attempt does not blindly call release again.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `git diff --check`.
+- Commit: `27d57ef` (`feat(order): add reservation cancellation`).
+- Notes: `confirmed -> cancellation_pending` is committed before the remote call, so concurrent/repeated requests cannot issue duplicate release commands. A known release moves to `cancelled`; dependency/ambiguous outcomes remain pending for reconciliation.
 
 ## 3.7 Synchronous communication tests
 
@@ -508,19 +516,19 @@ Evidence for 3.5:
 - [x] Test concurrent last-stock purchase.
 - [x] Test Product Service unavailable.
 - [x] Test timeout with ambiguous outcome.
-- [ ] Test cancellation.
-- [ ] Test repeated cancellation.
-- [ ] Test `cancellation_pending`.
+- [x] Test cancellation.
+- [x] Test repeated cancellation.
+- [x] Test `cancellation_pending`.
 - [x] Verify no partial stock decrement.
 - [x] Verify stock never becomes negative.
 
 Evidence for 3.7 (partial):
 
 - Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs`, `tests/MicroShop.OrderService.Tests/ProductInventoryClientTests.cs`, `OrderOrchestrationTests.cs`, and `OrderProductHttpIntegrationTests.cs`.
-- Tests: 19 Product tests and 33 Order tests pass, including Product atomic reservation/release, known failures, replay/mismatch, concurrent last-stock, typed HTTP response/error mapping, unavailable dependency, timeout ambiguity, cancellation propagation, and Order unknown-state persistence. Cancellation endpoint behavior remains deferred.
+- Tests: 19 Product tests and 38 Order tests pass, including Product atomic reservation/release, known failures, replay/mismatch, concurrent last-stock, typed HTTP response/error mapping, unavailable dependency, timeout ambiguity, cancellation propagation, cancellation release/idempotency, `cancellation_pending`, and Order unknown-state persistence.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
 - Commits: `d2a885a` (`feat(product): add atomic inventory reservations`), `8b021f5` (`docs(project): record inventory reservation boundary`), and `e3c2b7c` (`feat(order): integrate product inventory client`).
-- Notes: Product reservation and Order synchronous communication are green; cancellation and internal-route exclusion remain later Phase 3/4 work.
+- Notes: Product reservation, Order synchronous communication, and cancellation are green; internal-route exclusion remains later Phase 4 work.
 
 ## 3.8 Phase 3 validation gate
 
@@ -528,7 +536,7 @@ Evidence for 3.7 (partial):
 - [x] Product and Order databases remain isolated.
 - [x] All concurrency tests pass using PostgreSQL.
 - [x] All failure states match documentation.
-- [ ] Cancellation restores stock exactly once.
+- [x] Cancellation restores stock exactly once.
 - [ ] Internal Product API is not public.
 
 ---

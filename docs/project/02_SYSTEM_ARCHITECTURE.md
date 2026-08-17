@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, and the Order Service persistence/native API plus typed Product reservation orchestration. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, native create/list/detail API, typed HTTP client, and explicit distributed outcome states. Gateway routes, cancellation, Notification behavior, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, and the Order Service persistence/native API plus typed Product reservation and cancellation orchestration. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, native create/list/detail API, typed HTTP client, and explicit distributed outcome states. Gateway routes, Notification behavior, and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
@@ -39,7 +39,7 @@ The primary learning boundary is:
 - **HTTP request/response** when Order Service needs inventory confirmation before responding;
 - **broker event** when Order Service only announces that confirmation already happened.
 
-The current Order API persists `pending_inventory` before calling `IProductInventoryClient`. Runtime uses a typed HTTP client to Product's internal reservation endpoint, verifies the authoritative snapshots and total, then transitions to `confirmed`, known `rejected`, or `inventory_unknown`. The deterministic fake client remains an explicit test-only configuration for the earlier Phase 2 API tests; it does not mutate Product stock. Product's internal reservation/release API and Order's synchronous client/orchestration are implemented and tested, while cancellation remains next.
+The current Order API persists `pending_inventory` before calling `IProductInventoryClient`. Runtime uses a typed HTTP client to Product's internal reservation endpoint, verifies the authoritative snapshots and total, then transitions to `confirmed`, known `rejected`, or `inventory_unknown`. A confirmed order calls the idempotent Product release endpoint before becoming `cancelled`; ambiguous release remains `cancellation_pending`. The deterministic fake client remains an explicit test-only configuration for the earlier Phase 2 API tests and does not mutate Product stock.
 
 ## 2. Runtime boundaries
 

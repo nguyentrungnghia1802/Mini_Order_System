@@ -247,13 +247,13 @@ Required cases:
 
 The implemented Product API tests use PostgreSQL Testcontainers and apply the real Product migrations. They cover update rounding/versioning, activation filtering, competing PATCH requests, atomic reservation failures, authoritative snapshots, replay/mismatch, idempotent release, and concurrent last-stock requests. EF Core InMemory is not used.
 
-The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite contains 33 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client.
+The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite contains 38 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client and cancellation release flow.
 
 ### Order integration tests
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 33-test suite covers creation, known rejection, listing, detail, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, and `inventory_unknown` persistence.
+The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 38-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, and `cancellation_pending` persistence.
 
 Cases:
 

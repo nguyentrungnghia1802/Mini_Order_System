@@ -66,7 +66,7 @@ Phase 2 status: partial. Order domain entities, state transition guard, state-hi
 
 Learning objective: request/response coupling and distributed outcome states.
 
-Phase 3 status: partial. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, PostgreSQL concurrency tests, Order's typed client, authoritative orchestration, explicit timeout/availability mapping, and `inventory_unknown` tests are implemented in `d2a885a`, `8b021f5`, and `e3c2b7c`. Cancellation/release orchestration remains next.
+Phase 3 status: partial. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, PostgreSQL concurrency tests, Order's typed client, authoritative orchestration, explicit timeout/availability mapping, `inventory_unknown`, and guarded cancellation/release orchestration are implemented in `d2a885a`, `8b021f5`, `e3c2b7c`, and `27d57ef`. Gateway exposure and internal-route exclusion remain next.
 
 ### Phase 4: YARP API Gateway
 

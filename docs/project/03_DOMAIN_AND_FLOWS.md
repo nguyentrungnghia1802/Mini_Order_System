@@ -119,7 +119,7 @@ Forbidden examples:
 
 ### Phase 2 native API behavior
 
-The implemented Order API creates and commits `pending_inventory`, calls the typed Product reservation client with the same generated order ID, stores Product-authoritative name/price/quantity snapshots, and then commits `confirmed`; known Product failures commit `rejected`, while unavailable or ambiguous results commit `inventory_unknown`. The deterministic fake client is retained only for explicit Phase 2 compatibility tests and does not change Product stock. Product's internal HTTP reservation/release boundary and the synchronous Order orchestration are implemented; cancellation remains later in Phase 3.
+The implemented Order API creates and commits `pending_inventory`, calls the typed Product reservation client with the same generated order ID, stores Product-authoritative name/price/quantity snapshots, and then commits `confirmed`; known Product failures commit `rejected`, while unavailable or ambiguous results commit `inventory_unknown`. A confirmed order enters `cancellation_pending` before calling Product release, becomes `cancelled` only after a known release, and returns a stable conflict for repeated attempts while release remains unknown. The deterministic fake client is retained only for explicit Phase 2 compatibility tests and does not change Product stock.
 
 ## 7. Notification state
 
@@ -285,7 +285,7 @@ Canonical item set comparison sorts by product ID and compares quantity; request
 6. Product Service finds and locks reservation/items/products, restores quantities, marks released, and commits.
 7. Order Service changes order to `cancelled`.
 8. API returns current order.
-9. Repeated cancellation returns current cancelled state or a stable conflict without another stock change.
+9. Repeated cancellation returns the current cancelled state or a stable conflict without another release call.
 
 If the release response is lost, Order Service uses `cancellation_pending`, not a false success.
 
