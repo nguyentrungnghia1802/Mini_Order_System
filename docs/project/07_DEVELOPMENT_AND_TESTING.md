@@ -269,15 +269,20 @@ Cases:
 
 ### Notification integration tests
 
-The current `MicroShop.NotificationService.Tests` project starts PostgreSQL 17 Testcontainers, applies `20260817185808_InitialNotificationSchema`, and verifies the host readiness check, consumer persistence boundary, and read API:
+The current `MicroShop.NotificationService.Tests` project starts PostgreSQL 17 and RabbitMQ 4 Testcontainers, applies `20260817185808_InitialNotificationSchema`, and verifies the host readiness check, consumer persistence boundary, read API, and real broker behavior:
 
 - consume event creates one Notification and one `ConsumedMessage`;
 - duplicate event creates one Notification;
 - unsupported schema fails before side effects;
 - customer email, order ID, amount, currency, body, and trace ID survive the readback.
 - read API email/order filters, stable pagination, OpenAPI, validation, not-found, and idempotent mark-as-read behavior.
+- RabbitMQ publish/consume creates the Notification through the actual service host;
+- duplicate broker delivery keeps one Notification;
+- unsupported schema retries and moves to the durable endpoint error queue;
+- publisher completion is independent of a stopped Notification consumer;
+- a queued message survives Notification host restart and is consumed after restart.
 
-RabbitMQ publish/consume, retry/error-queue, service restart, and queued-message recovery tests remain Compose-level work. The consumer uses only the Notification connection and EF model.
+The integration fixture uses a disposable RabbitMQ container because the current infrastructure Compose intentionally keeps AMQP port 5672 private. The consumer uses only the Notification connection and EF model; full application-container Compose and Angular E2E remain later gates.
 
 ### Gateway integration tests
 
@@ -290,7 +295,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 78 passing tests: 1 Architecture, 2 Contracts, 7 Notification, 7 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, and mark-as-read; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
+The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 83 passing tests: 1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, publisher independence, restart, and queued recovery; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
 
 ### Contract tests
 

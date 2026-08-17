@@ -167,15 +167,15 @@ This status table is updated from verified repository code and runtime checks. T
 | Gateway | ASP.NET Core/YARP host, public Product/Order/Notification routes, internal-route rejection, and Gateway tests implemented |
 | Product Service | Partial Phase 1/3: Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
 | Order Service | Partial Phase 2/3: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API, typed Product reservation client, authoritative snapshot orchestration, explicit timeout/availability mapping, `inventory_unknown`, and PostgreSQL integration tests implemented |
-| Notification Service | Independent host, owned PostgreSQL schema/migration, durable `OrderConfirmedV1` consumer, duplicate suppression, database-backed readiness, read/mark-as-read API, and OpenAPI implemented; UI and broker recovery exercises remain |
+| Notification Service | Independent host, owned PostgreSQL schema/migration, durable `OrderConfirmedV1` consumer, duplicate suppression, database-backed readiness, read/mark-as-read API, OpenAPI, and RabbitMQ integration/restart tests implemented; full-stack recovery remains |
 | Angular frontend | Angular 22 strict workspace, same-origin Gateway clients, Product catalog/operator screens, checkout, Order list/detail/cancellation screens, Notification route/list/refresh/polling UI, and UI tests implemented |
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
-| RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; full-stack recovery validation remains |
+| RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers publish/consume, retry/error queue, duplicate, restart, and queued recovery tests pass; full-stack validation remains |
 | Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose implemented; full stack planned for Phase 6 |
-| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL Testcontainers foundations implemented; broker-level recovery and E2E tests remain |
+| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations implemented; Angular E2E tests remain |
 | Deployment | Optional after local completion |
 
-Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, and synchronous reservation path from the remaining broker recovery and end-to-end behavior.
+Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, and synchronous reservation path from the remaining full-stack Compose and end-to-end behavior.
 
 ## 10. Main technical constraints
 

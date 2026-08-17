@@ -44,8 +44,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Broker-level publish/consume and recovery tests.
-- MassTransit producer/consumer and transactional outbox.
+- Transactional outbox and its outage/recovery behavior.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
@@ -54,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 5 — implement broker-level recovery validation and the remaining end-to-end flow.
+Phase 6 — add application images, full-stack Compose, and the remaining end-to-end flow.
 
 ## Phase 1 — Product Service foundation
 
@@ -99,24 +98,24 @@ Phase 5 — implement broker-level recovery validation and the remaining end-to-
 | --- | --- | --- |
 | Gateway foundation | `[x]` | YARP Product/Order clusters, public path transforms, Notification placeholder cluster, CORS, request limit, health, structured logging defaults, and trace forwarding are configured in `src/Gateway/MicroShop.Gateway/`. |
 | Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
-| Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
-| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; Gateway client coverage is included in the current 16-test Angular suite. |
+| Gateway integration tests | `[x]` | 7 `MicroShop.Gateway.Tests` pass for Product/Order/Notification transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
+| Angular Gateway client migration | `[x]` | `ProductApiService`, `OrderApiService`, and `NotificationApiService` use same-origin Gateway paths; the interceptor maps connectivity failures to `GatewayApiError`; Gateway client coverage is included in the current 21-test Angular suite. |
 | Phase 4 validation gate | `[~]` | Gateway routing, Product/Order Angular feature screens, and source-level Gateway-only usage pass; application-container port isolation remains in the Phase 6 Compose slice. |
 
 Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 78 .NET tests pass (1 Architecture, 2 Contracts, 7 Notification, 7 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 83 .NET tests pass (1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
 | Shared `OrderConfirmedV1` contract | `[x]` | Versioned passive records and two JSON compatibility tests are implemented in `MicroShop.Contracts`. |
-| RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, and bus readiness health are configured. |
+| RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, bus readiness health, and real RabbitMQ Testcontainers integration coverage are implemented. |
 | Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
-| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 7 PostgreSQL-backed Notification tests pass. |
+| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 12 Notification tests pass, including real RabbitMQ publish/consume and recovery coverage. |
 | Notification read API and Gateway route | `[x]` | Filtered/paginated `GET /api/v1/notifications`, idempotent mark-as-read, OpenAPI, and tested `/api/notifications/*` Gateway transform are implemented. |
 | Notification Angular UI | `[x]` | `/notifications` route, same-origin client, list/empty/error/loading states, bounded polling, manual refresh, eventual-consistency guidance, and mark-as-read are implemented; 21 Angular tests pass overall. |
-| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API/UI and duplicate suppression are verified; broker-level restart/recovery and full eventual-flow validation remain. |
+| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API/UI, duplicate suppression, retry/error queue, publisher independence, restart, and queued recovery are verified; full Compose eventual-flow validation remains. |

@@ -559,7 +559,7 @@ Evidence for 3.7:
 Evidence for 3.8:
 
 - Files: Product/Order database configuration and migrations, the typed Product client, cancellation orchestration, and Gateway route/test files.
-- Tests: Full solution validation passes with 78 .NET tests: 1 Architecture, 2 Contracts, 7 Gateway, 7 Notification, 40 Order, and 21 Product.
++ Tests: Full solution validation passes with 83 .NET tests: 1 Architecture, 2 Contracts, 7 Gateway, 12 Notification, 40 Order, and 21 Product.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`) completes the final Gateway safety item for this gate.
 
@@ -603,7 +603,7 @@ Evidence for 4.2 (partial):
 
 - Files: `BootstrapConfiguration.cs`, `Program.cs`, `appsettings.json`, and `GatewayApiTests.cs`.
 - Tests: Internal Product paths return `404 GATEWAY_ROUTE_NOT_FOUND` without forwarding; unavailable destinations return `502 DOWNSTREAM_UNAVAILABLE`; invalid Product/Order destination schemes fail startup configuration.
-- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore` (78 tests pass).
++ Commands: `dotnet test MicroShop.sln --configuration Release --no-restore` (83 tests pass).
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Notes: Angular feature clients and screens use same-origin Gateway paths; service-native ports are not referenced by browser code. Full application-container port isolation remains a Phase 6 Compose validation item.
 
@@ -650,7 +650,7 @@ Evidence for 4.4:
 Evidence for 4.5:
 
 - Files: Gateway route configuration and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
-- Tests: 7 Gateway tests, 21 Angular tests, and the full 78-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
+- Tests: 7 Gateway tests, 21 Angular tests, and the full 83-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Notes: Public routes, internal-route exclusion, Angular same-origin API clients, and Product/Order feature screens are complete. Application-container port isolation remains a Phase 6 Compose validation item.
@@ -676,7 +676,7 @@ Evidence for 4.5:
 Evidence for 5.1:
 
 - Files: `src/BuildingBlocks/MicroShop.Contracts/Orders/OrderConfirmedV1.cs`, `src/Services/OrderService/MicroShop.OrderService/MicroShop.OrderService.csproj`, `src/Services/NotificationService/MicroShop.NotificationService/MicroShop.NotificationService.csproj`, and `tests/MicroShop.Contracts.Tests/OrderConfirmedV1SerializationTests.cs`.
-- Tests: 2 contract tests pass for stable camelCase JSON serialization and documented Version 1 fixture deserialization; the full .NET solution has 78 passing tests.
++ Tests: 2 contract tests pass for stable camelCase JSON serialization and documented Version 1 fixture deserialization; the full .NET solution has 83 passing tests.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.Contracts.Tests/MicroShop.Contracts.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `2c99721` (`feat(contracts): add order confirmed event`).
 - Notes: The assembly contains passive immutable records only; it references no EF Core project, database entity, or service business logic. Order and Notification reference the contract assembly directly.
@@ -695,10 +695,10 @@ Evidence for 5.1:
 Evidence for 5.2:
 
 - Files: `deploy/compose.yaml`, `.env.example`, `Directory.Packages.props`, `src/BuildingBlocks/MicroShop.ServiceDefaults/Messaging/RabbitMqOptions.cs`, both service `Program.cs` files, and `tests/MicroShop.NotificationService.Tests/NotificationBootstrapTests.cs`.
-- Tests: Notification bootstrap health and API tests pass with owned PostgreSQL Testcontainers; the existing Order readiness test passes with the same isolated test transport; the full solution has 78 passing .NET tests. Compose reports healthy PostgreSQL and RabbitMQ containers with the management UI on port 15672.
++ Tests: Notification bootstrap health and API tests pass with owned PostgreSQL Testcontainers; the existing Order readiness test passes with the same isolated test transport; the full solution has 83 passing .NET tests. Compose reports healthy PostgreSQL and RabbitMQ containers with the management UI on port 15672.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `docker compose --env-file .env.example -f deploy/compose.yaml config --quiet`; `docker compose --env-file .env.example -f deploy/compose.yaml up -d`; `docker compose --env-file .env.example -f deploy/compose.yaml ps`.
 - Commit: `6fabfd5` (`feat(messaging): configure RabbitMQ transport`).
-- Notes: Runtime uses MassTransit RabbitMQ 8.5.10, a durable `microshop-notification-order-confirmed-v1` endpoint, three 250ms retry attempts, and the framework error-queue convention. Testing uses in-memory transport so PostgreSQL-backed Order tests do not require a broker. A native host-to-broker smoke is deferred until application containers exist because AMQP port 5672 is intentionally private in the current infrastructure Compose.
++ Notes: Runtime uses MassTransit RabbitMQ 8.5.10, a durable `microshop-notification-order-confirmed-v1` endpoint, three 250ms retry attempts, and the framework error-queue convention. PostgreSQL-backed Order tests continue to use isolated in-memory transport, while the Notification messaging integration suite uses a disposable RabbitMQ Testcontainer. A native full-stack smoke is deferred until application containers exist because AMQP port 5672 is intentionally private in the current infrastructure Compose.
 
 ## 5.3 Direct publish learning milestone
 
@@ -730,7 +730,7 @@ Evidence for 5.3:
 Evidence for 5.4:
 
 - Files: `src/Services/NotificationService/MicroShop.NotificationService/Persistence/NotificationDbContext.cs`, `Persistence/Entities/ConsumedMessage.cs`, `Persistence/Entities/Notification.cs`, `Persistence/Configurations/`, `Persistence/Migrations/20260817185808_InitialNotificationSchema.cs`, `Infrastructure/Database/NotificationDatabaseOptions.cs`, and `Program.cs`.
-- Tests: 7 Notification tests pass against a real PostgreSQL 17 Testcontainer; the bootstrap test verifies `/health/ready` against the migrated owned database and the API tests verify filters, pagination, OpenAPI, and mark-as-read. The full solution has 78 passing .NET tests.
++ Tests: 12 Notification tests pass against real PostgreSQL 17 and RabbitMQ Testcontainers; the bootstrap test verifies `/health/ready` against the migrated owned database, API tests verify filters/pagination/OpenAPI/mark-as-read, and the messaging tests verify publish/consume and recovery. The full solution has 83 passing .NET tests.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-build --no-restore`.
 - Commit: `e6f19a6` (`feat(notification): persist confirmed order events`).
 - Notes: Notification owns `consumed_messages` and `notifications`; unique `message_id`/`source_message_id` constraints and customer/order indexes are local to that database. No Product or Order EF project, DbContext, connection string, table, or migration is referenced.
@@ -767,7 +767,7 @@ Evidence for 5.5:
 Evidence for 5.6:
 
 - Files: `src/Services/NotificationService/MicroShop.NotificationService/Features/Notifications/NotificationContracts.cs`, `NotificationEndpoints.cs`, `Program.cs`, `src/Gateway/MicroShop.Gateway/appsettings.json`, `BootstrapConfiguration.cs`, and the Notification/Gateway test files.
-- Tests: 7 Notification tests pass, including email/order filters, stable descending pagination, OpenAPI discovery, validation, not-found handling, and idempotent mark-as-read; 7 Gateway tests pass, including `/api/notifications` to `/api/v1/notifications` path/query transformation. The full solution has 78 passing .NET tests.
++ Tests: 12 Notification tests pass, including email/order filters, stable descending pagination, OpenAPI discovery, validation, not-found handling, idempotent mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, restart, and queued recovery; 7 Gateway tests pass, including `/api/notifications` to `/api/v1/notifications` path/query transformation. The full solution has 83 passing .NET tests.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-build --no-restore`; `dotnet test tests/MicroShop.Gateway.Tests/MicroShop.Gateway.Tests.csproj --configuration Release --no-build --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-build --no-restore`.
 - Commit: `569027d` (`feat(notification): add read api and gateway route`).
 - Notes: The Gateway proxies only the public Notification HTTP path; it does not reference Notification EF types or database configuration. The Angular Notification screen consumes the public path through the same-origin Gateway client.
@@ -792,30 +792,35 @@ Evidence for 5.7:
 
 ## 5.8 Messaging tests
 
-- [ ] Publish/consume integration test.
+- [x] Publish/consume integration test.
 - [x] Duplicate event test.
-- [ ] Consumer retry test.
-- [ ] Error queue test.
-- [ ] Notification Service restart test.
-- [ ] Durable queued-message recovery test.
-- [ ] Verify Order confirmation does not wait for Notification consumer.
+- [x] Consumer retry test.
+- [x] Error queue test.
+- [x] Notification Service restart test.
+- [x] Durable queued-message recovery test.
+- [x] Verify Order confirmation does not wait for Notification consumer.
 - [x] Verify Notification Service uses only its own database.
 
-Evidence for completed 5.8 items:
+Evidence for 5.8:
 
-- Files: `tests/MicroShop.NotificationService.Tests/NotificationConsumerTests.cs` and the Notification persistence/consumer implementation in commit `e6f19a6`.
-- Tests: `SuppressesDuplicateDeliveryByMessageId` proves one durable Notification for repeated delivery; the consumer test fixture creates and migrates an isolated Notification database and contains no Product/Order database reference.
-- Remaining broker-level publish/consume, retry/error-queue, restart, and durable recovery exercises remain pending until the application-container Compose slice exposes the RabbitMQ path safely.
+- Files: `tests/MicroShop.NotificationService.Tests/RabbitMqMessagingFixture.cs`, `NotificationMessagingIntegrationTests.cs`, `NotificationConsumerTests.cs`, and `MicroShop.NotificationService.Tests.csproj`; central package/lock files pin `Testcontainers.RabbitMq` 4.13.0 and `RabbitMQ.Client` 7.2.1.
+- Tests: 5 RabbitMQ-backed integration tests pass: publish/consume, duplicate delivery, bounded retry/error queue, queued recovery after Notification host restart, and publisher completion while the consumer is stopped. The existing PostgreSQL consumer tests still verify ownership and transactional/idempotent persistence; the full solution has 83 passing .NET tests.
+- Commands: `dotnet restore MicroShop.sln --locked-mode`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~NotificationMessagingIntegrationTests`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Notes: The test host runs the actual Notification `Program` against the durable `microshop-notification-order-confirmed-v1` endpoint. The RabbitMQ container is disposable because infrastructure Compose keeps AMQP 5672 private; no shared Docker volume is removed.
 
 ## 5.9 Phase 5 validation gate
 
-- [ ] Confirmed Order emits event.
-- [ ] Notification Service consumes event.
-- [ ] Duplicate event creates one Notification.
-- [ ] Stopping Notification Service does not block Order confirmation.
-- [ ] Restarting Notification Service drains queued messages.
-- [ ] Angular displays eventual Notification.
+- [x] Confirmed Order emits event.
+- [x] Notification Service consumes event.
+- [x] Duplicate event creates one Notification.
+- [x] Stopping Notification Service does not block Order confirmation.
+- [x] Restarting Notification Service drains queued messages.
+- [~] Angular displays eventual Notification.
 
+Evidence for 5.9:
+
+- Files: `src/Services/OrderService/MicroShop.OrderService/Infrastructure/Messaging/OrderConfirmedPublisher.cs`, `src/Services/NotificationService/MicroShop.NotificationService/Program.cs`, and `tests/MicroShop.NotificationService.Tests/NotificationMessagingIntegrationTests.cs`.
+- Tests: direct Order publication and failure-window tests, plus the 5 RabbitMQ-backed Notification integration tests, pass. Angular Notification list behavior is unit-tested with bounded polling; full browser-to-Compose eventual delivery remains deferred to Phase 6/8.
 ---
 
 # Phase 6 — Docker Compose Completion
