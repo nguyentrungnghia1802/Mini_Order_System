@@ -102,3 +102,30 @@ export interface OrderListQuery {
   status?: OrderStatus;
   customerEmail?: string;
 }
+
+export interface NotificationResponse {
+  id: string;
+  orderId: string;
+  customerEmail: string;
+  subject: string;
+  body: string;
+  totalAmount: number;
+  currency: string;
+  isRead: boolean;
+  createdAtUtc: string;
+}
+
+export interface NotificationPage {
+  items: NotificationResponse[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface NotificationListQuery {
+  page?: number;
+  limit?: number;
+  customerEmail?: string;
+  orderId?: string;
+}

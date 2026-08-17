@@ -1,0 +1,82 @@
+<section class="page" aria-labelledby="notifications-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Notification Service through Gateway</p>
+      <h1 id="notifications-title">Notifications</h1>
+      <p class="lede">Generated order confirmations arrive here after the message is consumed.</p>
+    </div>
+    <button class="button" type="button" (click)="refresh()" [disabled]="state() === 'loading'">
+      Refresh
+    </button>
+  </div>
+
+  <p class="polling-note" role="status">{{ pollingMessage }}</p>
+
+  @if (actionError()) {
+    <div class="action-error" role="alert">{{ actionError() }}</div>
+  }
+
+  @if (state() === 'loading') {
+    <div class="status-card" role="status">Loading notifications…</div>
+  } @else if (state() === 'error') {
+    <div class="status-card error" role="alert">
+      <strong>Notifications unavailable</strong>
+      <p>{{ errorMessage() }}</p>
+      <button class="button" type="button" (click)="refresh()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="status-card" role="status">
+      <strong>No notifications yet.</strong>
+      <p>An order confirmation may still be in flight. Refresh after the Notification Service consumes it.</p>
+    </div>
+  } @else {
+    <div class="notification-list" aria-live="polite">
+      @for (notification of notifications(); track notification.id) {
+        <article class="notification-card" [class.unread]="!notification.isRead">
+          <div class="notification-heading">
+            <div>
+              <p class="notification-label">Order confirmation</p>
+              <h2>{{ notification.subject }}</h2>
+            </div>
+            @if (!notification.isRead) {
+              <span class="status unread-status">Unread</span>
+            } @else {
+              <span class="status">Read</span>
+            }
+          </div>
+
+          <p class="notification-body">{{ notification.body }}</p>
+
+          <dl class="notification-meta">
+            <div>
+              <dt>Customer</dt>
+              <dd>{{ notification.customerEmail }}</dd>
+            </div>
+            <div>
+              <dt>Total</dt>
+              <dd>{{ notification.totalAmount | currency: notification.currency:'symbol':'1.0-2' }}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{{ notification.createdAtUtc | date: 'medium' }}</dd>
+            </div>
+          </dl>
+
+          <div class="notification-actions">
+            <a class="text-link" [routerLink]="['/orders', notification.orderId]">View order</a>
+            @if (!notification.isRead) {
+              <button
+                class="button secondary"
+                type="button"
+                [disabled]="updatingId() !== null"
+                (click)="markAsRead(notification)"
+              >
+                {{ updatingId() === notification.id ? 'Saving…' : 'Mark as read' }}
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

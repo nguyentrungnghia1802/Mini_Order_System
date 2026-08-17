@@ -5,6 +5,7 @@ import { ProductManagementComponent } from './features/products/product-manageme
 import { OrderCheckoutComponent } from './features/orders/order-checkout.component';
 import { OrderDetailComponent } from './features/orders/order-detail.component';
 import { OrderListComponent } from './features/orders/order-list.component';
+import { NotificationListComponent } from './features/notifications/notification-list.component';
 
 export const routes: Routes = [
   {
@@ -28,6 +29,11 @@ export const routes: Routes = [
   {
     path: 'orders/:orderId',
     component: OrderDetailComponent
+  },
+  {
+    path: 'notifications',
+    component: NotificationListComponent,
+    pathMatch: 'full'
   },
   {
     path: '',

@@ -14,6 +14,7 @@ import { gatewayErrorInterceptor } from './gateway-error.interceptor';
 import { GatewayApiError } from './gateway-error';
 import { OrderApiService } from './order-api.service';
 import { ProductApiService } from './product-api.service';
+import { NotificationApiService } from './notification-api.service';
 
 describe('Gateway API clients', () => {
   let httpTesting: HttpTestingController;
@@ -98,5 +99,31 @@ describe('Gateway API clients', () => {
     const gatewayError = receivedError as GatewayApiError;
     expect(gatewayError.kind).toBe('connectivity');
     expect(gatewayError.code).toBe('DOWNSTREAM_UNAVAILABLE');
+  });
+
+  it('uses same-origin Gateway paths for Notification listing and mark-as-read', () => {
+    const service = TestBed.inject(NotificationApiService);
+    const notificationId = 'notification-1';
+
+    service.list({ page: 2, limit: 5, customerEmail: 'a@example.com' }).subscribe();
+    const listRequest = httpTesting.expectOne(
+      '/api/notifications?page=2&limit=5&customerEmail=a@example.com'
+    );
+    expect(listRequest.request.method).toBe('GET');
+    listRequest.flush({
+      items: [],
+      page: 2,
+      limit: 5,
+      total: 0,
+      totalPages: 0
+    });
+
+    service.markAsRead(notificationId).subscribe();
+    const readRequest = httpTesting.expectOne(
+      `/api/notifications/${notificationId}/read`
+    );
+    expect(readRequest.request.method).toBe('POST');
+    expect(readRequest.request.body).toBeNull();
+    readRequest.flush({ id: notificationId, isRead: true });
   });
 });
