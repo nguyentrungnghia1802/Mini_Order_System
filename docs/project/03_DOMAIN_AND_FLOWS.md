@@ -297,7 +297,7 @@ If the release response is lost, Order Service uses `cancellation_pending`, not 
 Order DB commit -> publish event -> return
 ```
 
-Known gap: process failure between commit and publish loses the event.
+Implemented in the Order Service. The event body and MassTransit envelope preserve a generated message ID, the Order ID correlation, and the incoming W3C `traceparent` when present. A tested publisher failure after the database commit leaves the Order confirmed, demonstrating the known gap: process failure between commit and publish can lose the event.
 
 ### Transactional outbox milestone
 

@@ -186,7 +186,7 @@ Baseline implementation options:
 1. direct publish after database commit for first learning milestone;
 2. transactional outbox for the final hardening milestone.
 
-Documentation and status must state which option is implemented. Direct publish has a known message-loss window; outbox closes that window.
+The current implementation is the direct-publish milestone: Order commits `confirmed`, then publishes through MassTransit with explicit message/correlation IDs and trace context. Direct publish has a known message-loss window; the Phase 7 outbox closes that window. Documentation and status must not describe the direct milestone as lossless.
 
 ### RabbitMQ to Notification Service
 

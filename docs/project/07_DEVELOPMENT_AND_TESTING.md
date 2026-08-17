@@ -290,7 +290,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 70 passing tests: 1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 39 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification bootstrap suite verifies liveness/readiness with the test-only in-memory bus.
+The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 71 passing tests: 1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification bootstrap suite verifies liveness/readiness with the test-only in-memory bus; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
 
 ### Contract tests
 

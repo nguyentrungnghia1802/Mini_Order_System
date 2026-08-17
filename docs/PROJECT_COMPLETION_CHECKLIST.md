@@ -107,7 +107,7 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 70 .NET tests pass (1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 39 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 71 .NET tests pass (1 Architecture, 2 Contracts, 1 Notification bootstrap, 6 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 
@@ -115,5 +115,6 @@ Gateway evidence:
 | --- | --- | --- |
 | Shared `OrderConfirmedV1` contract | `[x]` | Versioned passive records and two JSON compatibility tests are implemented in `MicroShop.Contracts`. |
 | RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, and bus readiness health are configured. |
+| Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
 | Notification persistence/consumer/API/UI | `[ ]` | Deferred to the remaining Phase 5 vertical slice. |
 | Phase 5 validation gate | `[ ]` | Publishing, consuming, duplicate suppression, read API/UI, restart behavior, and eventual Notification flow remain unimplemented. |
