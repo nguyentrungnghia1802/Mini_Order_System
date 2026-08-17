@@ -134,6 +134,8 @@ Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Fea
 
 Current Gateway implementation files are `BootstrapConfiguration.cs`, `Program.cs`, and `appsettings.json`. Gateway owns only YARP route/cluster configuration, public cross-cutting policy, health, trace-header forwarding, destination validation, and stable proxy errors; it does not contain Product or Order business logic. `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs` verifies the public route boundary and internal-route rejection.
 
+Current Angular API boundary files are `web/microshop-ui/src/app/core/api/api.paths.ts`, `api.models.ts`, `product-api.service.ts`, `order-api.service.ts`, `gateway-error.ts`, and `gateway-error.interceptor.ts`. They use same-origin `/api/products` and `/api/orders` paths only; feature components are added in the Product and Order UI slices.
+
 ## 5. Dependency rules
 
 | Layer/area | May depend on | Must not depend on |

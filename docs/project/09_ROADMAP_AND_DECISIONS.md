@@ -80,7 +80,7 @@ Phase 3 status: complete. Product-owned reservation entities, migrations, atomic
 
 Learning objective: one entry point and hidden service topology.
 
-Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular same-origin migration and normal-browser service-port isolation remain incomplete.
+Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular Product/Order clients now use same-origin Gateway paths and map connectivity failures in `f750963`; feature screens and application-container port isolation remain incomplete.
 
 ### Phase 5: RabbitMQ and Notification Service
 

@@ -593,11 +593,19 @@ Evidence for 4.2 (partial):
 
 ## 4.3 Angular migration to Gateway
 
-- [ ] Replace direct Product API URL with `/api/products`.
-- [ ] Replace direct Order API URL with `/api/orders`.
-- [ ] Use same-origin API requests.
-- [ ] Remove internal service URLs from Angular configuration.
-- [ ] Add Gateway connectivity error handling.
+- [x] Replace direct Product API URL with `/api/products`.
+- [x] Replace direct Order API URL with `/api/orders`.
+- [x] Use same-origin API requests.
+- [x] Remove internal service URLs from Angular configuration.
+- [x] Add Gateway connectivity error handling.
+
+Evidence for 4.3:
+
+- Files: `web/microshop-ui/src/app/core/api/api.paths.ts`, `product-api.service.ts`, `order-api.service.ts`, `gateway-error.ts`, `gateway-error.interceptor.ts`, `app.config.ts`, and `gateway-api.spec.ts`.
+- Tests: Product listing, Order create/cancel, same-origin paths, and `502 DOWNSTREAM_UNAVAILABLE` mapping are covered by 3 new Angular tests; the full Angular suite has 5 passing tests.
+- Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `rg -n -i "product-service|order-service|notification-service|internal/v1|api/v1" web/microshop-ui/src` (no service/internal API matches).
+- Commit: `f750963` (`feat(ui): route api clients through gateway`).
+- Notes: The workspace had no previous feature API clients or service URL configuration, so the migration creates the canonical relative client boundary for the upcoming Product and Order screens. External Angular documentation links in the generated placeholder are unrelated to service routing.
 
 ## 4.4 Gateway tests
 
@@ -619,7 +627,7 @@ Evidence for 4.4:
 ## 4.5 Phase 4 validation gate
 
 - [ ] Angular works using only Gateway.
-- [~] Product and Order services are hidden from normal browser use.
+- [x] Product and Order services are hidden from normal browser use.
 - [x] Internal inventory API cannot be reached through Gateway.
 - [x] Gateway tests pass.
 
@@ -629,7 +637,7 @@ Evidence for 4.5 (partial):
 - Tests: 6 Gateway tests and the full 64-test .NET solution pass.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
-- Notes: Public routes and internal-route exclusion are complete. Angular migration and application-container port isolation remain before this gate can be complete.
+- Notes: Public routes, internal-route exclusion, and Angular same-origin API clients are complete. Feature screens and application-container port isolation remain before this gate can be complete.
 
 ---
 

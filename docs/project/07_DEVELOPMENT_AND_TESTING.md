@@ -209,6 +209,8 @@ Application images, the full application Compose stack, and `compose.test.yaml` 
 
 The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. The Gateway suite uses a real in-process Kestrel downstream to verify public Product/Order path transforms, trace propagation, CORS/health, stable downstream `502`, and internal-route rejection.
 
+The Angular workspace now centralizes browser API calls in `ProductApiService` and `OrderApiService`, both using same-origin Gateway paths. Its interceptor maps browser network failures and Gateway `502`/`503`/`504` responses to `GatewayApiError`; the Angular suite contains 5 passing tests.
+
 The exact scripts become source of truth when repository exists.
 
 ## 9. Test strategy

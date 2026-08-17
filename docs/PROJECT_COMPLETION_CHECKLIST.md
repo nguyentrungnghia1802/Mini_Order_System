@@ -43,8 +43,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Angular Product screens and Angular checkout/order pages.
-- Angular Product/catalog and checkout/order pages plus migration to same-origin Gateway APIs.
+- Angular Product/catalog/operator screens and checkout/order pages.
 - Notification business behavior, migration, and integration tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
@@ -55,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 4.3 — migrate the Angular workspace to same-origin `/api/products` and `/api/orders` calls, then add the first catalog/checkout UI slice.
+Phase 1.4 — build the first Angular Product catalog/operator screen on the completed same-origin Gateway API clients.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -98,9 +97,10 @@ Phase 4.3 — migrate the Angular workspace to same-origin `/api/products` and `
 | Area | Status | Verified evidence |
 | --- | --- | --- |
 | Gateway foundation | `[x]` | YARP Product/Order clusters, public path transforms, Notification placeholder cluster, CORS, request limit, health, structured logging defaults, and trace forwarding are configured in `src/Gateway/MicroShop.Gateway/`. |
-| Gateway safety | `[~]` | Internal routes are rejected, destinations are validated, and downstream failures map to stable `502`; Angular has not yet migrated and native service ports remain useful for debugging. |
+| Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
 | Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
-| Phase 4 validation gate | `[~]` | Gateway-side requirements pass; Angular same-origin migration and normal-browser port isolation remain in the next slice. |
+| Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; 5 Angular tests pass. |
+| Phase 4 validation gate | `[~]` | Gateway and frontend routing foundations pass; feature screens and application-container port isolation remain in later slices. |
 
 Gateway evidence:
 
