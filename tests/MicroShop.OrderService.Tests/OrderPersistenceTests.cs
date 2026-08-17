@@ -53,6 +53,44 @@ public sealed class OrderPersistenceTests(OrderDatabaseFixture fixture) : IClass
     }
 
     [Fact]
+    public async Task RejectsConcurrentOrderStateTransition()
+    {
+        var orderId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var order = Order.Create(orderId, "Concurrency Test", "concurrency@example.com", now);
+
+        await using (var seedContext = fixture.CreateDbContext())
+        {
+            seedContext.Orders.Add(order);
+            await seedContext.SaveChangesAsync();
+        }
+
+        await using var firstContext = fixture.CreateDbContext();
+        await using var secondContext = fixture.CreateDbContext();
+        var firstOrder = await firstContext.Orders.SingleAsync(candidate => candidate.Id == orderId);
+        var secondOrder = await secondContext.Orders.SingleAsync(candidate => candidate.Id == orderId);
+
+        firstOrder.TransitionTo(OrderStatuses.Confirmed, "FIRST_TRANSITION", "trace-first", now.AddSeconds(1));
+        secondOrder.TransitionTo(OrderStatuses.Confirmed, "SECOND_TRANSITION", "trace-second", now.AddSeconds(2));
+
+        await firstContext.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => secondContext.SaveChangesAsync());
+
+        await using var verificationContext = fixture.CreateDbContext();
+        var persisted = await verificationContext.Orders
+            .AsNoTracking()
+            .Include(candidate => candidate.StateHistory)
+            .SingleAsync(candidate => candidate.Id == orderId);
+
+        Assert.Equal(OrderStatuses.Confirmed, persisted.Status);
+        Assert.Equal(2, persisted.Version);
+        Assert.Equal(2, persisted.StateHistory.Count);
+        Assert.Contains(persisted.StateHistory, history => history.ReasonCode == "FIRST_TRANSITION");
+        Assert.DoesNotContain(persisted.StateHistory, history => history.ReasonCode == "SECOND_TRANSITION");
+    }
+
+    [Fact]
     public async Task DatabaseRejectsUnknownOrderStatus()
     {
         await using var dbContext = fixture.CreateDbContext();
