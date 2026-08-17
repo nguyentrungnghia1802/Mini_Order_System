@@ -173,7 +173,7 @@ For demo/VPS:
 
 Prefer backward-compatible expand/contract migrations for any future rolling deployment.
 
-For the current Product slice, apply `InitialProductSchema`, `AddInventoryReservations`, and `AddInventoryReservationConstraints` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`, and `InitialNotificationSchema` with the Notification wrapper. In Compose, the three migration one-shots use the same service-owned commands before application startup. Normal Product, Order, and Notification startup validates database configuration and readiness but does not silently apply migrations.
+For the current Product slice, apply `InitialProductSchema`, `AddInventoryReservations`, and `AddInventoryReservationConstraints` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`, and `InitialNotificationSchema` with `scripts/db-migrate-notification.ps1` or `.sh`. `scripts/db-migrate-all.ps1/.sh` runs the three Compose migration one-shots in order. In Compose, the same one-shots run before application startup. Normal Product, Order, and Notification startup validates database configuration and readiness but does not silently apply migrations. The local reset wrappers require explicit owner-approved volume-deletion flags and typed confirmation.
 
 ## 8. Public deployment path
 

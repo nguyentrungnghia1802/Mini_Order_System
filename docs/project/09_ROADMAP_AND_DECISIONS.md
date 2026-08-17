@@ -107,7 +107,7 @@ Phase 5 status: contract, transport, direct-publish, Notification persistence, c
 
 Learning objective: process isolation, service discovery, and operations.
 
-Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `deploy/docker/`: four SDK-free, non-root ASP.NET runtime images and one Angular build/unprivileged-Nginx image. Phase 6.2–6.5 now wire and validate the full Web/Gateway/Product/Order/Notification/PostgreSQL/RabbitMQ stack, three migration one-shots, health-based startup, private application ports, one-command Windows/POSIX documentation, and a confirmed Order plus Notification Compose smoke. The remaining Phase 6 work is the migrate-all wrapper, permission-gated local reset wrapper, and CI/Playwright stack automation.
+Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `deploy/docker/`: four SDK-free, non-root ASP.NET runtime images and one Angular build/unprivileged-Nginx image. Phase 6.2–6.5 now wire and validate the full Web/Gateway/Product/Order/Notification/PostgreSQL/RabbitMQ stack, three migration one-shots, health-based startup, private application ports, one-command Windows documentation, migration-all/reset wrappers, and a confirmed Order plus Notification Compose smoke. Native Linux/macOS execution and CI/Playwright stack automation remain validation work.
 
 ### Phase 7: Reliability hardening
 

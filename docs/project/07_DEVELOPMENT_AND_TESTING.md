@@ -119,9 +119,8 @@ Recommended repository scripts:
 ./scripts/db-migrate-product.sh
 ./scripts/db-migrate-order.sh
 ./scripts/db-migrate-notification.sh
-./scripts/db-migrate-all.sh
+./scripts/db-migrate-all.sh .env
 ./scripts/db-seed-products.sh
-./scripts/db-reset-local.sh
 ```
 
 PowerShell equivalents should exist for a Windows-first learning environment.
@@ -136,7 +135,7 @@ dotnet ef database update \
 
 For the current Product slice, set `PRODUCT_DB_HOST`, `PRODUCT_DB_PORT`, `PRODUCT_DB_NAME`, `PRODUCT_DB_USER`, and the untracked `PRODUCT_DB_PASSWORD` environment variable before using `scripts/db-migrate-product.*` or `scripts/db-seed-products.*`. Install the pinned CLI with `dotnet tool install --tool-path <local-tool-dir> dotnet-ef --version 10.0.10` when `dotnet ef` is not already available.
 
-`db-reset-local` is destructive and must refuse production-like hosts unless explicitly overridden.
+`db-reset-local` is destructive and requires explicit reset/volume-deletion flags, an exact typed confirmation, and an explicit non-Development override when applicable. Normal `docker compose down` preserves named volumes.
 
 ## 6. RabbitMQ inspection
 

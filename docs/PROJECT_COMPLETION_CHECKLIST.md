@@ -46,14 +46,14 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
 - Transactional outbox and its outage/recovery behavior.
-- `migrate-all` and permission-gated local reset wrappers.
+- Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
 Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. `npm ci` currently reports one moderate and one high development-tool advisory in the Angular toolchain; `npm audit --omit=dev --audit-level=high` reports 0 production vulnerabilities. No production dependency is affected.
 
 ## Next recommended slice
 
-Phase 6.3 — add the migration-all and permission-gated reset wrappers, then document the complete one-command operations flow.
+Phase 7 — replace the direct publish dual-write gap with the transactional outbox.
 
 ## Phase 6 — Docker Compose completion (partial)
 

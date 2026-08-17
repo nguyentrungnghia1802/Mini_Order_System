@@ -875,8 +875,8 @@ Evidence for 6.2:
 - [x] Add explicit Product migration command.
 - [x] Add explicit Order migration command.
 - [x] Add explicit Notification migration command.
-- [ ] Add migrate-all script.
-- [ ] Add safe local reset script requiring explicit confirmation/permission.
+- [x] Add migrate-all script.
+- [x] Add safe local reset script requiring explicit confirmation/permission.
 - [x] Ensure services do not race migrations.
 - [x] Add health-based startup dependencies where supported.
 - [x] Validate configuration at startup.
@@ -885,7 +885,7 @@ Evidence for the implemented 6.3 items:
 
 - Files: Product `Program.cs` now supports `--migrate`; Order and Notification already expose `--migrate`; Compose contains `migrate-product`, `migrate-order`, and `migrate-notification` one-shot services with `service_completed_successfully` dependencies.
 - Tests: all three migration containers exited with code 0 before their application services started; each service reached a healthy readiness endpoint against its owned database.
-- Notes: `migrate-all` and the permission-gated reset wrapper remain intentionally incomplete and are not marked `[x]`.
+- Evidence for the remaining wrappers: `scripts/db-migrate-all.ps1/.sh` ran all three Compose migration services successfully; `scripts/db-reset-local.ps1/.sh` require explicit reset and volume-deletion flags plus the exact confirmation string. The PowerShell refusal path was executed without flags and ran no Docker command; POSIX scripts pass `bash -n` inside the Linux ASP.NET container, while native WSL bash is unavailable in this Windows environment.
 
 ## 6.4 One-command local run
 

@@ -61,7 +61,7 @@ docker compose --env-file .env -f deploy/compose.yaml run --rm migrate-product
 docker compose --env-file .env -f deploy/compose.yaml down
 ```
 
-`docker compose up --build` builds or reuses the five pinned application images and runs the three explicit database migrations before application startup. The dedicated `migrate-product`, `migrate-order`, and `migrate-notification` services can be run again for an explicit migration operation; `migrate-all` and a permission-gated reset wrapper are tracked in the next Phase 6.3 slice. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+`docker compose up --build` builds or reuses the five pinned application images and runs the three explicit database migrations before application startup. The dedicated `migrate-product`, `migrate-order`, and `migrate-notification` services can be run again for an explicit migration operation; `scripts/db-migrate-all.ps1/.sh` wraps those three services. The permission-gated `scripts/db-reset-local.ps1/.sh` is never needed for normal stop/start and must not be run without owner approval. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
 
 Build the verified runtime images from the repository root:
 
