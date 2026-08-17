@@ -13,6 +13,24 @@ namespace MicroShop.Gateway.Tests;
 public sealed class GatewayApiTests
 {
     [Fact]
+    public void InvalidDownstreamAddressFailsStartupConfiguration()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["PRODUCT_SERVICE_URL"] = "ftp://product.local/",
+                ["ORDER_SERVICE_URL"] = "http://order.local/"
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => MicroShop.Gateway.BootstrapConfiguration.AddYarp(services, configuration));
+
+        Assert.Contains("Product Service", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ProductRouteTransformsPathQueryAndTraceParent()
     {
         string? receivedPath = null;
