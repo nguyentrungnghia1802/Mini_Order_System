@@ -5,13 +5,13 @@ using Microsoft.Extensions.Configuration;
 namespace MicroShop.NotificationService.Tests;
 
 public sealed class NotificationBootstrapTests
-    : IClassFixture<NotificationApiFactory>
+    : IClassFixture<NotificationDatabaseFixture>
 {
     private readonly HttpClient client;
 
-    public NotificationBootstrapTests(NotificationApiFactory factory)
+    public NotificationBootstrapTests(NotificationDatabaseFixture fixture)
     {
-        client = factory.CreateClient();
+        client = fixture.CreateClient();
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public sealed class NotificationBootstrapTests
 
 }
 
-public sealed class NotificationApiFactory : WebApplicationFactory<Program>
+public sealed class NotificationApiFactory(string connectionString) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -37,6 +37,7 @@ public sealed class NotificationApiFactory : WebApplicationFactory<Program>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["NOTIFICATION_DB_CONNECTION_STRING"] = connectionString,
                 ["RABBITMQ_USE_IN_MEMORY"] = "true"
             });
         });
