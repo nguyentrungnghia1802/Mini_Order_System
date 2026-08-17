@@ -3,6 +3,7 @@ using System;
 using MicroShop.ProductService.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MicroShop.ProductService.Persistence.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    partial class ProductDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260817164457_AddInventoryReservations")]
+    partial class AddInventoryReservations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -73,13 +76,9 @@ namespace MicroShop.ProductService.Persistence.Migrations
 
                     b.ToTable("inventory_reservations", null, t =>
                         {
-                            t.HasCheckConstraint("ck_inventory_reservations_currency_vnd", "currency = 'VND'");
-
                             t.HasCheckConstraint("ck_inventory_reservations_release_timestamp_consistent", "(status = 'released' AND released_at_utc IS NOT NULL) OR (status = 'reserved' AND released_at_utc IS NULL)");
 
                             t.HasCheckConstraint("ck_inventory_reservations_status_valid", "status IN ('reserved', 'released')");
-
-                            t.HasCheckConstraint("ck_inventory_reservations_total_nonnegative", "total_amount >= 0");
                         });
                 });
 
@@ -137,8 +136,6 @@ namespace MicroShop.ProductService.Persistence.Migrations
                             t.HasCheckConstraint("ck_inventory_reservation_items_status_valid", "status IN ('reserved', 'released')");
 
                             t.HasCheckConstraint("ck_inventory_reservation_items_subtotal_nonnegative", "subtotal >= 0");
-
-                            t.HasCheckConstraint("ck_inventory_reservation_items_unit_price_nonnegative", "unit_price >= 0");
                         });
                 });
 
@@ -209,12 +206,6 @@ namespace MicroShop.ProductService.Persistence.Migrations
 
             modelBuilder.Entity("MicroShop.ProductService.Persistence.Entities.InventoryReservationItem", b =>
                 {
-                    b.HasOne("MicroShop.ProductService.Persistence.Entities.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("MicroShop.ProductService.Persistence.Entities.InventoryReservation", "Reservation")
                         .WithMany("Items")
                         .HasForeignKey("ReservationId")

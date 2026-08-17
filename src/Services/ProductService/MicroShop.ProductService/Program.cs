@@ -1,3 +1,4 @@
+using MicroShop.ProductService.Features.Inventory;
 using MicroShop.ProductService.Features.Products;
 using MicroShop.ProductService.Infrastructure.Database;
 using MicroShop.ProductService.Persistence;
@@ -24,6 +25,7 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<InventoryReservationService>();
 builder.Services.AddOptions<ProductDatabaseOptions>()
     .Configure(options =>
     {
@@ -59,6 +61,7 @@ app.MapGet("/", () => Results.Ok(new
     message = "Product API is available under /api/v1/products."
 }));
 ProductEndpoints.MapProductEndpoints(app);
+InventoryEndpoints.MapInventoryEndpoints(app);
 
 if (!app.Environment.IsProduction())
 {
