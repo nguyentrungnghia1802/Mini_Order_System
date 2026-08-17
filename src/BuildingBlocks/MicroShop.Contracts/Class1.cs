@@ -1,6 +1,5 @@
 namespace MicroShop.Contracts;
 
-public class Class1
+internal static class ContractAssemblyMarker
 {
-
 }

@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/MicroShop.Contracts/MicroShop.Contracts.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/MicroShop.ServiceDefaults/MicroShop.ServiceDefaults.csproj" />
   </ItemGroup>
 

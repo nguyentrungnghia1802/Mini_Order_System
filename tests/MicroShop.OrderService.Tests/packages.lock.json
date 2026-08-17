@@ -576,9 +576,13 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "microshop.contracts": {
+        "type": "Project"
+      },
       "microshop.orderservice": {
         "type": "Project",
         "dependencies": {
+          "MicroShop.Contracts": "[1.0.0, )",
           "MicroShop.ServiceDefaults": "[1.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.10, )",
           "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": "[10.0.10, )",
