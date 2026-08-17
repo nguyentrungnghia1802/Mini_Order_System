@@ -78,9 +78,9 @@ Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/con
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 38 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, and database credential isolation. |
+| Order foundation tests | `[x]` | 39 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, and the optimistic-concurrency guard. |
 | Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; 16 Angular tests pass. |
-| Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
+| Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
 ## Phase 3 — Product reservation and Order communication (partial)
 

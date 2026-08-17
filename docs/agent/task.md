@@ -347,15 +347,15 @@ Evidence for 2.3:
 - [x] Integration-test Order listing.
 - [x] Integration-test Order detail.
 - [x] Integration-test state-history persistence.
-- [ ] Test Order concurrency guard.
+- [x] Test Order concurrency guard.
 
-Evidence for 2.4 (partial):
+Evidence for 2.4:
 
 - Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderApiTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
-- Tests: 38 Order tests pass, including HTTP creation, known Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, database credential isolation, typed Product HTTP mapping, timeout/unavailable handling, real orchestration state mapping, and cancellation release/idempotency. Order transition concurrency remains unimplemented.
-- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
-- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: The HTTP creation, listing, and detail items are complete. The real Product reservation/orchestration slice is implemented; the separate Order transition concurrency guard remains deferred.
+- Tests: 39 Order tests pass, including HTTP creation, known Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, database credential isolation, typed Product HTTP mapping, timeout/unavailable handling, real orchestration state mapping, cancellation release/idempotency, and the database optimistic-concurrency guard.
+- Commands: `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RejectsConcurrentOrderStateTransition`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`.
+- Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`), and `33d7c70` (`test(order): cover concurrent transitions`).
+- Notes: Two independent DbContexts transition the same persisted order; the first save wins and the second is rejected by the `version` concurrency token without adding a second state-history record.
 
 ## 2.5 Angular Order foundation
 

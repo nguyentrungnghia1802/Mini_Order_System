@@ -255,7 +255,7 @@ The current Product suite contains 19 passing tests and the reservation cases ar
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 38-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, and `cancellation_pending` persistence. The Angular suite has 16 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, and duplicate-submit suppression.
+The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 39-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, `cancellation_pending` persistence, and optimistic-concurrency rejection. The Angular suite has 16 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, and duplicate-submit suppression.
 
 Cases:
 

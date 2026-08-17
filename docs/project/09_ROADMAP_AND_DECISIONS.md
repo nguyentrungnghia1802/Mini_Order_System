@@ -52,7 +52,7 @@ Phase 1 status: complete. Product domain/persistence, `InitialProductSchema`, se
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
-Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, typed Product orchestration, cancellation, and Angular checkout/list/detail screens are implemented. The 38-test Order suite and 16-test Angular suite pass. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration. The exact legacy Angular-with-fake-client wording remains a documented partial gate.
+Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, typed Product orchestration, cancellation, optimistic-concurrency rejection, and Angular checkout/list/detail screens are implemented. The 39-test Order suite and 16-test Angular suite pass. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration. The exact legacy Angular-with-fake-client wording remains a documented partial gate.
 
 ### Phase 3: Synchronous service communication
 
