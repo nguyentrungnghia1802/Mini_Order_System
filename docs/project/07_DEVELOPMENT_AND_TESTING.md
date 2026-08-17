@@ -1,6 +1,6 @@
 # Development and Testing
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Prerequisites
 
@@ -207,7 +207,7 @@ dotnet ef database update \
 
 Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
 
-The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, fake Product business failures, pagination, and stable Problem Details. It is intentionally a native service test; Gateway routing and the Order-to-Product client remain Phase 3/4 work.
+The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. Gateway routing remains Phase 4 work.
 
 The exact scripts become source of truth when repository exists.
 
@@ -247,13 +247,13 @@ Required cases:
 
 The implemented Product API tests use PostgreSQL Testcontainers and apply the real Product migrations. They cover update rounding/versioning, activation filtering, competing PATCH requests, atomic reservation failures, authoritative snapshots, replay/mismatch, idempotent release, and concurrent last-stock requests. EF Core InMemory is not used.
 
-The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite still uses the Phase 2 fake client until the typed Product HTTP client slice is complete.
+The current Product suite contains 19 passing tests and the reservation cases are implemented in `InventoryApiTests`. The Order suite contains 33 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client.
 
 ### Order integration tests
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the native fake-client API. The 18-test suite covers creation, rejection, listing, detail, pagination, and stable error codes. Remote Product-client cases remain planned.
+The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 33-test suite covers creation, known rejection, listing, detail, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, and `inventory_unknown` persistence.
 
 Cases:
 

@@ -119,7 +119,7 @@ Forbidden examples:
 
 ### Phase 2 native API behavior
 
-The implemented Phase 2 native Order API follows the first part of this state machine without a remote reservation. It creates and commits `pending_inventory`, resolves items through the deterministic `FakeProductCatalogClient`, stores authoritative fake name/price snapshots, and then commits `confirmed`; known fake Product failures commit `rejected` with a stable code. The fake client does not change Product stock. Product's internal HTTP reservation/release boundary is now implemented; the Order typed client, ambiguous outcomes, and cancellation remain later steps in Phase 3.
+The implemented Order API creates and commits `pending_inventory`, calls the typed Product reservation client with the same generated order ID, stores Product-authoritative name/price/quantity snapshots, and then commits `confirmed`; known Product failures commit `rejected`, while unavailable or ambiguous results commit `inventory_unknown`. The deterministic fake client is retained only for explicit Phase 2 compatibility tests and does not change Product stock. Product's internal HTTP reservation/release boundary and the synchronous Order orchestration are implemented; cancellation remains later in Phase 3.
 
 ## 7. Notification state
 
@@ -218,7 +218,7 @@ Activation and deactivation use the same PATCH contract by changing `isActive`. 
 
 ## 11. Insufficient stock flow
 
-The Product-owned part of this flow is implemented by the internal reservation API: it locks requested Product rows in stable ID order, validates every item before decrementing anything, and commits either all stock changes plus snapshots or none. The Order-to-Product call and final Order state transition are still the next integration slice.
+The Product-owned part of this flow is implemented by the internal reservation API: it locks requested Product rows in stable ID order, validates every item before decrementing anything, and commits either all stock changes plus snapshots or none. The typed Order-to-Product call verifies the response, stores snapshots, and commits the final Order state; cancellation/release remains the next integration slice.
 
 1. Product Service locks all requested rows.
 2. At least one row has insufficient stock.

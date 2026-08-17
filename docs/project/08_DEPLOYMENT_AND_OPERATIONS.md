@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Product includes a Product-owned internal reservation/release API; Order includes a Phase 2 native create/list/detail API backed by a deterministic fake Product client. The full `web`, Gateway, Notification Compose services, and Order's real reservation communication remain deferred.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail API backed at runtime by a typed Product reservation client with explicit timeout and `inventory_unknown` handling. The full `web`, Gateway business routes, Notification Compose service, and cancellation remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |

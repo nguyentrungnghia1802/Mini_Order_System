@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Repository layout
 
-The repository follows this layout, with Product and the Phase 2 Order native API folders populated. Empty future feature folders remain intentionally omitted until their owning phase needs them.
+The repository follows this layout, with Product and the Order native API plus synchronous Product-reservation folders populated. Empty future feature folders remain intentionally omitted until their owning phase needs them.
 
 Recommended monorepo:
 
@@ -130,7 +130,7 @@ A feature file may contain endpoint mapping, DTO, validator, and handler for a s
 
 Current Product implementation files are `Features/Products/ProductContracts.cs`, `Features/Products/ProductEndpoints.cs`, `Features/Inventory/InventoryContracts.cs`, `Features/Inventory/InventoryEndpoints.cs`, `Features/Inventory/InventoryReservationService.cs`, `Persistence/ProductDbContext.cs`, `Persistence/Entities/`, `Persistence/Configurations/`, `Persistence/Migrations/`, `Persistence/ProductSeed.cs`, and `Infrastructure/Database/ProductDatabaseOptions.cs`. These files remain inside Product Service; no EF entity or business logic is placed in a shared project.
 
-Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/IProductCatalogClient.cs`, `Infrastructure/Products/FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 boundary only; the typed Product HTTP client remains the next Phase 3 slice. Order does not reference Product EF entities or its database.
+Current Order implementation files are `Features/Orders/OrderContracts.cs`, `Features/Orders/OrderEndpoints.cs`, `Features/Orders/OrderApplicationService.cs`, `Infrastructure/Products/ProductInventoryContracts.cs`, `ProductInventoryClient.cs`, `ProductServiceOptions.cs`, `FakeProductCatalogClient.cs`, `Persistence/OrderDbContext.cs`, `Persistence/Entities/`, and `Persistence/Migrations/`. The fake client is a Phase 2 compatibility boundary only; the default path is the typed Product HTTP client. Order does not reference Product EF entities or its database.
 
 ## 5. Dependency rules
 

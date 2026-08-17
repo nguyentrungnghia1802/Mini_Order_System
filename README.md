@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own domain model, state-history persistence, PostgreSQL migration, readiness, and a native HTTP API backed by a deterministic fake Product client. The next slice connects Order to the internal Product reservation API; Notification, Gateway business routes, Angular screens, and full-stack application containers remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, and `inventory_unknown` persistence. The fake Product client is test-only compatibility coverage. Gateway business routes, Notification behavior, Angular screens, cancellation, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 
@@ -49,7 +49,7 @@ docker compose --env-file .env -f deploy/compose.yaml up -d
 docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product's migration is applied explicitly by the Product command above, while Order/Notification migrations remain deferred. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product and Order migrations are applied explicitly by their service commands, while Notification migration and application containers remain deferred. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
 
 For the current Product slice, start infrastructure, set the untracked Product database password, apply the migration, and optionally seed demo products:
 
@@ -79,7 +79,7 @@ $env:ORDER_DB_PASSWORD = "<local-password>"
 ./scripts/db-migrate-order.ps1
 ```
 
-Order exposes persistence health/readiness, `/openapi/v1.json`, and the Phase 2 native API under `/api/v1/orders` for create, paginated list, and detail. The fake client returns authoritative snapshots for the deterministic catalog and does not mutate Product stock; real reservation communication is the Phase 3 slice.
+Order exposes persistence health/readiness, `/openapi/v1.json`, and the native API under `/api/v1/orders` for create, paginated list, and detail. Runtime uses `ProductService:BaseUrl`/`PRODUCT_SERVICE_URL` and an explicit timeout no greater than five seconds to call Product's internal reservation API. Product returns authoritative snapshots and Order persists `confirmed`, known `rejected`, or infrastructure `inventory_unknown` outcomes. Set `ProductService:UseFakeClient=true` only for the legacy deterministic Phase 2 test fixture; the default runtime path is the typed HTTP client.
 
 For native application debugging, use the non-default override to publish PostgreSQL and RabbitMQ application ports:
 

@@ -328,7 +328,7 @@ Evidence for 2.3:
 - Tests: `OrderApiTests` covers authoritative request validation, duplicate/quantity rejection, pending-to-confirmed persistence, rejected fake Product outcomes, pagination, detail, and stable validation codes.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `git diff --check`.
 - Commit: `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: The deterministic fake catalog returns authoritative name/price/stock snapshots and never mutates Product data. Real atomic reservation, timeout ambiguity, and cancellation are Phase 3 work.
+- Notes: The deterministic fake catalog remains available only for explicit Phase 2 compatibility tests. Runtime Order creation now uses the typed Product reservation client; cancellation remains Phase 3 work.
 
 ## 2.4 Order tests
 
@@ -344,10 +344,10 @@ Evidence for 2.3:
 Evidence for 2.4 (partial):
 
 - Files: `tests/MicroShop.OrderService.Tests/OrderDomainTests.cs`, `OrderApiTests.cs`, `OrderDatabaseFixture.cs`, and `OrderPersistenceTests.cs`.
-- Tests: 18 Order tests pass, including HTTP creation, fake Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, and database credential isolation. Order transition concurrency remains unimplemented.
+- Tests: 33 Order tests pass, including HTTP creation, known Product rejection, listing/detail pagination, domain transitions, migration persistence, state history, status constraints, readiness/OpenAPI, database credential isolation, typed Product HTTP mapping, timeout/unavailable handling, and real orchestration state mapping. Order transition concurrency remains unimplemented.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
 - Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: The HTTP creation, listing, and detail items are complete. The remaining concurrency guard test is intentionally deferred to the real Product reservation/orchestration slice.
+- Notes: The HTTP creation, listing, and detail items are complete. The real Product reservation/orchestration slice is implemented; the separate Order transition concurrency guard remains deferred.
 
 ## 2.5 Angular Order foundation
 
@@ -377,7 +377,7 @@ Evidence for 2.6 (partial Phase 2 gate):
 - Tests: 18 Order tests pass; readiness, native Order API, and OpenAPI are reachable with a fresh owned PostgreSQL database.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`.
 - Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`).
-- Notes: Angular checkout remains incomplete. The fake client is intentionally local to Phase 2; real Product HTTP communication and Order orchestration remain Phase 3 work.
+- Notes: Angular checkout remains incomplete. The fake client is opt-in test compatibility; the default Order runtime uses real Product HTTP communication and persists explicit unknown outcomes.
 
 ---
 
@@ -446,29 +446,45 @@ Evidence for 3.3 (partial):
 
 ## 3.4 Order Product client
 
-- [ ] Create typed `HttpClient`.
-- [ ] Configure Product Service internal URL.
-- [ ] Configure explicit timeout.
-- [ ] Propagate `traceparent`.
-- [ ] Propagate cancellation token.
-- [ ] Map Product business errors.
-- [ ] Map dependency unavailable.
-- [ ] Map ambiguous timeout to `inventory_unknown`.
-- [ ] Avoid blind retries.
-- [ ] Use stable `orderId` for safe replay.
+- [x] Create typed `HttpClient`.
+- [x] Configure Product Service internal URL.
+- [x] Configure explicit timeout.
+- [x] Propagate `traceparent`.
+- [x] Propagate cancellation token.
+- [x] Map Product business errors.
+- [x] Map dependency unavailable.
+- [x] Map ambiguous timeout to `inventory_unknown`.
+- [x] Avoid blind retries.
+- [x] Use stable `orderId` for safe replay.
+
+Evidence for 3.4:
+
+- Files: `Infrastructure/Products/ProductInventoryClient.cs`, `ProductInventoryContracts.cs`, `ProductServiceOptions.cs`, `Program.cs`, and `Features/Orders/OrderEndpoints.cs`.
+- Tests: `ProductInventoryClientTests` verifies internal reserve/release routes, authoritative response parsing, `traceparent`, business Problem Details, unavailable dependency, timeout ambiguity, malformed response, and caller cancellation.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `git diff --check`.
+- Commit: `e3c2b7c` (`feat(order): integrate product inventory client`).
+- Notes: The client sets `HttpClient.Timeout` to infinite and applies the configured linked timeout so the ambiguity boundary is explicit; no automatic retry is configured.
 
 ## 3.5 Real Order orchestration
 
-- [ ] Generate order ID before remote call.
-- [ ] Persist `pending_inventory`.
-- [ ] Call Product reservation.
-- [ ] Store authoritative Product snapshots.
-- [ ] Calculate Order total from snapshots.
-- [ ] Transition to `confirmed`.
-- [ ] Transition known Product failures to `rejected`.
-- [ ] Transition ambiguous failures to `inventory_unknown`.
-- [ ] Add state-history entries.
-- [ ] Return stable public errors with order ID where appropriate.
+- [x] Generate order ID before remote call.
+- [x] Persist `pending_inventory`.
+- [x] Call Product reservation.
+- [x] Store authoritative Product snapshots.
+- [x] Calculate Order total from snapshots.
+- [x] Transition to `confirmed`.
+- [x] Transition known Product failures to `rejected`.
+- [x] Transition ambiguous failures to `inventory_unknown`.
+- [x] Add state-history entries.
+- [x] Return stable public errors with order ID where appropriate.
+
+Evidence for 3.5:
+
+- Files: `Features/Orders/OrderApplicationService.cs`, `OrderEndpoints.cs`, `Infrastructure/Products/FakeProductCatalogClient.cs`, and `tests/MicroShop.OrderService.Tests/OrderOrchestrationTests.cs` plus `OrderProductHttpIntegrationTests.cs`.
+- Tests: Order orchestration verifies pending-before-call, stable order identity, Product-authoritative snapshots/totals, known rejection, unavailable dependency, timeout ambiguity, malformed/mismatched response, trace forwarding, and persisted state history.
+- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
+- Commit: `e3c2b7c` (`feat(order): integrate product inventory client`).
+- Notes: A reservation response with inconsistent snapshots is treated as `INVENTORY_OUTCOME_UNKNOWN`; an over-limit reservation is released before a normal total-limit rejection, with release ambiguity also becoming unknown.
 
 ## 3.6 Cancellation
 
@@ -490,8 +506,8 @@ Evidence for 3.3 (partial):
 - [x] Test reservation mismatch.
 - [x] Test idempotent release.
 - [x] Test concurrent last-stock purchase.
-- [ ] Test Product Service unavailable.
-- [ ] Test timeout with ambiguous outcome.
+- [x] Test Product Service unavailable.
+- [x] Test timeout with ambiguous outcome.
 - [ ] Test cancellation.
 - [ ] Test repeated cancellation.
 - [ ] Test `cancellation_pending`.
@@ -500,18 +516,18 @@ Evidence for 3.3 (partial):
 
 Evidence for 3.7 (partial):
 
-- Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs` and `ProductApiFixture.cs`.
-- Tests: 19 Product tests pass, including atomic reservation/release, known Product failures, replay/mismatch, concurrent last-stock, and the existing catalog/update suite. Order-to-Product HTTP, timeout, cancellation, and unknown-outcome cases remain deferred.
+- Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs`, `tests/MicroShop.OrderService.Tests/ProductInventoryClientTests.cs`, `OrderOrchestrationTests.cs`, and `OrderProductHttpIntegrationTests.cs`.
+- Tests: 19 Product tests and 33 Order tests pass, including Product atomic reservation/release, known failures, replay/mismatch, concurrent last-stock, typed HTTP response/error mapping, unavailable dependency, timeout ambiguity, cancellation propagation, and Order unknown-state persistence. Cancellation endpoint behavior remains deferred.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
-- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
-- Notes: The completed items cover the Product-owned reservation boundary only; Phase 3 remains partial until Order uses the real typed client.
+- Commits: `d2a885a` (`feat(product): add atomic inventory reservations`), `8b021f5` (`docs(project): record inventory reservation boundary`), and `e3c2b7c` (`feat(order): integrate product inventory client`).
+- Notes: Product reservation and Order synchronous communication are green; cancellation and internal-route exclusion remain later Phase 3/4 work.
 
 ## 3.8 Phase 3 validation gate
 
-- [ ] Order Service uses real Product HTTP communication.
-- [ ] Product and Order databases remain isolated.
-- [ ] All concurrency tests pass using PostgreSQL.
-- [ ] All failure states match documentation.
+- [x] Order Service uses real Product HTTP communication.
+- [x] Product and Order databases remain isolated.
+- [x] All concurrency tests pass using PostgreSQL.
+- [x] All failure states match documentation.
 - [ ] Cancellation restores stock exactly once.
 - [ ] Internal Product API is not public.
 

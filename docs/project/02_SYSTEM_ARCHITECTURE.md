@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, and the Order Service persistence plus fake HTTP API slice. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, and native create/list/detail API. Gateway routes, Order's real typed client, Notification behavior, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, and the Order Service persistence/native API plus typed Product reservation orchestration. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, native create/list/detail API, typed HTTP client, and explicit distributed outcome states. Gateway routes, cancellation, Notification behavior, and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
@@ -39,7 +39,7 @@ The primary learning boundary is:
 - **HTTP request/response** when Order Service needs inventory confirmation before responding;
 - **broker event** when Order Service only announces that confirmation already happened.
 
-The current Phase 2 Order API uses `IProductCatalogClient` with a deterministic in-process fake catalog. It persists `pending_inventory` before resolving requested items, stores the returned authoritative snapshots, and transitions to `confirmed` or `rejected`. This fake client only validates active state and available stock; it does not decrement Product stock. Product's Phase 3 internal reservation/release API is now implemented and tested, while the real Order HTTP client/orchestration remains next.
+The current Order API persists `pending_inventory` before calling `IProductInventoryClient`. Runtime uses a typed HTTP client to Product's internal reservation endpoint, verifies the authoritative snapshots and total, then transitions to `confirmed`, known `rejected`, or `inventory_unknown`. The deterministic fake client remains an explicit test-only configuration for the earlier Phase 2 API tests; it does not mutate Product stock. Product's internal reservation/release API and Order's synchronous client/orchestration are implemented and tested, while cancellation remains next.
 
 ## 2. Runtime boundaries
 
@@ -204,7 +204,7 @@ If processing throws, MassTransit retry/error behavior applies. Poison messages 
 
 ## 6. Request flow: successful order
 
-The following is the target Phase 3+ flow after the Product reservation API and Gateway are implemented. The current Phase 2 native flow stops at the fake Product client described above.
+The following flow is implemented through the native service boundary; Gateway forwarding and cancellation are still later slices.
 
 ```text
 1. Angular POST /api/orders

@@ -163,10 +163,10 @@ This status table is updated from verified repository code and runtime checks. T
 | Area | Status |
 | --- | --- |
 | Requirements and boundaries | Specified |
-| Repository | Phase 0 bootstrap, Product vertical slice, and Order persistence plus fake Order API slices implemented |
+| Repository | Phase 0 bootstrap, Product catalog/reservation slice, and Order persistence/native HTTP plus Product reservation orchestration slices implemented |
 | Gateway | Bootstrap ASP.NET Core/YARP host implemented; public routes planned for Phase 4 |
 | Product Service | Partial Phase 1/3: Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
-| Order Service | Partial Phase 2: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API with a deterministic fake Product client, and PostgreSQL integration tests implemented; real reservation communication planned |
+| Order Service | Partial Phase 2/3: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API, typed Product reservation client, authoritative snapshot orchestration, explicit timeout/availability mapping, `inventory_unknown`, and PostgreSQL integration tests implemented |
 | Notification Service | Independent bootstrap host and health endpoints implemented; consumer/API planned for Phase 5 |
 | Angular frontend | Angular 22 strict workspace implemented; feature screens planned |
 | PostgreSQL databases | Compose creates three logical databases/users; Product reservation and Order migrations are implemented, Notification migration remains planned |
@@ -175,7 +175,7 @@ This status table is updated from verified repository code and runtime checks. T
 | Tests | Bootstrap tests plus Product reservation and Order unit/API/PostgreSQL Testcontainers foundations implemented; remaining cross-service contract, messaging, and E2E tests planned |
 | Deployment | Optional after local completion |
 
-Documentation must continue to distinguish the verified Product and Order native slices from planned Gateway, real reservation, Notification, Angular, and end-to-end behavior.
+Documentation must continue to distinguish the verified Product and Order native slices and synchronous reservation path from planned Gateway, cancellation, Notification, Angular, and end-to-end behavior.
 
 ## 10. Main technical constraints
 

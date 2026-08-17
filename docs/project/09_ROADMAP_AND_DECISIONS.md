@@ -52,7 +52,7 @@ Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, see
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
-Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, deterministic fake Product client, and 18 PostgreSQL-backed tests are implemented. Product's Phase 3 reservation boundary is implemented separately; Order still needs the typed Product client, explicit timeout/ambiguous-outcome mapping, real orchestration, cancellation, and cross-service tests.
+Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, and 33 PostgreSQL-backed tests are implemented. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration.
 
 ### Phase 3: Synchronous service communication
 
@@ -66,7 +66,7 @@ Phase 2 status: partial. Order domain entities, state transition guard, state-hi
 
 Learning objective: request/response coupling and distributed outcome states.
 
-Phase 3 status: partial. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, and PostgreSQL concurrency tests are implemented in `d2a885a`. Order's typed client, real orchestration, timeout/unknown-state mapping, cancellation, and cross-service tests remain next.
+Phase 3 status: partial. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, PostgreSQL concurrency tests, Order's typed client, authoritative orchestration, explicit timeout/availability mapping, and `inventory_unknown` tests are implemented in `d2a885a`, `8b021f5`, and `e3c2b7c`. Cancellation/release orchestration remains next.
 
 ### Phase 4: YARP API Gateway
 

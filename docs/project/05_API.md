@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17.
 
 ## 1. Contract sources
 
-Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail subset against a deterministic fake Product client. Notification, Gateway, the Order typed client, and Angular-facing routes remain phase-scoped.
+Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail subset through a typed Product inventory client, authoritative reservation snapshots, and explicit `rejected`/`inventory_unknown` outcomes. Notification, Gateway, cancellation, and Angular-facing routes remain phase-scoped.
 
 Executable contract sources:
 
@@ -198,7 +198,7 @@ The successful response returns the new version in both the body and `ETag`, for
 
 ### `POST /api/v1/orders`
 
-Implemented by Order Service in the Phase 2 native slice. The request accepts only customer fields and Product IDs/quantities; the server obtains product name, price, and stock facts from `IProductCatalogClient`.
+Implemented by Order Service in the native slice. The request accepts only customer fields and Product IDs/quantities; the server obtains product name, price, and stock facts from the typed `IProductInventoryClient` reservation response.
 
 Request:
 
@@ -255,11 +255,11 @@ Possible errors:
 
 The order record may exist in a rejected/unknown state even when the public response is an error. Error details may include `orderId` so the learner can inspect it.
 
-In the current Phase 2 implementation, the deterministic fake catalog exercises `PRODUCT_NOT_FOUND`, `PRODUCT_INACTIVE`, and `INSUFFICIENT_STOCK`, returning a persisted rejected Order. It does not mutate Product stock. The `503` dependency outcomes and authoritative internal reservation response are Phase 3 behavior.
+The Order runtime maps Product's `PRODUCT_NOT_FOUND`, `PRODUCT_INACTIVE`, and `INSUFFICIENT_STOCK` responses to persisted rejected Orders, using Product's authoritative internal reservation response for snapshots and totals. A dependency failure returns `503 PRODUCT_SERVICE_UNAVAILABLE` and persists `inventory_unknown`; a timeout or invalid/ambiguous result returns `503 INVENTORY_OUTCOME_UNKNOWN` and persists `inventory_unknown`. The deterministic fake catalog remains only for explicit legacy tests and does not mutate Product stock.
 
 ### `GET /api/v1/orders`
 
-Implemented by Order Service in the Phase 2 native slice. Results are ordered by newest creation time and then ID, and may be filtered by status or normalized customer email.
+Implemented by Order Service in the native slice. Results are ordered by newest creation time and then ID, and may be filtered by status or normalized customer email.
 
 | Query | Type | Default |
 | --- | --- | --- |
@@ -272,7 +272,7 @@ Response: `200 OrderPage`.
 
 ### `GET /api/v1/orders/{orderId}`
 
-Implemented by Order Service in the Phase 2 native slice.
+Implemented by Order Service in the native slice.
 
 Response:
 
