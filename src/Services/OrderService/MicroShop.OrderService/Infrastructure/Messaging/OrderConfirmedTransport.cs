@@ -1,27 +1,25 @@
 using MassTransit;
-using MicroShop.OrderService.Persistence.Entities;
+using MicroShop.Contracts.Orders;
 
 namespace MicroShop.OrderService.Infrastructure.Messaging;
 
-public interface IOrderEventPublisher
+public interface IOrderConfirmedMessageTransport
 {
-    Task PublishConfirmedAsync(
-        Order order,
+    Task PublishAsync(
+        OrderConfirmedV1 message,
         string? traceParent,
         CancellationToken cancellationToken);
 }
 
-public sealed class MassTransitOrderEventPublisher(IPublishEndpoint publishEndpoint)
-    : IOrderEventPublisher
+public sealed class MassTransitOrderConfirmedMessageTransport(IPublishEndpoint publishEndpoint)
+    : IOrderConfirmedMessageTransport
 {
-    public Task PublishConfirmedAsync(
-        Order order,
+    public Task PublishAsync(
+        OrderConfirmedV1 message,
         string? traceParent,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(order);
-
-        var message = OrderConfirmedMessageFactory.Create(order);
+        ArgumentNullException.ThrowIfNull(message);
 
         return publishEndpoint.Publish(
             message,

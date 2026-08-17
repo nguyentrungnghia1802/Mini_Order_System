@@ -12,10 +12,13 @@ public sealed class OrderDbContext(DbContextOptions<OrderDbContext> options) : D
 
     public DbSet<OrderStateHistory> OrderStateHistory => Set<OrderStateHistory>();
 
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new OrderConfiguration());
         modelBuilder.ApplyConfiguration(new OrderItemConfiguration());
         modelBuilder.ApplyConfiguration(new OrderStateHistoryConfiguration());
+        modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
     }
 }

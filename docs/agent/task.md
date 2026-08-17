@@ -714,7 +714,7 @@ Evidence for 5.3:
 - Tests: 40 Order tests pass, including confirmed-event construction with stable order/message IDs and trace parent propagation, plus a direct-publish failure test proving the confirmed Order remains persisted after the broker publish step throws.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `96d5183` (`feat(order): publish confirmed events`).
-- Notes: Order commits `confirmed` before calling MassTransit `IPublishEndpoint`. The envelope `MessageId` is explicitly set to the event body's `MessageId`, `OrderId` is the correlation ID, and a W3C `traceparent` header is copied when present. This is intentionally not the final reliability path; Phase 7 outbox hardening must close the post-commit publish gap.
+- Notes: This historical milestone committed `confirmed` before calling MassTransit `IPublishEndpoint`. The envelope `MessageId` was explicitly set to the event body's `MessageId`, `OrderId` was the correlation ID, and a W3C `traceparent` header was copied when present. It remains as the direct-publish learning demonstration; Phase 7.1 now closes the post-commit publish gap in the runtime path.
 
 ## 5.4 Notification database
 
@@ -926,20 +926,28 @@ Evidence for 6.5:
 
 ## 7.1 Transactional outbox
 
-- [ ] Add OutboxMessage entity.
-- [ ] Add Outbox migration.
-- [ ] Insert `OrderConfirmedV1` outbox record in Order confirmation transaction.
-- [ ] Stop using direct broker publish as final path.
-- [ ] Preserve the direct-publish demonstration in documentation/tests only.
-- [ ] Implement outbox dispatcher.
-- [ ] Claim pending records safely.
-- [ ] Add attempt count.
-- [ ] Add next-attempt time.
-- [ ] Add last-error field.
-- [ ] Add lock/lease field.
-- [ ] Mark successful publish.
-- [ ] Make dispatcher restart-safe.
-- [ ] Prevent infinite retry loop.
+- [x] Add OutboxMessage entity.
+- [x] Add Outbox migration.
+- [x] Insert `OrderConfirmedV1` outbox record in Order confirmation transaction.
+- [x] Stop using direct broker publish as final path.
+- [x] Preserve the direct-publish demonstration in documentation/tests only.
+- [x] Implement outbox dispatcher.
+- [x] Claim pending records safely.
+- [x] Add attempt count.
+- [x] Add next-attempt time.
+- [x] Add last-error field.
+- [x] Add lock/lease field.
+- [x] Mark successful publish.
+- [x] Make dispatcher restart-safe.
+- [x] Prevent infinite retry loop.
+
+Evidence for 7.1:
+
+- Files: `src/Services/OrderService/MicroShop.OrderService/Persistence/Entities/OutboxMessage.cs`, `Persistence/Configurations/OutboxMessageConfiguration.cs`, `Persistence/Migrations/20260817203650_AddOrderOutbox.cs`, `Infrastructure/Messaging/OrderConfirmedMessageFactory.cs`, `OrderOutboxWriter.cs`, `OrderConfirmedTransport.cs`, `OutboxOptions.cs`, `OutboxDispatcher.cs`, `Features/Orders/OrderApplicationService.cs`, `Program.cs`, and `tests/MicroShop.OrderService.Tests/OutboxDispatcherTests.cs`.
+- Database: `outbox_messages` is Order-owned, stores the stable event MessageId and serialized `OrderConfirmedV1`, has unique `(message_type, aggregate_id)`, pending indexes, attempt/error fields, lease fields, published/dead-letter timestamps, and no cross-service foreign key.
+- Tests: 44 Order tests pass against PostgreSQL Testcontainers. Coverage includes atomic confirmed Order plus outbox persistence, direct-publish failure isolation, stable MessageId/traceparent payload, `FOR UPDATE SKIP LOCKED` concurrent claim, bounded retry/dead-letter, and lease-expiry recovery after dispatcher interruption.
+- Commands: `dotnet ef migrations add AddOrderOutbox --project src/Services/OrderService/MicroShop.OrderService --startup-project src/Services/OrderService/MicroShop.OrderService --output-dir Persistence/Migrations`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-build --no-restore`.
+- Notes: production DI no longer registers `IOrderEventPublisher`; `MassTransitOrderEventPublisher` remains only as the explicit direct-publish learning/demo path. The dispatcher uses a lease and bounded attempts, marks exhausted rows dead-lettered, and can reclaim an expired lease after process restart. Outbox operations/readiness/metrics, RabbitMQ outage Compose evidence, reconciliation, and the Phase 7 gate remain in later 7.2-7.6 tasks.
 
 ## 7.2 Outbox operations
 

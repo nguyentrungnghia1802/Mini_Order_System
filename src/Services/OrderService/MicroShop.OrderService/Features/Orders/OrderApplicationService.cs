@@ -10,7 +10,7 @@ namespace MicroShop.OrderService.Features.Orders;
 public sealed class OrderApplicationService(
     OrderDbContext dbContext,
     IProductInventoryClient productInventoryClient,
-    IOrderEventPublisher orderEventPublisher)
+    IOrderOutboxWriter orderOutboxWriter)
 {
     public async Task<CreateOrderOutcome> CreateAsync(
         CreateOrderRequest request,
@@ -107,11 +107,8 @@ public sealed class OrderApplicationService(
             "PRODUCT_RESERVATION_CONFIRMED",
             traceId,
             DateTimeOffset.UtcNow);
+        orderOutboxWriter.AddConfirmed(order, traceParent);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await orderEventPublisher.PublishConfirmedAsync(
-            order,
-            traceParent,
-            cancellationToken);
 
         return CreateOrderOutcome.Success(order);
     }

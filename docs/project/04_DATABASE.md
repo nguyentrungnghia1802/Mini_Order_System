@@ -169,7 +169,7 @@ orders 1 --- * order_state_history
 orders 1 --- * outbox_messages (logical association)
 ```
 
-The executable Order configuration uses `ck_orders_status_valid`, `ck_orders_currency_vnd`, `ck_orders_total_nonnegative`, `ck_orders_version_positive`, and the corresponding item/history constraints. The Order migration does not create an outbox table; durable event publication belongs to Phase 7.
+The executable Order configuration uses `ck_orders_status_valid`, `ck_orders_currency_vnd`, `ck_orders_total_nonnegative`, `ck_orders_version_positive`, and the corresponding item/history constraints. Migration `20260817203650_AddOrderOutbox` adds the Order-owned outbox table; no cross-service foreign key is introduced.
 
 ### `orders`
 
@@ -238,23 +238,25 @@ Recommended even in a learning project because it makes flows visible.
 
 ### `outbox_messages`
 
-Hardening-phase schema:
+The executable Phase 7.1 schema is:
 
 | Column | Type | Rules |
 | --- | --- | --- |
 | `id` | uuid | PK/message ID |
-| `type` | varchar(200) | contract type |
-| `schema_version` | integer | positive |
-| `payload_json` | jsonb | immutable serialized event |
-| `occurred_at_utc` | timestamptz | domain event time |
+| `message_type` | varchar(128) | contract type |
+| `aggregate_id` | uuid | confirmed Order ID |
+| `payload` | text | immutable serialized `OrderConfirmedV1` |
+| `trace_parent` | varchar(256) | nullable W3C context |
 | `created_at_utc` | timestamptz | row creation |
-| `published_at_utc` | timestamptz | nullable |
 | `attempt_count` | integer | nonnegative |
-| `last_error` | varchar | nullable/truncated |
-| `next_attempt_at_utc` | timestamptz | nullable |
-| `locked_until_utc` | timestamptz | nullable claim |
+| `next_attempt_at_utc` | timestamptz | next eligible dispatch time |
+| `last_error` | varchar(4000) | nullable/truncated |
+| `locked_by` | varchar(128) | nullable worker identity |
+| `locked_until_utc` | timestamptz | nullable lease expiry |
+| `published_at_utc` | timestamptz | nullable success time |
+| `dead_lettered_at_utc` | timestamptz | nullable terminal failure time |
 
-Index pending rows by `published_at_utc`, `next_attempt_at_utc`, and lock time.
+The primary key `id` is also the stable broker MessageId. A unique index on `(message_type, aggregate_id)` prevents duplicate confirmation envelopes for one Order; a pending index covers publication/dead-letter state, next-attempt time, lease, and creation order. The dispatcher claims rows with PostgreSQL `FOR UPDATE SKIP LOCKED` and never queries another service database.
 
 ## 6. Notification database logical model
 
@@ -355,7 +357,7 @@ One Order DB transaction:
 - insert order items;
 - set total and `confirmed`;
 - insert state history;
-- insert outbox event when outbox phase is enabled;
+- insert the serialized `OrderConfirmedV1` outbox event;
 - commit.
 
 ### Notification consume

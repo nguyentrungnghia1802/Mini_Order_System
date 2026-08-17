@@ -12,7 +12,7 @@ Product 1 ---- * InventoryReservationItem * ---- 1 InventoryReservation
 
 Order Context
 Order 1 ---- * OrderItem
-Order 1 ---- * OutboxMessage (hardening phase)
+Order 1 ---- * OutboxMessage (transactional publication)
 
 Notification Context
 ConsumedMessage 1 ---- 0..1 Notification
@@ -209,7 +209,7 @@ Activation and deactivation use the same PATCH contract by changing `isActive`. 
 11. Order Service inserts immutable `OrderItem` rows.
 12. Order Service calculates/verifies total from snapshots.
 13. Order Service changes status to `confirmed`.
-14. Direct-publish milestone publishes the event after commit; outbox milestone writes event in the same transaction.
+14. Order writes the outbox event in the same transaction as confirmation; the direct-publish milestone remains only as a failure-window demonstration.
 15. Order Service returns `201 Created`.
 16. Angular navigates to order detail.
 17. Notification Service eventually consumes the event through the durable MassTransit endpoint.
@@ -297,7 +297,7 @@ If the release response is lost, Order Service uses `cancellation_pending`, not 
 Order DB commit -> publish event -> return
 ```
 
-Implemented in the Order Service. The event body and MassTransit envelope preserve a generated message ID, the Order ID correlation, and the incoming W3C `traceparent` when present. A tested publisher failure after the database commit leaves the Order confirmed, demonstrating the known gap: process failure between commit and publish can lose the event.
+Retained as a test/documentation learning milestone only. The event body and MassTransit envelope preserve a generated message ID, the Order ID correlation, and the incoming W3C `traceparent` when present. A tested publisher failure after the database commit leaves the Order confirmed, demonstrating why direct publish is not the final reliability path.
 
 ### Transactional outbox milestone
 
@@ -313,7 +313,7 @@ Outbox dispatcher
   -> mark published
 ```
 
-The outbox milestone is preferred for the final repository because it teaches the database/broker consistency boundary.
+This is the current Order confirmation path. `OutboxMessage.Id` is the event MessageId, `message_type` identifies `OrderConfirmedV1`, the JSON payload is immutable, and an expired lease can be reclaimed. The dispatcher uses bounded exponential backoff and marks rows dead-lettered after the configured attempt limit, so a broker outage does not roll back or lose a confirmed Order. At-least-once publication still permits duplicates; Notification owns deduplication.
 
 ## 17. Notification consume flow
 

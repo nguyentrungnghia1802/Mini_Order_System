@@ -94,7 +94,7 @@ Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CO
 
 Learning objective: asynchronous event-driven communication and at-least-once delivery.
 
-Phase 5 status: contract, transport, direct-publish, Notification persistence, consumer, read API, Angular UI, broker recovery foundations, and the full-stack Compose order-to-notification smoke path are implemented. `MicroShop.Contracts.Orders.OrderConfirmedV1` is implemented with message/order IDs, customer destination, totals, item snapshots, UTC occurrence time, schema version, and serialization tests. MassTransit RabbitMQ options, bounded retry, durable Notification endpoint, environment credentials, readiness registration, and post-commit Order publish with trace/correlation propagation are configured. Notification owns `consumed_messages` and `notifications`, applies its migration, persists both records transactionally, suppresses duplicate message IDs, and exposes filtered/paginated reads plus mark-as-read through its native API and Gateway route. Angular uses the same-origin Gateway Notification client with a bounded polling list, manual refresh, loading/empty/error states, and mark-as-read. RabbitMQ Testcontainers tests verify publish/consume, duplicate suppression, retry/error-queue behavior, publisher independence, service restart, and queued recovery; Compose verifies a seeded confirmed Order becomes a readable Notification. Browser Playwright coverage and the direct publish dual-write gap remain incomplete; the latter is intentionally a Phase 7 outbox task.
+Phase 5 status: contract, transport, direct-publish demonstration, Notification persistence, consumer, read API, Angular UI, broker recovery foundations, and the full-stack Compose order-to-notification smoke path are implemented. `MicroShop.Contracts.Orders.OrderConfirmedV1` is implemented with message/order IDs, customer destination, totals, item snapshots, UTC occurrence time, schema version, and serialization tests. MassTransit RabbitMQ options, bounded retry, durable Notification endpoint, environment credentials, and readiness registration are configured. Notification owns `consumed_messages` and `notifications`, applies its migration, persists both records transactionally, suppresses duplicate message IDs, and exposes filtered/paginated reads plus mark-as-read through its native API and Gateway route. Angular uses the same-origin Gateway Notification client with a bounded polling list, manual refresh, loading/empty/error states, and mark-as-read. RabbitMQ Testcontainers tests verify publish/consume, duplicate suppression, retry/error-queue behavior, publisher independence, service restart, and queued recovery; Compose verifies a seeded confirmed Order becomes a readable Notification. The final Order event path is implemented in Phase 7.1; browser Playwright coverage and the remaining Phase 7 reliability gates are incomplete.
 
 ### Phase 6: Docker Compose completion
 
@@ -119,6 +119,8 @@ Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `dep
 - failure-injection tests.
 
 Learning objective: DB/broker dual-write, idempotency, and recovery.
+
+Phase 7 status: partial. Phase 7.1 implements the Order-owned transactional outbox and lease-based dispatcher. Confirmation writes `orders` and `outbox_messages` atomically; the dispatcher publishes stable event IDs with trace context, uses `FOR UPDATE SKIP LOCKED`, retries with bounded exponential backoff, recovers expired leases, and dead-letters after the configured maximum. Phase 7.2-7.6 remain for operational backlog/readiness/metrics, RabbitMQ outage/recovery evidence, concurrent inbox/restart hardening, inventory/cancellation reconciliation, shutdown, and the final gate.
 
 ### Phase 8: Observability and quality
 
@@ -150,7 +152,7 @@ The project is "complete for learning" at the end of Phase 8. Phase 9 and busine
 
 | ID | Issue | Impact | Planned control |
 | --- | --- | --- | --- |
-| TD-001 | Direct publish after DB commit in early phase | Lost notification window | Phase 7 outbox |
+| TD-001 | Direct publish after DB commit in early phase | Historical lost-notification window | Phase 7.1 transactional outbox implemented; Phase 7.2 outage/readiness evidence remains |
 | TD-002 | No public order idempotency key | Browser retry may duplicate orders | Disable duplicate UI submit; optional extension |
 | TD-003 | No automated reconciliation initially | `inventory_unknown` requires manual inspection | Phase 7 helper/job |
 | TD-004 | No authentication | Public demo operator writes are unsafe | Local-only baseline; optional Phase 9 |
@@ -310,7 +312,7 @@ Do not silently reverse an accepted ADR. Add a superseding ADR.
 
 **Context:** Direct publish is easier to learn first but creates a database/broker dual-write gap.
 
-**Decision:** Implement direct publish to demonstrate the problem, then add an Order DB outbox as the final hardening baseline.
+**Decision:** Implement direct publish to demonstrate the problem, then use an Order DB transactional outbox as the final hardening baseline. The direct publisher is retained only for the learning test/documentation path.
 
 **Consequences:** The learner observes why the pattern exists instead of adding it mechanically. Final reliability is stronger.
 

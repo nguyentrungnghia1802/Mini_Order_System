@@ -118,7 +118,38 @@ builder.Services.AddScoped<IProductInventoryClient>(serviceProvider =>
         : serviceProvider.GetRequiredService<ProductInventoryClient>();
 });
 builder.Services.AddScoped<OrderApplicationService>();
-builder.Services.AddScoped<IOrderEventPublisher, MassTransitOrderEventPublisher>();
+var outboxEnabled = !builder.Environment.IsEnvironment("Testing")
+    && ParseBool(
+        configuration["ORDER_OUTBOX_ENABLED"] ?? configuration["OrderOutbox:Enabled"],
+        fallback: true);
+builder.Services.AddOptions<OutboxOptions>()
+    .Configure(options =>
+    {
+        options.Enabled = outboxEnabled;
+        options.MaxAttempts = ParseInt(
+            configuration["ORDER_OUTBOX_MAX_ATTEMPTS"] ?? configuration["OrderOutbox:MaxAttempts"],
+            options.MaxAttempts);
+        options.PollInterval = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_POLL_INTERVAL_MS"] ?? configuration["OrderOutbox:PollIntervalMilliseconds"],
+            options.PollInterval);
+        options.LeaseDuration = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_LEASE_DURATION_MS"] ?? configuration["OrderOutbox:LeaseDurationMilliseconds"],
+            options.LeaseDuration);
+        options.RetryBaseDelay = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_RETRY_BASE_DELAY_MS"] ?? configuration["OrderOutbox:RetryBaseDelayMilliseconds"],
+            options.RetryBaseDelay);
+        options.RetryMaxDelay = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_RETRY_MAX_DELAY_MS"] ?? configuration["OrderOutbox:RetryMaxDelayMilliseconds"],
+            options.RetryMaxDelay);
+    })
+    .Validate(options => options.MaxAttempts is >= 1 and <= 100, "Order outbox max attempts must be between 1 and 100.")
+    .Validate(options => options.PollInterval >= TimeSpan.FromMilliseconds(50), "Order outbox poll interval must be at least 50 milliseconds.")
+    .Validate(options => options.LeaseDuration >= TimeSpan.FromSeconds(1), "Order outbox lease duration must be at least 1 second.")
+    .Validate(options => options.RetryBaseDelay > TimeSpan.Zero, "Order outbox retry base delay must be positive.")
+    .Validate(options => options.RetryMaxDelay >= options.RetryBaseDelay, "Order outbox retry max delay must not be lower than the base delay.")
+    .ValidateOnStart();
+builder.Services.AddScoped<IOrderOutboxWriter, OrderOutboxWriter>();
+builder.Services.AddScoped<IOrderConfirmedMessageTransport, MassTransitOrderConfirmedMessageTransport>();
 builder.Services.AddOptions<OrderDatabaseOptions>()
     .Configure(options =>
     {
@@ -142,6 +173,10 @@ builder.Services.AddDbContext<OrderDbContext>((serviceProvider, options) =>
         npgsqlOptions.MigrationsAssembly(typeof(OrderDbContext).Assembly.FullName));
 });
 builder.Services.AddHealthChecks().AddDbContextCheck<OrderDbContext>("order-database");
+if (outboxEnabled)
+{
+    builder.Services.AddHostedService<OutboxDispatcher>();
+}
 
 var app = builder.Build();
 
@@ -178,6 +213,13 @@ static int ParsePort(string? value, int fallback)
 static int ParseInt(string? value, int fallback)
 {
     return int.TryParse(value, out var parsed) ? parsed : fallback;
+}
+
+static TimeSpan ParseMilliseconds(string? value, TimeSpan fallback)
+{
+    return int.TryParse(value, out var milliseconds) && milliseconds > 0
+        ? TimeSpan.FromMilliseconds(milliseconds)
+        : fallback;
 }
 
 static bool ParseBool(string? value, bool fallback)

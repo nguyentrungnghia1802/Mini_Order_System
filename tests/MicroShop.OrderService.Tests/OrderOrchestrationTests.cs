@@ -27,8 +27,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             true,
             false));
         await using var dbContext = fixture.CreateDbContext();
-        var publisher = new RecordingOrderEventPublisher();
-        var service = new OrderApplicationService(dbContext, client, publisher);
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
         var outcome = await service.CreateAsync(
             CreateRequest(productId, 2),
@@ -44,10 +43,13 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
         Assert.Equal(outcome.Order.Id, client.ReserveRequest!.OrderId);
         Assert.Equal(2, outcome.Order.StateHistory.Count);
         Assert.Equal("PRODUCT_RESERVATION_CONFIRMED", outcome.Order.StateHistory.Last().ReasonCode);
-        var message = Assert.Single(publisher.Messages);
+        var outbox = Assert.Single(dbContext.OutboxMessages.Local);
+        Assert.Equal(OrderConfirmedMessageFactory.MessageType, outbox.MessageType);
+        Assert.Equal(outcome.Order.Id, outbox.AggregateId);
+        Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", outbox.TraceParent);
+        var message = OrderConfirmedMessageFactory.Deserialize(outbox.Payload);
+        Assert.Equal(outbox.Id, message.MessageId);
         Assert.Equal(outcome.Order.Id, message.OrderId);
-        Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", publisher.TraceParent);
-        Assert.NotEqual(Guid.Empty, message.MessageId);
         Assert.Equal(250_000m, message.TotalAmount);
         Assert.Equal("Authoritative Product", Assert.Single(message.Items).ProductName);
     }
@@ -66,7 +68,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             false,
             false));
         await using var dbContext = fixture.CreateDbContext();
-        var service = new OrderApplicationService(dbContext, client, new NoOpOrderEventPublisher());
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
         var outcome = await service.CreateAsync(
             CreateRequest(Guid.NewGuid(), 1),
@@ -96,7 +98,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             false,
             false));
         await using var dbContext = fixture.CreateDbContext();
-        var service = new OrderApplicationService(dbContext, client, new NoOpOrderEventPublisher());
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
         var outcome = await service.CreateAsync(
             CreateRequest(Guid.NewGuid(), 1),
@@ -125,7 +127,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             false,
             false));
         await using var dbContext = fixture.CreateDbContext();
-        var service = new OrderApplicationService(dbContext, client, new NoOpOrderEventPublisher());
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
         var outcome = await service.CreateAsync(
             CreateRequest(productId, 1),
@@ -156,7 +158,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             true,
             false));
         await using var dbContext = fixture.CreateDbContext();
-        var service = new OrderApplicationService(dbContext, client, new NoOpOrderEventPublisher());
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
         var outcome = await service.CreateAsync(
             CreateRequest(requestedProductId, 1),
@@ -171,7 +173,7 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
     }
 
     [Fact]
-    public async Task DirectPublishFailureLeavesConfirmedOrderForOutboxHardening()
+    public async Task LegacyDirectPublishFailureDoesNotAffectOutboxConfirmation()
     {
         var productId = Guid.NewGuid();
         var client = new StubProductInventoryClient(new ProductReservationResult(
@@ -184,16 +186,21 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             null,
             true,
             false));
-        var publisher = new FailingOrderEventPublisher();
         await using var dbContext = fixture.CreateDbContext();
-        var service = new OrderApplicationService(dbContext, client, publisher);
+        var service = new OrderApplicationService(dbContext, client, new OrderOutboxWriter(dbContext));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
+        var outcome = await service.CreateAsync(
             CreateRequest(productId, 1),
             "direct-publish-failure",
             null,
-            CancellationToken.None));
+            CancellationToken.None);
 
+        Assert.True(outcome.IsSuccess);
+        var publisher = new FailingOrderEventPublisher();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.PublishConfirmedAsync(
+            outcome.Order,
+            null,
+            CancellationToken.None));
         Assert.NotNull(publisher.OrderId);
         await using var verificationContext = fixture.CreateDbContext();
         var persisted = await verificationContext.Orders
@@ -202,6 +209,11 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
 
         Assert.Equal(OrderStatuses.Confirmed, persisted.Status);
         Assert.Equal(99m, persisted.TotalAmount);
+        var outbox = await verificationContext.OutboxMessages
+            .AsNoTracking()
+            .SingleAsync(message => message.AggregateId == publisher.OrderId);
+        Assert.Null(outbox.PublishedAtUtc);
+        Assert.Null(outbox.DeadLetteredAtUtc);
     }
 
     private static CreateOrderRequest CreateRequest(Guid productId, int quantity)
@@ -238,50 +250,6 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
                 Guid.NewGuid(),
                 null,
                 false));
-        }
-    }
-
-    private sealed class NoOpOrderEventPublisher : IOrderEventPublisher
-    {
-        public Task PublishConfirmedAsync(
-            Order order,
-            string? traceParent,
-            CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class RecordingOrderEventPublisher : IOrderEventPublisher
-    {
-        public List<MicroShop.Contracts.Orders.OrderConfirmedV1> Messages { get; } = [];
-
-        public string? TraceParent { get; private set; }
-
-        public Task PublishConfirmedAsync(
-            Order order,
-            string? traceParent,
-            CancellationToken cancellationToken)
-        {
-            TraceParent = traceParent;
-            Messages.Add(new MicroShop.Contracts.Orders.OrderConfirmedV1(
-                Guid.NewGuid(),
-                order.Id,
-                order.CustomerName,
-                order.CustomerEmail,
-                order.TotalAmount,
-                order.Currency,
-                order.Items
-                    .OrderBy(item => item.ProductId)
-                    .Select(item => new MicroShop.Contracts.Orders.OrderConfirmedItemV1(
-                        item.ProductId,
-                        item.ProductName,
-                        item.UnitPrice,
-                        item.Quantity,
-                        item.Subtotal))
-                    .ToArray(),
-                order.ConfirmedAtUtc!.Value));
-            return Task.CompletedTask;
         }
     }
 

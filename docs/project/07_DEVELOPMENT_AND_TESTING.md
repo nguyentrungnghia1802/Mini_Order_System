@@ -249,13 +249,13 @@ Required cases:
 
 The implemented Product API tests use PostgreSQL Testcontainers and apply the real Product migrations. They cover update rounding/versioning, activation filtering, competing PATCH requests, atomic reservation failures, authoritative snapshots, replay/mismatch, idempotent release, and concurrent last-stock requests. EF Core InMemory is not used.
 
-The current Product suite contains 21 passing tests and the reservation cases are implemented in `InventoryApiTests`, including controlled reservation lookup by order ID. The Order suite contains 39 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client and cancellation release flow.
+The current Product suite contains 21 passing tests and the reservation cases are implemented in `InventoryApiTests`, including controlled reservation lookup by order ID. The Order suite contains 44 passing tests; the fake client is only enabled explicitly in the legacy API fixture, while the runtime path and integration tests use the typed Product HTTP client, cancellation release flow, and transactional outbox dispatcher.
 
 ### Order integration tests
 
 Use real Order PostgreSQL and either Product Service test host/container or an explicit HTTP stub for isolated orchestration cases.
 
-The current Order tests apply `20260801204113_InitialOrderSchema` to a fresh PostgreSQL Testcontainer, persist immutable item snapshots and state history, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 40-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, `cancellation_pending` persistence, optimistic-concurrency rejection, and direct `OrderConfirmedV1` publication behavior. The Angular suite has 21 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, duplicate-submit suppression, and Notification list/mark-as-read UI behavior.
+The current Order tests apply `20260801204113_InitialOrderSchema` and `20260817203650_AddOrderOutbox` to fresh PostgreSQL Testcontainers, persist immutable item snapshots/state history/outbox payloads, verify status constraints, readiness/OpenAPI, database credential isolation, and exercise the typed Product HTTP boundary. The 44-test suite covers creation, known rejection, listing, detail, cancellation, pagination, stable error codes, authoritative snapshots, unavailable dependency, timeout ambiguity, caller cancellation, `inventory_unknown`, `cancellation_pending` persistence, optimistic-concurrency rejection, direct-publish demonstration isolation, atomic outbox persistence, stable event identity, concurrent claim, retry/dead-letter, and lease-expiry recovery. The Angular suite has 21 passing tests covering Gateway API contracts, Product catalog/operator screens, checkout outcomes, Order list/detail, cancellation, duplicate-submit suppression, and Notification list/mark-as-read UI behavior.
 
 Cases:
 
@@ -266,6 +266,10 @@ Cases:
 - confirmation event/outbox row;
 - cancellation state guards;
 - release unknown -> cancellation_pending.
+
+### Transactional outbox tests
+
+`OutboxDispatcherTests` use PostgreSQL Testcontainers and a fake transport at the transport boundary. They verify stable MessageId publication and completion state, `FOR UPDATE SKIP LOCKED` claim exclusivity under concurrent dispatchers, bounded retry/dead-letter behavior, and recovery after a worker loses its lease. The service-level direct publisher remains tested only to demonstrate the historical post-commit failure window; it is not registered in the production confirmation path.
 
 ### Notification integration tests
 
@@ -295,7 +299,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 83 passing tests: 1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 40 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, publisher independence, restart, and queued recovery; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order orchestration suite covers direct publish identity/trace propagation and the post-commit publish failure window.
+The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 87 passing tests: 1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 44 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, publisher independence, restart, and queued recovery; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order suite covers direct-publish demonstration isolation plus transactional outbox identity, claim, bounded retry/dead-letter, and lease recovery.
 
 ### Contract tests
 

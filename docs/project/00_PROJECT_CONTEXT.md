@@ -197,8 +197,8 @@ Documentation must continue to distinguish the verified Product/Gateway/Angular 
 | Risk | Why it matters | Planned control |
 | --- | --- | --- |
 | Order saved but inventory reservation fails | Order and Product databases cannot share one transaction | Use explicit order states and record failure |
-| Inventory reserved but Order database update fails | Reservation may become orphaned | Use compensating release; later add reconciliation/outbox |
-| Event publish fails after order confirmation | Notification may never be created | Add transactional outbox in hardening phase |
+| Inventory reserved but Order database update fails | Reservation may become orphaned | Use compensating release; Phase 7 reconciliation remains planned. The transactional outbox covers confirmed-event publication, not remote inventory reconciliation. |
+| Event publish fails after order confirmation | Notification may be delayed or dead-lettered | Transactional outbox persists the event; bounded dispatch/dead-letter operations and reconciliation remain observable Phase 7 work |
 | Duplicate message delivery | RabbitMQ/MassTransit may redeliver | Unique message ID and consumer inbox |
 | Product Service unavailable | Order creation depends on a synchronous call | Timeout, no blind retry for unsafe calls, clear 503 response |
 | Notification Service unavailable | Messages accumulate | Durable queue and readiness/consumer monitoring |

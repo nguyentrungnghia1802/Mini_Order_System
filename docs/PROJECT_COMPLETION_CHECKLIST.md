@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, and Phase 6.1/6.2 runtime images plus full-stack Compose, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1 transactional outbox, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -45,7 +45,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Transactional outbox and its outage/recovery behavior.
+- Remaining Phase 7.2-7.6 outbox operations, outage/recovery gate, inbox concurrency hardening, reconciliation, and resilience policies.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 7 — replace the direct publish dual-write gap with the transactional outbox.
+Phase 7.2 — add outbox operations/readiness/backlog evidence and the RabbitMQ outage/recovery test.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -61,6 +61,15 @@ Phase 7 — replace the direct publish dual-write gap with the transactional out
 | --- | --- | --- |
 | Runtime images | `[x]` | Five multi-stage Dockerfiles under `deploy/docker/` build successfully as `microshop-*:phase6`; .NET runtime images are SDK-free, non-root, port 8080 only, and the Web image serves `/health`. |
 | Full-stack Compose | `[x]` | `deploy/compose.yaml` starts the five application services after three successful migration one-shots; Web `/health`, Gateway API proxying, confirmed Order, and eventual Notification delivery pass. Only Web 8080 and RabbitMQ management 15672 are published by default. |
+
+## Phase 7.1 — Transactional outbox (partial Phase 7)
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Order outbox schema and migration | `[x]` | `OutboxMessage`, `OutboxMessageConfiguration`, `OrderDbContext`, and `20260817203650_AddOrderOutbox` create an Order-owned table with stable message ID, aggregate identity, immutable JSON payload, attempt/lease/publish/dead-letter state, indexes, and a unique `(message_type, aggregate_id)` constraint. |
+| Atomic confirmation write | `[x]` | `OrderApplicationService` adds the serialized `OrderConfirmedV1` row before the same `SaveChangesAsync` that confirms the Order; no production DI registration remains for the direct broker publisher. |
+| Dispatcher and recovery state | `[x]` | `OutboxDispatcher` uses PostgreSQL `FOR UPDATE SKIP LOCKED`, leases, bounded exponential backoff, stable MessageId/correlation/traceparent publication, lease-expiry recovery, and dead-lettering at the configured maximum. |
+| Phase 7.1 tests | `[x]` | 44 Order tests pass, including atomic outbox persistence, direct-publish demonstration isolation, stable-ID success, concurrent claim, retry/dead-letter, and restart/lease recovery. |
 
 ## Phase 1 — Product Service foundation
 
@@ -84,7 +93,7 @@ Phase 7 — replace the direct publish dual-write gap with the transactional out
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 40 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and direct event publication. |
+| Order foundation tests | `[x]` | 44 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and outbox/direct-publish behavior. |
 | Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; the combined Angular suite has 21 tests. |
 | Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
@@ -113,7 +122,7 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 83 .NET tests pass (1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 87 .NET tests pass (1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 44 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 

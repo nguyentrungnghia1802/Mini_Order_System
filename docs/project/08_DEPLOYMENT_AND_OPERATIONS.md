@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, and Phase 6.2 verifies the Compose order-to-notification smoke flow. Browser Playwright coverage and the Phase 7 outbox remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1 verifies durable outbox persistence and lease/retry behavior. Browser Playwright coverage and Phase 7.2-7.6 operations/reconciliation/resilience gates remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -15,6 +15,10 @@ The repository now provides a full local Compose stack: Web, Gateway, Product, O
 | Production | Not a baseline target | Requires authentication, privacy, HA, monitoring, legal review |
 
 The system must not be described as production-ready merely because it runs in Docker.
+
+## Phase 7.1 outbox status
+
+Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The operational backlog/readiness/metrics policy, RabbitMQ outage Compose exercise, reconciliation, and shutdown/resilience gates remain Phase 7.2-7.6 work.
 
 ## 2. Configuration model
 
@@ -41,7 +45,7 @@ The current Gateway configuration reads `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_UR
 - Product Service internal URL;
 - HTTP timeout/resilience settings;
 - RabbitMQ connection;
-- outbox settings when enabled.
+- outbox settings: `ORDER_OUTBOX_ENABLED`, `ORDER_OUTBOX_MAX_ATTEMPTS`, `ORDER_OUTBOX_POLL_INTERVAL_MS`, `ORDER_OUTBOX_LEASE_DURATION_MS`, `ORDER_OUTBOX_RETRY_BASE_DELAY_MS`, and `ORDER_OUTBOX_RETRY_MAX_DELAY_MS`.
 
 ### Notification Service
 
