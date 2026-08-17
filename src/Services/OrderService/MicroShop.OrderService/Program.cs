@@ -1,4 +1,6 @@
+using MicroShop.OrderService.Features.Orders;
 using MicroShop.OrderService.Infrastructure.Database;
+using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -23,6 +25,8 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<IProductCatalogClient, FakeProductCatalogClient>();
+builder.Services.AddScoped<OrderApplicationService>();
 builder.Services.AddOptions<OrderDatabaseOptions>()
     .Configure(options =>
     {
@@ -55,8 +59,9 @@ app.MapGet("/", () => Results.Ok(new
 {
     service = "order-service",
     status = "running",
-    message = "Order persistence foundation is available; Order API is planned in Phase 2."
+    message = "Order API is available under /api/v1/orders using the Phase 2 fake Product catalog."
 }));
+OrderEndpoints.MapOrderEndpoints(app);
 
 if (!app.Environment.IsProduction())
 {
