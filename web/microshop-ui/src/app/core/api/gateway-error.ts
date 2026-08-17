@@ -7,6 +7,7 @@ export interface GatewayProblemDetails {
   detail?: string;
   code?: string;
   traceId?: string;
+  errors?: Record<string, string[]>;
 }
 
 export type GatewayErrorKind = 'connectivity' | 'api' | 'unknown';

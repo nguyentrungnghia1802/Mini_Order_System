@@ -1,0 +1,42 @@
+<section class="page" aria-labelledby="catalog-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Product Service through Gateway</p>
+      <h1 id="catalog-title">Product catalog</h1>
+      <p class="lede">Browse active Products returned by the MicroShop public API.</p>
+    </div>
+    <a class="button secondary" routerLink="/products/manage">Manage Products</a>
+  </div>
+
+  @if (state() === 'loading') {
+    <div class="status-card" role="status">Loading Products…</div>
+  } @else if (state() === 'error') {
+    <div class="status-card error" role="alert">
+      <strong>Catalog unavailable</strong>
+      <p>{{ errorMessage() }}</p>
+      <button class="button" type="button" (click)="loadProducts()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="status-card" role="status">
+      <strong>No active Products yet.</strong>
+      <p>Open Product management to create the first catalog item.</p>
+      <a class="button" routerLink="/products/manage">Create a Product</a>
+    </div>
+  } @else {
+    <div class="product-grid">
+      @for (product of products(); track product.id) {
+        <article class="product-card">
+          <div class="product-card-heading">
+            <h2>{{ product.name }}</h2>
+            <span class="status active">Active</span>
+          </div>
+          <p class="description">{{ product.description || 'No description provided.' }}</p>
+          <div class="product-facts">
+            <span class="price">{{ product.unitPrice | currency: product.currency:'symbol':'1.0-2' }}</span>
+            <span>{{ product.availableStock }} in stock</span>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

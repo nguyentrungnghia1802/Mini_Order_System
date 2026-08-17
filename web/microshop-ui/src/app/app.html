@@ -1,3 +1,16 @@
+<header class="app-shell-header">
+  <a class="brand" routerLink="/products" aria-label="MicroShop home">MicroShop</a>
+  <nav aria-label="Primary navigation">
+    <a routerLink="/products" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
+    <a routerLink="/products/manage" routerLinkActive="active">Manage Products</a>
+  </nav>
+</header>
+
+<main class="app-content">
+  <router-outlet />
+</main>
+
+<main class="main legacy-placeholder" aria-hidden="true">
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 <!-- * * * * * * * * * * * The content below * * * * * * * * * * * -->
 <!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * -->
@@ -184,7 +197,6 @@
   }
 </style>
 
-<main class="main">
   <div class="content">
     <div class="left-side">
       <svg
@@ -232,8 +244,8 @@
           <clipPath id="a"><path fill="#fff" d="M0 0h982v239H0z" /></clipPath>
         </defs>
       </svg>
-      <h1>Hello, {{ title() }}</h1>
-      <p>Congratulations! Your app is running. 🎉</p>
+      <h1>MicroShop</h1>
+      <p>The public API is served through the Gateway.</p>
     </div>
     <div class="divider" role="separator" aria-label="Divider"></div>
     <div class="right-side">
@@ -341,4 +353,4 @@
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
 
-<router-outlet />
+<!-- Routed content is rendered in the app-content outlet above. -->

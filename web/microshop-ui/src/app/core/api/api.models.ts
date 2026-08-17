@@ -26,6 +26,23 @@ export interface ProductListQuery {
   search?: string;
 }
 
+export interface CreateProductRequest {
+  name: string;
+  description: string;
+  unitPrice: number;
+  currency: string;
+  initialStock: number;
+  isActive: boolean;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  description?: string;
+  unitPrice?: number;
+  availableStock?: number;
+  isActive?: boolean;
+}
+
 export interface OrderItemRequest {
   productId: string;
   quantity: number;

@@ -1,11 +1,17 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpHeaders,
+  HttpParams
+} from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  CreateProductRequest,
   ProductListQuery,
   ProductPage,
-  ProductResponse
+  ProductResponse,
+  UpdateProductRequest
 } from './api.models';
 import { GATEWAY_API_PATHS, productApiPath } from './api.paths';
 
@@ -21,6 +27,26 @@ export class ProductApiService {
 
   get(productId: string): Observable<ProductResponse> {
     return this.http.get<ProductResponse>(productApiPath(productId));
+  }
+
+  create(request: CreateProductRequest): Observable<ProductResponse> {
+    return this.http.post<ProductResponse>(GATEWAY_API_PATHS.products, request);
+  }
+
+  update(
+    productId: string,
+    request: UpdateProductRequest,
+    version: number
+  ): Observable<ProductResponse> {
+    return this.http.patch<ProductResponse>(
+      productApiPath(productId),
+      request,
+      {
+        headers: new HttpHeaders({
+          'If-Match': `"${version}"`
+        })
+      }
+    );
   }
 }
 

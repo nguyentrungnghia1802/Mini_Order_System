@@ -1,0 +1,107 @@
+<section class="page" aria-labelledby="management-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Product Service through Gateway</p>
+      <h1 id="management-title">Manage Products</h1>
+      <p class="lede">Create, edit, activate, and deactivate catalog records.</p>
+    </div>
+    <a class="button secondary" routerLink="/products">Back to catalog</a>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="notice error" role="alert">{{ errorMessage() }}</div>
+  }
+  @if (successMessage()) {
+    <div class="notice success" role="status">{{ successMessage() }}</div>
+  }
+
+  <div class="management-grid">
+    <section class="panel" aria-labelledby="products-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="products-heading">Catalog records</h2>
+          <p>Inactive records stay visible here for operator actions.</p>
+        </div>
+        <button class="button" type="button" (click)="startCreate()">New Product</button>
+      </div>
+
+      @if (state() === 'loading') {
+        <p class="status-text" role="status">Loading Products…</p>
+      } @else if (state() === 'error') {
+        <p class="status-text">The catalog could not be loaded.</p>
+        <button class="button secondary" type="button" (click)="loadProducts()">Retry</button>
+      } @else if (products().length === 0) {
+        <p class="status-text">No Product records exist yet.</p>
+      } @else {
+        <div class="record-list">
+          @for (product of products(); track product.id) {
+            <article class="record" [class.inactive]="!product.isActive">
+              <div>
+                <h3>{{ product.name }}</h3>
+                <p>{{ product.unitPrice | number:'1.0-2' }} {{ product.currency }} · stock {{ product.availableStock }}</p>
+              </div>
+              <div class="record-actions">
+                <span class="status" [class.active]="product.isActive" [class.inactive-status]="!product.isActive">
+                  {{ product.isActive ? 'Active' : 'Inactive' }}
+                </span>
+                <button class="button small secondary" type="button" (click)="startEdit(product)">Edit</button>
+                <button class="button small secondary" type="button" [disabled]="isSaving()" (click)="toggleActive(product)">
+                  {{ product.isActive ? 'Deactivate' : 'Activate' }}
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <form class="panel form-panel" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="panel-heading">
+        <div>
+          <h2>{{ isEditing() ? 'Edit Product' : 'Create Product' }}</h2>
+          <p>Server validation and optimistic version conflicts are shown here.</p>
+        </div>
+      </div>
+
+      <div class="form-fields">
+        <label for="product-name">Name</label>
+        <input id="product-name" type="text" formControlName="name" autocomplete="off" />
+        @if (fieldError('name'); as error) {
+          <span class="field-error">{{ error }}</span>
+        }
+
+        <label for="product-description">Description</label>
+        <textarea id="product-description" rows="3" formControlName="description"></textarea>
+        @if (fieldError('description'); as error) {
+          <span class="field-error">{{ error }}</span>
+        }
+
+        <label for="product-price">Unit price (VND)</label>
+        <input id="product-price" type="number" min="0" step="0.01" formControlName="unitPrice" />
+        @if (fieldError('unitPrice'); as error) {
+          <span class="field-error">{{ error }}</span>
+        }
+
+        <label for="product-stock">Available stock</label>
+        <input id="product-stock" type="number" min="0" step="1" formControlName="stock" />
+        @if (fieldError('stock'); as error) {
+          <span class="field-error">{{ error }}</span>
+        }
+
+        <label class="checkbox-row" for="product-active">
+          <input id="product-active" type="checkbox" formControlName="isActive" />
+          <span>Product is active for shoppers</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="button" type="submit" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving…' : (isEditing() ? 'Save changes' : 'Create Product') }}
+        </button>
+        @if (isEditing()) {
+          <button class="button secondary" type="button" [disabled]="isSaving()" (click)="startCreate()">Cancel edit</button>
+        }
+      </div>
+    </form>
+  </div>
+</section>
