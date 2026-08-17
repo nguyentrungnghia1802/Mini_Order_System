@@ -86,6 +86,31 @@ public sealed class GatewayApiTests
     }
 
     [Fact]
+    public async Task NotificationRouteTransformsPathAndQuery()
+    {
+        string? receivedPath = null;
+        await using var downstream = await DownstreamServer.StartAsync(async context =>
+        {
+            receivedPath = context.Request.Path + context.Request.QueryString;
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.CompleteAsync();
+        });
+        await using var factory = new GatewayFactory(
+            downstream.Address,
+            downstream.Address,
+            downstream.Address);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(
+            "/api/notifications?customerEmail=a%40example.com&page=2");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(
+            "/api/v1/notifications?customerEmail=a%40example.com&page=2",
+            receivedPath);
+    }
+
+    [Fact]
     public async Task InternalProductRouteIsRejectedWithoutForwarding()
     {
         var forwarded = false;
@@ -152,22 +177,29 @@ public sealed class GatewayApiTests
 
     private sealed record GatewayProblem(string Code);
 
-    private sealed class GatewayFactory(Uri productAddress, Uri orderAddress)
+    private sealed class GatewayFactory(
+        Uri productAddress,
+        Uri orderAddress,
+        Uri? notificationAddress = null)
         : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            var actualNotificationAddress = notificationAddress ?? productAddress;
             builder.UseEnvironment("Testing");
             builder.UseSetting("PRODUCT_SERVICE_URL", productAddress.ToString());
             builder.UseSetting("ORDER_SERVICE_URL", orderAddress.ToString());
+            builder.UseSetting("NOTIFICATION_SERVICE_URL", actualNotificationAddress.ToString());
             builder.ConfigureAppConfiguration((_, configurationBuilder) =>
             {
                 configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["PRODUCT_SERVICE_URL"] = productAddress.ToString(),
                     ["ORDER_SERVICE_URL"] = orderAddress.ToString(),
+                    ["NOTIFICATION_SERVICE_URL"] = actualNotificationAddress.ToString(),
                     ["Gateway:ProductServiceUrl"] = productAddress.ToString(),
-                    ["Gateway:OrderServiceUrl"] = orderAddress.ToString()
+                    ["Gateway:OrderServiceUrl"] = orderAddress.ToString(),
+                    ["Gateway:NotificationServiceUrl"] = actualNotificationAddress.ToString()
                 });
             });
         }

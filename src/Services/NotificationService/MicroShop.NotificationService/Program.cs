@@ -1,5 +1,6 @@
 using MassTransit;
 using MicroShop.NotificationService.Features.Messaging;
+using MicroShop.NotificationService.Features.Notifications;
 using MicroShop.NotificationService.Infrastructure.Database;
 using MicroShop.NotificationService.Persistence;
 using MicroShop.ServiceDefaults.Messaging;
@@ -37,6 +38,22 @@ builder.Services.AddOptions<NotificationDatabaseOptions>()
     .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "Notification database user is required.")
     .Validate(options => options.HasConnectionCredentials, "Notification database password or connection string is required.")
     .ValidateOnStart();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        if (!context.ProblemDetails.Extensions.ContainsKey("code"))
+        {
+            context.ProblemDetails.Extensions["code"] = "INTERNAL_ERROR";
+        }
+
+        if (!context.ProblemDetails.Extensions.ContainsKey("traceId"))
+        {
+            context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+        }
+    };
+});
+builder.Services.AddOpenApi();
 builder.Services.AddDbContext<NotificationDbContext>((serviceProvider, options) =>
 {
     var database = serviceProvider.GetRequiredService<IOptions<NotificationDatabaseOptions>>().Value;
@@ -111,13 +128,20 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
 MicroShop.ServiceDefaults.ServiceDefaultsExtensions.MapMicroShopHealth(app);
 app.MapGet("/", () => Results.Ok(new
 {
     service = "notification-service",
-    status = "bootstrap",
-    message = "Notification consumer/API is introduced in Phase 5."
+    status = "running",
+    message = "Notification API is available under /api/v1/notifications."
 }));
+NotificationEndpoints.MapNotificationEndpoints(app);
+
+if (!app.Environment.IsProduction())
+{
+    app.MapOpenApi("/openapi/v1.json");
+}
 
 if (args.Contains("--migrate", StringComparer.OrdinalIgnoreCase))
 {

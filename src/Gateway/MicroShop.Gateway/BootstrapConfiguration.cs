@@ -10,6 +10,7 @@ public static class BootstrapConfiguration
 {
     private const string DefaultProductServiceAddress = "http://localhost:5245/";
     private const string DefaultOrderServiceAddress = "http://localhost:5075/";
+    private const string DefaultNotificationServiceAddress = "http://localhost:5088/";
 
     public static void AddYarp(IServiceCollection services, IConfiguration configuration)
     {
@@ -25,15 +26,23 @@ public static class BootstrapConfiguration
             "Gateway:OrderServiceUrl",
             "ReverseProxy:Clusters:order-cluster:Destinations:order:Address",
             DefaultOrderServiceAddress);
+        var notificationServiceAddress = GetServiceAddress(
+            configuration,
+            "NOTIFICATION_SERVICE_URL",
+            "Gateway:NotificationServiceUrl",
+            "ReverseProxy:Clusters:notification-cluster:Destinations:notification:Address",
+            DefaultNotificationServiceAddress);
         ValidateServiceAddress("Product Service", productServiceAddress);
         ValidateServiceAddress("Order Service", orderServiceAddress);
+        ValidateServiceAddress("Notification Service", notificationServiceAddress);
 
         var proxyConfiguration = new ConfigurationBuilder()
             .AddConfiguration(configuration)
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ReverseProxy:Clusters:product-cluster:Destinations:product:Address"] = productServiceAddress,
-                ["ReverseProxy:Clusters:order-cluster:Destinations:order:Address"] = orderServiceAddress
+                ["ReverseProxy:Clusters:order-cluster:Destinations:order:Address"] = orderServiceAddress,
+                ["ReverseProxy:Clusters:notification-cluster:Destinations:notification:Address"] = notificationServiceAddress
             })
             .Build();
 

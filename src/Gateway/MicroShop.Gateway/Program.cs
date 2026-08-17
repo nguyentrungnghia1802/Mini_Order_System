@@ -36,7 +36,7 @@ app.MapGet("/", () => Results.Ok(new
 {
     service = "gateway",
     status = "running",
-    message = "YARP Gateway routes Product and Order public APIs."
+    message = "YARP Gateway routes Product, Order, and Notification public APIs."
 }));
 app.MapReverseProxy(proxyPipeline =>
 {
