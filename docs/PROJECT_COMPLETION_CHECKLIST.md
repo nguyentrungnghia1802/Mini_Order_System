@@ -101,10 +101,10 @@ Phase 5 — implement versioned RabbitMQ contracts, Notification persistence/con
 | Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
 | Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
 | Angular Gateway client migration | `[x]` | `ProductApiService` and `OrderApiService` use `/api/products` and `/api/orders`; the interceptor maps connectivity failures to `GatewayApiError`; Gateway client coverage is included in the current 16-test Angular suite. |
-| Phase 4 validation gate | `[~]` | Gateway and frontend routing foundations pass; feature screens and application-container port isolation remain in later slices. |
+| Phase 4 validation gate | `[~]` | Gateway routing, Product/Order Angular feature screens, and source-level Gateway-only usage pass; application-container port isolation remains in the Phase 6 Compose slice. |
 
 Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 67 .NET tests pass (1 Architecture, 6 Gateway, 39 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 69 .NET tests pass (1 Architecture, 2 Contracts, 6 Gateway, 39 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.

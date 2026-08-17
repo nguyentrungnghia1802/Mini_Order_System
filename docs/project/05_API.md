@@ -437,6 +437,8 @@ Implemented response fields include the reservation ID, order ID, `reserved`/`re
 
 ## 10. Integration event contract
 
+The first versioned contract is implemented in `src/BuildingBlocks/MicroShop.Contracts/Orders/OrderConfirmedV1.cs` and is covered by `tests/MicroShop.Contracts.Tests/OrderConfirmedV1SerializationTests.cs`. The contract assembly contains no EF entities or service business logic.
+
 Contract name:
 
 ```text

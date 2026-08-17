@@ -559,7 +559,7 @@ Evidence for 3.7:
 Evidence for 3.8:
 
 - Files: Product/Order database configuration and migrations, the typed Product client, cancellation orchestration, and Gateway route/test files.
-- Tests: Full solution validation passes with 67 .NET tests: 1 Architecture, 6 Gateway, 39 Order, and 21 Product.
+- Tests: Full solution validation passes with 69 .NET tests: 1 Architecture, 2 Contracts, 6 Gateway, 39 Order, and 21 Product.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`) completes the final Gateway safety item for this gate.
 
@@ -650,7 +650,7 @@ Evidence for 4.4:
 Evidence for 4.5:
 
 - Files: Gateway route configuration and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
-- Tests: 6 Gateway tests, 16 Angular tests, and the full 64-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
+- Tests: 6 Gateway tests, 16 Angular tests, and the full 69-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Notes: Public routes, internal-route exclusion, Angular same-origin API clients, and Product/Order feature screens are complete. Application-container port isolation remains a Phase 6 Compose validation item.
@@ -661,17 +661,25 @@ Evidence for 4.5:
 
 ## 5.1 Shared event contracts
 
-- [ ] Create `MicroShop.Contracts`.
-- [ ] Add `OrderConfirmedV1`.
-- [ ] Add message ID.
-- [ ] Add order ID.
-- [ ] Add customer destination fields.
-- [ ] Add total and currency.
-- [ ] Add item snapshots.
-- [ ] Add occurred-at UTC.
-- [ ] Add schema version.
-- [ ] Keep contracts free from EF entities and business logic.
-- [ ] Add serialization compatibility test.
+- [x] Create `MicroShop.Contracts`.
+- [x] Add `OrderConfirmedV1`.
+- [x] Add message ID.
+- [x] Add order ID.
+- [x] Add customer destination fields.
+- [x] Add total and currency.
+- [x] Add item snapshots.
+- [x] Add occurred-at UTC.
+- [x] Add schema version.
+- [x] Keep contracts free from EF entities and business logic.
+- [x] Add serialization compatibility test.
+
+Evidence for 5.1:
+
+- Files: `src/BuildingBlocks/MicroShop.Contracts/Orders/OrderConfirmedV1.cs`, `src/Services/OrderService/MicroShop.OrderService/MicroShop.OrderService.csproj`, `src/Services/NotificationService/MicroShop.NotificationService/MicroShop.NotificationService.csproj`, and `tests/MicroShop.Contracts.Tests/OrderConfirmedV1SerializationTests.cs`.
+- Tests: 2 contract tests pass for stable camelCase JSON serialization and documented Version 1 fixture deserialization; the full .NET solution has 69 passing tests.
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.Contracts.Tests/MicroShop.Contracts.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `2c99721` (`feat(contracts): add order confirmed event`).
+- Notes: The assembly contains passive immutable records only; it references no EF Core project, database entity, or service business logic. Order and Notification reference the contract assembly directly.
 
 ## 5.2 RabbitMQ and MassTransit
 
