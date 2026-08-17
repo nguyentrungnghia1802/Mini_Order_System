@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, and Phase 4 Gateway routing/safety/frontend client slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, `27d57ef`, `569af30`, `f750963`, and `185a8cc` (`feat(ui): add product catalog management`).
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, and the Phase 5 contract/transport/Notification persistence/read API/Angular UI slices, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -43,8 +43,8 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 
 ## Deferred and not yet complete
 
-- Notification UI, Playwright end-to-end coverage, and the legacy fake-client compatibility gate for Angular checkout.
-- Notification Angular UI, broker-level publish/consume and recovery tests.
+- Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
+- Broker-level publish/consume and recovery tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -54,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 5 — implement the Angular Notification UI and broker-level recovery validation.
+Phase 5 — implement broker-level recovery validation and the remaining end-to-end flow.
 
 ## Phase 1 — Product Service foundation
 
@@ -79,7 +79,7 @@ Phase 5 — implement the Angular Notification UI and broker-level recovery vali
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
 | Order foundation tests | `[x]` | 40 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and direct event publication. |
-| Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; 16 Angular tests pass. |
+| Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; the combined Angular suite has 21 tests. |
 | Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
 ## Phase 3 — Product reservation and Order communication (partial)
@@ -118,5 +118,5 @@ Gateway evidence:
 | Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
 | Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 7 PostgreSQL-backed Notification tests pass. |
 | Notification read API and Gateway route | `[x]` | Filtered/paginated `GET /api/v1/notifications`, idempotent mark-as-read, OpenAPI, and tested `/api/notifications/*` Gateway transform are implemented. |
-| Notification Angular UI | `[ ]` | Angular screen, bounded polling, and loading/empty/error states remain. |
-| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API and duplicate suppression are verified; Angular UI, broker-level restart/recovery, and full eventual-flow validation remain. |
+| Notification Angular UI | `[x]` | `/notifications` route, same-origin client, list/empty/error/loading states, bounded polling, manual refresh, eventual-consistency guidance, and mark-as-read are implemented; 21 Angular tests pass overall. |
+| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API/UI and duplicate suppression are verified; broker-level restart/recovery and full eventual-flow validation remain. |

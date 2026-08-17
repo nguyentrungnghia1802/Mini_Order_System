@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, Notification, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular Notification screen, full `web` integration, and application containers remain deferred.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, Notification, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application now includes the Notification screen and same-origin Gateway integration; application containers, broker recovery validation, and full-stack Compose execution remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |

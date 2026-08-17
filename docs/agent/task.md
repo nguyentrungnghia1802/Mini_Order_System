@@ -374,7 +374,7 @@ Evidence for 2.4:
 Evidence for 2.5:
 
 - Files: `web/microshop-ui/src/app/app.routes.ts`, `features/orders/order-checkout.component.*`, `order-list.component.*`, `order-detail.component.*`, and `core/api/order-api.service.ts`.
-- Tests: 16 Angular tests pass, including checkout request/quantity mapping, confirmed/rejected/dependency outcomes, duplicate-submit suppression, Order list rendering, detail loading, and cancellation.
+- Tests: 21 Angular tests pass, including checkout request/quantity mapping, confirmed/rejected/dependency outcomes, duplicate-submit suppression, Order list rendering, detail loading, cancellation, Notification API paths, and Notification UI states.
 - Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `git diff --check`.
 - Commit: `20bf3d8` (`feat(ui): add order checkout and history`).
 - Notes: All browser calls use same-origin `/api/orders` and `/api/products` Gateway paths. Known Product failures are shown as rejected; unavailable/ambiguous outcomes are shown as unknown dependency outcomes rather than false confirmation.
@@ -390,7 +390,7 @@ Evidence for 2.5:
 Evidence for 2.6 (partial Phase 2 gate):
 
 - Files: `src/Services/OrderService/MicroShop.OrderService/Program.cs`, Order migration, `tests/MicroShop.OrderService.Tests/`, and `.github/workflows/ci.yml`.
-- Tests: 40 Order tests and 16 Angular tests pass; readiness, native Order API, OpenAPI, Gateway checkout contract, Product HTTP orchestration, optimistic concurrency, and direct event publication are covered.
+- Tests: 40 Order tests and 21 Angular tests pass; readiness, native Order API, OpenAPI, Gateway checkout contract, Product HTTP orchestration, optimistic concurrency, direct event publication, and Notification UI coverage are covered.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`.
 - Commits: `7bf1692` (`feat(order): add persistence foundation`), `d694a5b` (`feat(order): add fake order API foundation`), and `20bf3d8` (`feat(ui): add order checkout and history`).
 - Notes: The legacy fake Product client remains opt-in compatibility coverage; the default runtime and Angular flow use real Product HTTP communication and explicit unknown outcomes. The exact fake-client Angular gate is retained as partial rather than being claimed by a frontend HTTP stub.
@@ -618,7 +618,7 @@ Evidence for 4.2 (partial):
 Evidence for 4.3:
 
 - Files: `web/microshop-ui/src/app/core/api/api.paths.ts`, `product-api.service.ts`, `order-api.service.ts`, `gateway-error.ts`, `gateway-error.interceptor.ts`, `app.config.ts`, and `gateway-api.spec.ts`.
-- Tests: Product listing, Order create/cancel, same-origin paths, and `502 DOWNSTREAM_UNAVAILABLE` mapping are covered by the Gateway API tests; the full Angular suite has 16 passing tests.
+- Tests: Product listing, Order create/cancel, Notification listing/mark-as-read, same-origin paths, and `502 DOWNSTREAM_UNAVAILABLE` mapping are covered by the Gateway API tests; the full Angular suite has 21 passing tests.
 - Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `rg -n -i "product-service|order-service|notification-service|internal/v1|api/v1" web/microshop-ui/src` (no service/internal API matches).
 - Commits: `f750963` (`feat(ui): route api clients through gateway`), `185a8cc` (`feat(ui): add product catalog management`), and `20bf3d8` (`feat(ui): add order checkout and history`).
 - Notes: The workspace had no previous feature API clients or service URL configuration, so the migration creates the canonical relative client boundary for the upcoming Product and Order screens. External Angular documentation links in the generated placeholder are unrelated to service routing.
@@ -650,7 +650,7 @@ Evidence for 4.4:
 Evidence for 4.5:
 
 - Files: Gateway route configuration and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
-- Tests: 7 Gateway tests, 16 Angular tests, and the full 78-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
+- Tests: 7 Gateway tests, 21 Angular tests, and the full 78-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Notes: Public routes, internal-route exclusion, Angular same-origin API clients, and Product/Order feature screens are complete. Application-container port isolation remains a Phase 6 Compose validation item.
@@ -770,17 +770,25 @@ Evidence for 5.6:
 - Tests: 7 Notification tests pass, including email/order filters, stable descending pagination, OpenAPI discovery, validation, not-found handling, and idempotent mark-as-read; 7 Gateway tests pass, including `/api/notifications` to `/api/v1/notifications` path/query transformation. The full solution has 78 passing .NET tests.
 - Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-build --no-restore`; `dotnet test tests/MicroShop.Gateway.Tests/MicroShop.Gateway.Tests.csproj --configuration Release --no-build --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-build --no-restore`.
 - Commit: `569027d` (`feat(notification): add read api and gateway route`).
-- Notes: The Gateway proxies only the public Notification HTTP path; it does not reference Notification EF types or database configuration. The Angular Notification screen remains the next UI slice.
+- Notes: The Gateway proxies only the public Notification HTTP path; it does not reference Notification EF types or database configuration. The Angular Notification screen consumes the public path through the same-origin Gateway client.
 
 ## 5.7 Angular Notification UI
 
-- [ ] Create Notification route.
-- [ ] List notifications.
-- [ ] Add manual refresh.
-- [ ] Add bounded polling.
-- [ ] Handle eventual consistency.
-- [ ] Handle empty/error/loading states.
-- [ ] Optionally mark notification read.
+- [x] Create Notification route.
+- [x] List notifications.
+- [x] Add manual refresh.
+- [x] Add bounded polling.
+- [x] Handle eventual consistency.
+- [x] Handle empty/error/loading states.
+- [x] Optionally mark notification read.
+
+Evidence for 5.7:
+
+- Files: `web/microshop-ui/src/app/core/api/notification-api.service.ts`, `api.models.ts`, `api.paths.ts`, `features/notifications/notification-list.component.ts`, `.html`, `.scss`, `.spec.ts`, `app.routes.ts`, and `app.html`.
+- Tests: Angular lint passes; 21 Angular tests pass, including same-origin Notification client paths, list rendering, empty/error/loading states, mark-as-read interaction, and bounded polling that stops after five checks. Production Angular build passes.
+- Commands: `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`.
+- Commit: `e36b1f5` (`feat(ui): add notification screen`).
+- Notes: The page explains eventual consistency, performs one immediate read plus four bounded automatic checks at 15-second intervals, supports manual refresh after the bound, and never exposes service-native URLs to the browser.
 
 ## 5.8 Messaging tests
 
