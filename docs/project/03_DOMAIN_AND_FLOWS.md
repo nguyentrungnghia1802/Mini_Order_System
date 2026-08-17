@@ -214,7 +214,7 @@ Activation and deactivation use the same PATCH contract by changing `isActive`. 
 16. Angular navigates to order detail.
 17. Notification Service eventually consumes the event through the durable MassTransit endpoint.
 18. Notification Service persists one Notification and consumed-message ID in its own database; duplicate delivery is suppressed by the message ID constraint.
-19. Angular notification page displays it after refresh (remaining Phase 5 read API/UI behavior).
+19. Angular notification page displays it after refresh (remaining Phase 5 UI behavior).
 
 ## 11. Insufficient stock flow
 

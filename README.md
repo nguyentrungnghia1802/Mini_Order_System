@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured, and Notification now owns its PostgreSQL schema/migration plus an idempotent consumer that persists simulated notifications. The direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*` and `/api/orders/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management plus checkout, Order list/detail, and cancellation screens with loading/empty/error states. The fake Product client is test-only compatibility coverage. Notification read API/UI, full-stack application containers, and end-to-end coverage remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured, and Notification now owns its PostgreSQL schema/migration, idempotent consumer, read/mark-as-read API, and OpenAPI document. The direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*`, `/api/orders/*`, and `/api/notifications/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management plus checkout, Order list/detail, and cancellation screens with loading/empty/error states. The fake Product client is test-only compatibility coverage. Angular Notification UI, full-stack application containers, broker recovery, and end-to-end coverage remain later roadmap work.
 
 ## Target architecture
 
@@ -93,9 +93,9 @@ $env:NOTIFICATION_DB_PASSWORD = "<local-password>"
 dotnet run --project src/Services/NotificationService/MicroShop.NotificationService -- --migrate
 ```
 
-The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, and suppresses duplicate message IDs. The read API and Angular Notification screen are the remaining Phase 5 feature work.
+The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen and broker recovery exercises are the remaining Phase 5 feature work.
 
-For the current Gateway slice, run the native Gateway after Product and Order and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL` and `ORDER_SERVICE_URL`; Angular uses the same-origin Gateway paths and should not call service-native ports as a browser fallback.
+For the current Gateway slice, run the native Gateway after Product, Order, and Notification and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_URL`, and `NOTIFICATION_SERVICE_URL`; Angular uses the same-origin Gateway paths and should not call service-native ports as a browser fallback.
 
 ```powershell
 dotnet run --project src/Gateway/MicroShop.Gateway
@@ -105,6 +105,7 @@ Gateway routes:
 
 - `GET|POST|PATCH /api/products/*` -> Product `/api/v1/products/*`
 - `GET|POST /api/orders/*` -> Order `/api/v1/orders/*`
+- `GET|POST /api/notifications/*` -> Notification `/api/v1/notifications/*`
 - `/internal/*` -> `404 GATEWAY_ROUTE_NOT_FOUND`
 - unavailable downstream -> `502 DOWNSTREAM_UNAVAILABLE`
 

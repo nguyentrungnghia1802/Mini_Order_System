@@ -44,7 +44,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Notification UI, Playwright end-to-end coverage, and the legacy fake-client compatibility gate for Angular checkout.
-- Notification read API/UI, broker-level publish/consume and recovery tests.
+- Notification Angular UI, broker-level publish/consume and recovery tests.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -54,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 5 — implement the Notification read API/Gateway route/UI and broker-level recovery validation.
+Phase 5 — implement the Angular Notification UI and broker-level recovery validation.
 
 ## Phase 1 — Product Service foundation
 
@@ -107,7 +107,7 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 74 .NET tests pass (1 Architecture, 2 Contracts, 4 Notification, 6 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 78 .NET tests pass (1 Architecture, 2 Contracts, 7 Notification, 7 Gateway, 40 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 
@@ -116,6 +116,7 @@ Gateway evidence:
 | Shared `OrderConfirmedV1` contract | `[x]` | Versioned passive records and two JSON compatibility tests are implemented in `MicroShop.Contracts`. |
 | RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, and bus readiness health are configured. |
 | Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
-| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 4 PostgreSQL-backed Notification tests pass. |
-| Notification read API/UI | `[ ]` | Read API, Gateway Notification route, Angular screen, and bounded polling remain. |
-| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer and duplicate suppression are verified; broker-level restart/recovery, read API/UI, and full eventual-flow validation remain. |
+| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 7 PostgreSQL-backed Notification tests pass. |
+| Notification read API and Gateway route | `[x]` | Filtered/paginated `GET /api/v1/notifications`, idempotent mark-as-read, OpenAPI, and tested `/api/notifications/*` Gateway transform are implemented. |
+| Notification Angular UI | `[ ]` | Angular screen, bounded polling, and loading/empty/error states remain. |
+| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API and duplicate suppression are verified; Angular UI, broker-level restart/recovery, and full eventual-flow validation remain. |
