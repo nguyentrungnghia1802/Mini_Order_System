@@ -2,6 +2,9 @@ import { Routes } from '@angular/router';
 
 import { ProductCatalogComponent } from './features/products/product-catalog.component';
 import { ProductManagementComponent } from './features/products/product-management.component';
+import { OrderCheckoutComponent } from './features/orders/order-checkout.component';
+import { OrderDetailComponent } from './features/orders/order-detail.component';
+import { OrderListComponent } from './features/orders/order-list.component';
 
 export const routes: Routes = [
   {
@@ -12,6 +15,19 @@ export const routes: Routes = [
     path: 'products',
     component: ProductCatalogComponent,
     pathMatch: 'full'
+  },
+  {
+    path: 'checkout',
+    component: OrderCheckoutComponent
+  },
+  {
+    path: 'orders',
+    component: OrderListComponent,
+    pathMatch: 'full'
+  },
+  {
+    path: 'orders/:orderId',
+    component: OrderDetailComponent
   },
   {
     path: '',

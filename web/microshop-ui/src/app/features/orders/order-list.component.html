@@ -1,0 +1,43 @@
+<section class="page" aria-labelledby="orders-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Order Service through Gateway</p>
+      <h1 id="orders-title">Orders</h1>
+      <p class="lede">Review order outcomes returned by the Order Service.</p>
+    </div>
+    <a class="button" routerLink="/checkout">New order</a>
+  </div>
+
+  @if (state() === 'loading') {
+    <div class="status-card" role="status">Loading orders…</div>
+  } @else if (state() === 'error') {
+    <div class="status-card error" role="alert">
+      <strong>Orders unavailable</strong>
+      <p>{{ errorMessage() }}</p>
+      <button class="button" type="button" (click)="loadOrders()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="status-card" role="status">
+      <strong>No orders yet.</strong>
+      <p>Submit a checkout request to create the first order.</p>
+      <a class="button" routerLink="/checkout">Start checkout</a>
+    </div>
+  } @else {
+    <div class="order-list">
+      @for (order of orders(); track order.id) {
+        <a class="order-card" [routerLink]="['/orders', order.id]">
+          <div>
+            <h2>Order {{ order.id }}</h2>
+            <p>{{ order.customerName }} · {{ order.customerEmail }}</p>
+          </div>
+          <div class="order-summary">
+            <span class="status" [class.confirmed]="order.status === 'confirmed'" [class.rejected]="order.status === 'rejected'">
+              {{ order.status }}
+            </span>
+            <strong>{{ order.totalAmount | currency: order.currency:'symbol':'1.0-2' }}</strong>
+          </div>
+        </a>
+      }
+    </div>
+  }
+</section>

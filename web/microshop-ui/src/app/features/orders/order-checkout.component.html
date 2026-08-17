@@ -1,0 +1,100 @@
+<section class="page" aria-labelledby="checkout-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Order Service through Gateway</p>
+      <h1 id="checkout-title">Checkout</h1>
+      <p class="lede">Choose quantities and submit a server-authoritative order.</p>
+    </div>
+    <a class="button secondary" routerLink="/orders">View orders</a>
+  </div>
+
+  @if (state() === 'loading') {
+    <div class="status-card" role="status">Loading active Products…</div>
+  } @else if (state() === 'error') {
+    <div class="status-card error" role="alert">
+      <strong>Checkout unavailable</strong>
+      <p>{{ errorMessage() }}</p>
+      <button class="button" type="button" (click)="loadProducts()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="status-card" role="status">
+      <strong>No active Products are available.</strong>
+      <p>Create or activate a Product before checking out.</p>
+      <a class="button" routerLink="/products/manage">Manage Products</a>
+    </div>
+  } @else {
+    <form class="checkout-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="checkout-grid">
+        <section class="panel" aria-labelledby="customer-heading">
+          <h2 id="customer-heading">Customer details</h2>
+          <div class="form-fields">
+            <label for="customer-name">Name</label>
+            <input id="customer-name" type="text" formControlName="customerName" autocomplete="name" />
+            @if (productError('customerName'); as error) {
+              <span class="field-error">{{ error }}</span>
+            }
+
+            <label for="customer-email">Email</label>
+            <input id="customer-email" type="email" formControlName="customerEmail" autocomplete="email" />
+            @if (productError('customerEmail'); as error) {
+              <span class="field-error">{{ error }}</span>
+            }
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="items-heading">
+          <h2 id="items-heading">Products</h2>
+          <div class="item-list">
+            @for (product of products(); track product.id) {
+              <div class="item-row">
+                <div>
+                  <h3>{{ product.name }}</h3>
+                  <p>{{ product.unitPrice | currency: product.currency:'symbol':'1.0-2' }} · {{ product.availableStock }} available</p>
+                </div>
+                <label class="quantity-label" [for]="'quantity-' + product.id">
+                  Quantity
+                  <input
+                    [id]="'quantity-' + product.id"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    [formControl]="quantityControl(product.id)"
+                  />
+                </label>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      @if (outcome() === 'error') {
+        <div class="notice error" role="alert">{{ errorMessage() }}</div>
+      } @else if (outcome() === 'rejected') {
+        <div class="notice rejected" role="alert">
+          <strong>Order rejected</strong>
+          <p>{{ errorMessage() }}</p>
+          <p>Refresh Product stock and try again with an available quantity.</p>
+        </div>
+      } @else if (outcome() === 'dependency') {
+        <div class="notice error" role="alert">
+          <strong>Order status is unknown</strong>
+          <p>{{ errorMessage() }}</p>
+          <p>The Order Service records the outcome for safe investigation; do not submit blindly again.</p>
+        </div>
+      } @else if (outcome() === 'confirmed' && submittedOrder(); as order) {
+        <div class="notice success" role="status">
+          <strong>Order confirmed</strong>
+          <p>Order {{ order.id }} was confirmed for {{ order.totalAmount | currency: order.currency:'symbol':'1.0-2' }}.</p>
+          <a routerLink="/orders/{{ order.id }}">View order detail</a>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="button" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Submitting…' : 'Submit order' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

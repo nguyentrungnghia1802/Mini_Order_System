@@ -1,0 +1,60 @@
+<section class="page" aria-labelledby="order-detail-title">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Order Service through Gateway</p>
+      <h1 id="order-detail-title">Order detail</h1>
+    </div>
+    <a class="button secondary" routerLink="/orders">Back to orders</a>
+  </div>
+
+  @if (state() === 'loading') {
+    <div class="status-card" role="status">Loading order…</div>
+  } @else if (state() === 'error') {
+    <div class="status-card error" role="alert">
+      <strong>Order unavailable</strong>
+      <p>{{ errorMessage() }}</p>
+      <button class="button" type="button" (click)="loadOrder()">Retry</button>
+    </div>
+  } @else if (order(); as currentOrder) {
+    <article class="order-detail">
+      <header class="detail-header">
+        <div>
+          <p class="eyebrow">{{ currentOrder.status }}</p>
+          <h2>Order {{ currentOrder.id }}</h2>
+          <p>{{ currentOrder.customerName }} · {{ currentOrder.customerEmail }}</p>
+        </div>
+        @if (currentOrder.canCancel) {
+          <button class="button danger" type="button" [disabled]="isCancelling()" (click)="cancelOrder()">
+            {{ isCancelling() ? 'Cancelling…' : 'Cancel order' }}
+          </button>
+        }
+      </header>
+
+      @if (errorMessage()) {
+        <div class="notice error" role="alert">{{ errorMessage() }}</div>
+      }
+
+      <div class="detail-total">
+        <span>Total</span>
+        <strong>{{ currentOrder.totalAmount | currency: currentOrder.currency:'symbol':'1.0-2' }}</strong>
+      </div>
+
+      <h3>Items</h3>
+      <div class="item-list">
+        @for (item of currentOrder.items; track item.productId) {
+          <div class="item-row">
+            <span>{{ item.productName }} × {{ item.quantity }}</span>
+            <strong>{{ item.subtotal | currency: currentOrder.currency:'symbol':'1.0-2' }}</strong>
+          </div>
+        }
+      </div>
+
+      @if (currentOrder.failureCode) {
+        <div class="notice rejected" role="status">
+          <strong>{{ currentOrder.failureCode }}</strong>
+          <p>{{ currentOrder.failureDetail }}</p>
+        </div>
+      }
+    </article>
+  }
+</section>
