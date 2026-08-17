@@ -170,8 +170,8 @@ This status table is updated from verified repository code and runtime checks. T
 | Notification Service | Independent host, owned PostgreSQL schema/migration, durable `OrderConfirmedV1` consumer, duplicate suppression, database-backed readiness, read/mark-as-read API, OpenAPI, and RabbitMQ integration/restart tests implemented; full-stack recovery remains |
 | Angular frontend | Angular 22 strict workspace, same-origin Gateway clients, Product catalog/operator screens, checkout, Order list/detail/cancellation screens, Notification route/list/refresh/polling UI, and UI tests implemented |
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
-| RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers publish/consume, retry/error queue, duplicate, restart, and queued recovery tests pass; full-stack validation remains |
-| Docker Compose | PostgreSQL/RabbitMQ infrastructure Compose and Phase 6.1 runtime image builds implemented; full stack planned for Phase 6.2 |
+| RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers cover retry/error queue, duplicate, restart, and queued recovery, while full-stack Compose publish/consume smoke passes |
+| Docker Compose | Full Web/Gateway/Product/Order/Notification stack, three logical databases, migration one-shots, private service ports, and Phase 6.1 runtime image builds implemented |
 | Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations implemented; Angular E2E tests remain |
 | Deployment | Optional after local completion |
 

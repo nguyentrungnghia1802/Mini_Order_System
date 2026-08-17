@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured, and Notification now owns its PostgreSQL schema/migration, idempotent consumer, read/mark-as-read API, and OpenAPI document. The direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*`, `/api/orders/*`, and `/api/notifications/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order/Notification API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management, checkout, Order list/detail/cancellation, and Notification screens with bounded polling, manual refresh, and loading/empty/error states. RabbitMQ publish/consume, bounded retry/error queue, duplicate delivery, service restart, and queued recovery are verified with container-backed Notification integration tests. The fake Product client is test-only compatibility coverage. Phase 6.1 now provides five multi-stage runtime images with non-root application runtimes; full-stack Compose wiring and end-to-end coverage remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release/query API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, guarded cancellation with `cancellation_pending`, and the direct `OrderConfirmedV1` publish milestone after the confirmed DB commit. The versioned `MicroShop.Contracts.Orders.OrderConfirmedV1` wire contract is implemented and JSON-tested, MassTransit RabbitMQ transport/options, bounded retry, and a durable Notification endpoint are configured, and Notification now owns its PostgreSQL schema/migration, idempotent consumer, read/mark-as-read API, and OpenAPI document. The direct publish gap is intentionally deferred to the Phase 7 outbox. The YARP Gateway now exposes tested `/api/products/*`, `/api/orders/*`, and `/api/notifications/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. Angular uses same-origin Product/Order/Notification API clients under `/api`, has shared Gateway error handling, and includes Product catalog/operator management, checkout, Order list/detail/cancellation, and Notification screens with bounded polling, manual refresh, and loading/empty/error states. RabbitMQ publish/consume, bounded retry/error queue, duplicate delivery, service restart, and queued recovery are verified with container-backed Notification integration tests. The fake Product client is test-only compatibility coverage. Phase 6.1 provides five multi-stage runtime images with non-root application runtimes, and Phase 6.2 composes Web, Gateway, the three services, three migration one-shots, PostgreSQL, and RabbitMQ with private application ports. A seeded Compose Order reaches `confirmed` and produces a readable Notification through the Web/Gateway path.
 
 ## Target architecture
 
@@ -45,11 +45,23 @@ npm run build
 Pop-Location
 
 docker compose --env-file .env -f deploy/compose.yaml config
-docker compose --env-file .env -f deploy/compose.yaml up -d
-docker compose --env-file .env -f deploy/compose.yaml ps
+docker compose --env-file .env -f deploy/compose.yaml up --build -d
+docker compose --env-file .env -f deploy/compose.yaml ps --all
 ```
 
-The current Compose infrastructure file starts PostgreSQL and RabbitMQ only. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; Product, Order, and Notification migrations are applied explicitly by their service commands. The five Phase 6.1 application images build locally, while full-stack Compose wiring is the next slice. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
+The base Compose file starts PostgreSQL, RabbitMQ, three migration one-shots, Product, Order, Notification, Gateway, and Web. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; application services wait for their own migration one-shot and dependency health. Only Web `http://localhost:8080` and RabbitMQ management `http://localhost:15672` are published by default. The Web container proxies `/api/*` to the private Gateway. Existing PostgreSQL/RabbitMQ volumes are retained by normal `docker compose down`.
+
+Useful local operations:
+
+```powershell
+docker compose --env-file .env -f deploy/compose.yaml logs -f gateway
+docker compose --env-file .env -f deploy/compose.yaml ps --all
+docker compose --env-file .env -f deploy/compose.yaml run --rm --no-deps product-service dotnet MicroShop.ProductService.dll --seed
+docker compose --env-file .env -f deploy/compose.yaml run --rm migrate-product
+docker compose --env-file .env -f deploy/compose.yaml down
+```
+
+`docker compose up --build` builds or reuses the five pinned application images and runs the three explicit database migrations before application startup. The dedicated `migrate-product`, `migrate-order`, and `migrate-notification` services can be run again for an explicit migration operation; `migrate-all` and a permission-gated reset wrapper are tracked in the next Phase 6.3 slice. The RabbitMQ management UI is available at `http://localhost:15672` for local learning.
 
 Build the verified runtime images from the repository root:
 
@@ -61,7 +73,7 @@ docker build --file deploy/docker/gateway.Dockerfile --tag microshop-gateway:pha
 docker build --file deploy/docker/web.Dockerfile --tag microshop-web:phase6 .
 ```
 
-The .NET images contain only ASP.NET runtime layers and run as UID 1654 on port 8080. The Web image uses an unprivileged Nginx runtime and serves the Angular SPA with a `/health` endpoint. These images are not yet a full-stack Compose command; that wiring is tracked in Phase 6.2.
+The .NET images contain only ASP.NET runtime layers and run as UID 1654 on port 8080. The Web image uses an unprivileged Nginx runtime, proxies `/api/*` to the Compose Gateway, and serves the Angular SPA with a `/health` endpoint. These images are wired into the base Compose stack; the native-debug override publishes additional service ports only when explicitly selected.
 
 For the current Product slice, start infrastructure, set the untracked Product database password, apply the migration, and optionally seed demo products:
 
@@ -105,7 +117,7 @@ $env:NOTIFICATION_DB_PASSWORD = "<local-password>"
 dotnet run --project src/Services/NotificationService/MicroShop.NotificationService -- --migrate
 ```
 
-The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen now uses the Gateway API with bounded polling, manual refresh, and explicit loading/empty/error states. Full application-container Compose validation and end-to-end coverage remain later roadmap work; the broker recovery behavior is covered in the RabbitMQ Testcontainers suite.
+The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen now uses the Gateway API with bounded polling, manual refresh, and explicit loading/empty/error states. The Compose HTTP smoke flow confirms a seeded Order and eventual Notification delivery; browser Playwright coverage remains a later roadmap task, and broker recovery behavior is covered in the RabbitMQ Testcontainers suite.
 
 For the current Gateway slice, run the native Gateway after Product, Order, and Notification and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_URL`, and `NOTIFICATION_SERVICE_URL`; Angular uses the same-origin Gateway paths and should not call service-native ports as a browser fallback.
 

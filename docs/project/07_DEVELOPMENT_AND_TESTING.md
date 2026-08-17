@@ -66,7 +66,8 @@ Local passwords are demo values. Public deployment must use generated secrets an
 Best for learning networking and service independence.
 
 ```bash
-docker compose -f deploy/compose.yaml up --build
+docker compose --env-file .env -f deploy/compose.yaml up --build -d
+docker compose --env-file .env -f deploy/compose.yaml ps --all
 ```
 
 Expected public endpoints:
@@ -74,10 +75,10 @@ Expected public endpoints:
 | Component | URL |
 | --- | --- |
 | Web | `http://localhost:8080` |
-| Gateway direct | `http://localhost:8088` if published for debugging |
+| Gateway direct | `http://localhost:8081` if the debug override is selected |
 | RabbitMQ management | `http://localhost:15672` in development only |
 
-Service-native ports may be published only in `compose.override.yaml` for debugging.
+Service-native ports may be published only in `compose.override.yaml` for debugging. The base file keeps Gateway, Product, Order, Notification, PostgreSQL, and RabbitMQ AMQP ports private; only Web 8080 and RabbitMQ management 15672 are published.
 
 ### Infrastructure in Docker, apps native
 
@@ -205,7 +206,7 @@ dotnet ef database update \
   --startup-project src/Services/ProductService/MicroShop.ProductService
 ```
 
-Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
+The five application images and full application Compose stack are implemented. The Compose smoke path applies the three migrations, starts all application services, and verifies Web/Gateway Product/Order/Notification routing. `compose.test.yaml`, browser Playwright coverage, and CI image execution remain deferred. CI applies the Product migration to an empty PostgreSQL service database.
 
 The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. The Gateway suite uses a real in-process Kestrel downstream to verify public Product/Order path transforms, trace propagation, CORS/health, stable downstream `502`, and internal-route rejection.
 

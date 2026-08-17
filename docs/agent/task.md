@@ -127,7 +127,7 @@ Evidence for 0.5:
 - Tests: .NET build/test, Angular lint/test/build, PostgreSQL health, RabbitMQ health, and Compose status pass locally.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release`; `dotnet test MicroShop.sln --configuration Release`; `npm ci`; `npm run lint`; `npm run test -- --watch=false`; `npm run build`; `docker compose ... config/up/ps`.
 - Commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
-- Notes: Full-stack image, Order/Notification migrations, business integration, and E2E gates remain incomplete by design.
+- Notes: Full-stack Compose, migration ordering, business integration, and E2E gates remain incomplete by design; the five runtime images are now covered by Phase 6.1.
 
 ---
 
@@ -653,7 +653,7 @@ Evidence for 4.5:
 - Tests: 7 Gateway tests, 21 Angular tests, and the full 83-test .NET solution pass. Angular source scans contain no service-native, internal, or versioned service API URLs.
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
-- Notes: Public routes, internal-route exclusion, Angular same-origin API clients, and Product/Order feature screens are complete. Application-container port isolation remains a Phase 6 Compose validation item.
+- Notes: Public routes, internal-route exclusion, Angular same-origin API clients, Product/Order feature screens, and full-stack private application-port isolation are complete.
 
 ---
 
@@ -841,59 +841,84 @@ Evidence for 6.1:
 - Files: `.dockerignore`, `deploy/docker/product-service.Dockerfile`, `deploy/docker/order-service.Dockerfile`, `deploy/docker/notification-service.Dockerfile`, `deploy/docker/gateway.Dockerfile`, `deploy/docker/web.Dockerfile`, and `deploy/docker/nginx.conf`.
 - Commands: five `docker build --file deploy/docker/... --tag microshop-*:phase6 .` commands; `docker image inspect`; a temporary `microshop-web:phase6` container health check at `/health`.
 - Result: all five images build successfully from locked .NET restores or `npm ci`; .NET images expose only port 8080 and run as UID 1654, while the Nginx image runs as its unprivileged image user and serves the Angular build.
-- Notes: image build output reports the known Angular development-tool advisories; no production dependency vulnerability was introduced. Full-stack Compose wiring remains 6.2.
+- Notes: image build output reports the known Angular development-tool advisories; no production dependency vulnerability was introduced. Full-stack Compose wiring is verified in 6.2.
 
 ## 6.2 Compose stack
 
-- [ ] Add `deploy/compose.yaml`.
-- [ ] Add Web.
-- [ ] Add Gateway.
-- [ ] Add Product Service.
-- [ ] Add Order Service.
-- [ ] Add Notification Service.
-- [ ] Add PostgreSQL.
-- [ ] Create separate Product database and user.
-- [ ] Create separate Order database and user.
-- [ ] Create separate Notification database and user.
-- [ ] Add RabbitMQ.
-- [ ] Add persistent PostgreSQL volume.
-- [ ] Add persistent RabbitMQ volume.
-- [ ] Add internal application network.
-- [ ] Publish only required ports.
-- [ ] Keep database and RabbitMQ application ports private by default.
-- [ ] Add development override for debugging ports.
+- [x] Add `deploy/compose.yaml`.
+- [x] Add Web.
+- [x] Add Gateway.
+- [x] Add Product Service.
+- [x] Add Order Service.
+- [x] Add Notification Service.
+- [x] Add PostgreSQL.
+- [x] Create separate Product database and user.
+- [x] Create separate Order database and user.
+- [x] Create separate Notification database and user.
+- [x] Add RabbitMQ.
+- [x] Add persistent PostgreSQL volume.
+- [x] Add persistent RabbitMQ volume.
+- [x] Add internal application network.
+- [x] Publish only required ports.
+- [x] Keep database and RabbitMQ application ports private by default.
+- [x] Add development override for debugging ports.
+
+Evidence for 6.2:
+
+- Files: `deploy/compose.yaml`, `deploy/compose.override.yaml`, `.env.example`, and `deploy/docker/nginx.conf`.
+- Commands: `docker compose --env-file .env.example --file deploy/compose.yaml config`; `docker compose --env-file .env.example --file deploy/compose.yaml up --build -d`; `docker compose --env-file .env.example --file deploy/compose.yaml ps --all`.
+- Tests: all five application services, three migration one-shots, PostgreSQL, RabbitMQ, Gateway, and Web reached the expected state; only Web port 8080 and RabbitMQ management port 15672 are public in the base file. Gateway `/health` and Web `/health` are healthy, while application API ports remain private.
+- Full-stack smoke: `GET /api/products`, `GET /api/notifications`, confirmed `POST /api/orders`, and eventual Notification read all passed through Web/Nginx and Gateway. Existing Compose volumes were preserved.
 
 ## 6.3 Migration and startup
 
-- [ ] Add explicit Product migration command.
-- [ ] Add explicit Order migration command.
-- [ ] Add explicit Notification migration command.
+- [x] Add explicit Product migration command.
+- [x] Add explicit Order migration command.
+- [x] Add explicit Notification migration command.
 - [ ] Add migrate-all script.
 - [ ] Add safe local reset script requiring explicit confirmation/permission.
-- [ ] Ensure services do not race migrations.
-- [ ] Add health-based startup dependencies where supported.
-- [ ] Validate configuration at startup.
+- [x] Ensure services do not race migrations.
+- [x] Add health-based startup dependencies where supported.
+- [x] Validate configuration at startup.
+
+Evidence for the implemented 6.3 items:
+
+- Files: Product `Program.cs` now supports `--migrate`; Order and Notification already expose `--migrate`; Compose contains `migrate-product`, `migrate-order`, and `migrate-notification` one-shot services with `service_completed_successfully` dependencies.
+- Tests: all three migration containers exited with code 0 before their application services started; each service reached a healthy readiness endpoint against its owned database.
+- Notes: `migrate-all` and the permission-gated reset wrapper remain intentionally incomplete and are not marked `[x]`.
 
 ## 6.4 One-command local run
 
-- [ ] Document full-stack start command.
-- [ ] Document stop command.
-- [ ] Document logs command.
-- [ ] Document status command.
-- [ ] Document seed command.
-- [ ] Document migration command.
-- [ ] Verify Windows PowerShell workflow.
-- [ ] Verify Linux/macOS workflow where practical.
+- [x] Document full-stack start command.
+- [x] Document stop command.
+- [x] Document logs command.
+- [x] Document status command.
+- [x] Document seed command.
+- [x] Document migration command.
+- [x] Verify Windows PowerShell workflow.
+- [~] Verify Linux/macOS workflow where practical.
+
+Evidence for 6.4:
+
+- Files: `README.md`, `docs/project/07_DEVELOPMENT_AND_TESTING.md`, and `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md`.
+- Commands: `docker compose --env-file .env.example --file deploy/compose.yaml up --build -d`; `... ps --all`; `... logs`; `... run --rm --no-deps product-service dotnet MicroShop.ProductService.dll --seed`; and `... down` without volume removal.
+- Result: the Windows PowerShell workflow starts the full stack, seeds Product idempotently, exposes Web on 8080, and leaves PostgreSQL/RabbitMQ volumes intact. POSIX commands are documented with the same Compose file and service names but were not executed on Linux/macOS in this Windows run.
 
 ## 6.5 Phase 6 validation gate
 
-- [ ] Full stack starts with one documented Compose command.
-- [ ] Angular is reachable.
-- [ ] Gateway routes all public APIs.
-- [ ] Product/Order/Notification databases are separate.
-- [ ] RabbitMQ management shows expected topology.
-- [ ] End-to-end Order flow works in Compose.
-- [ ] Internal service ports are not unnecessarily public.
+- [x] Full stack starts with one documented Compose command.
+- [x] Angular is reachable.
+- [x] Gateway routes all public APIs.
+- [x] Product/Order/Notification databases are separate.
+- [x] RabbitMQ management shows expected topology.
+- [x] End-to-end Order flow works in Compose.
+- [x] Internal service ports are not unnecessarily public.
+
+Evidence for 6.5:
+
+- Files: `deploy/compose.yaml`, `deploy/postgres-init/001-create-service-databases.sh`, and `deploy/docker/nginx.conf`.
+- Tests: Compose `ps --all` shows three successful migration one-shots and healthy application services; Web `/api/products`, `/api/orders`, and `/api/notifications` routes pass; a seeded Order reaches `confirmed` and its Notification is readable through Web; only Web 8080 and RabbitMQ management 15672 are published.
+- Notes: the Angular UI behavior is covered by its unit suite; browser Playwright coverage remains a Phase 8 task.
 
 ---
 

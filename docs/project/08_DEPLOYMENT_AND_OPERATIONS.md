@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, Notification, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application now includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images; full-stack broker recovery validation and full-stack Compose execution remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, and Phase 6.2 verifies the Compose order-to-notification smoke flow. Browser Playwright coverage and the Phase 7 outbox remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -104,7 +104,7 @@ The current implementation maps these images to `deploy/docker/product-service.D
 
 ## 5. Compose topology
 
-Conceptual services:
+Implemented services:
 
 ```yaml
 services:
@@ -113,6 +113,9 @@ services:
   product-service:
   order-service:
   notification-service:
+  migrate-product:
+  migrate-order:
+  migrate-notification:
   postgres:
   rabbitmq:
 ```
@@ -126,20 +129,23 @@ Volumes:
 Networks:
 
 - one internal application network is enough for baseline;
-- only web/gateway and development RabbitMQ management ports are published;
+- only Web 8080 and RabbitMQ management 15672 are published by the base file;
+- Gateway and service-native ports are published only by `deploy/compose.override.yaml` for debugging;
 - database ports are optional debug overrides, not default public exposure.
 
 ## 6. Startup dependencies
 
 Compose `depends_on` controls startup order, not business readiness.
 
-Services must:
+The Compose implementation satisfies the following startup rules:
 
 - retry initial dependency connection with bounded startup policy where appropriate;
 - expose readiness;
 - fail clearly if configuration is invalid;
 - tolerate Notification Service starting before/after queue topology;
 - not assume database schema exists without explicit migration step.
+
+`migrate-product`, `migrate-order`, and `migrate-notification` wait for PostgreSQL health and exit successfully before their owning application service starts. Product now supports `--migrate`; Order and Notification retain their explicit `--migrate` commands. Product, Order, Notification, and Gateway expose Compose health checks; Web exposes `/health`; Gateway is started only after all three downstream services are healthy.
 
 Recommended startup sequence:
 
@@ -167,7 +173,7 @@ For demo/VPS:
 
 Prefer backward-compatible expand/contract migrations for any future rolling deployment.
 
-For the current Product slice, apply `InitialProductSchema`, `AddInventoryReservations`, and `AddInventoryReservationConstraints` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`. Normal Product and Order startup validates database configuration and readiness but does not silently apply migrations.
+For the current Product slice, apply `InitialProductSchema`, `AddInventoryReservations`, and `AddInventoryReservationConstraints` with `scripts/db-migrate-product.ps1` or `.sh`, then run the explicit seed command if demo data is needed. Apply `InitialOrderSchema` with `scripts/db-migrate-order.ps1` or `.sh`, and `InitialNotificationSchema` with the Notification wrapper. In Compose, the three migration one-shots use the same service-owned commands before application startup. Normal Product, Order, and Notification startup validates database configuration and readiness but does not silently apply migrations.
 
 ## 8. Public deployment path
 
@@ -194,15 +200,13 @@ Internal services, PostgreSQL, and RabbitMQ must not be exposed publicly.
 3. Back up current databases.
 4. Build/pull images.
 5. Start PostgreSQL and RabbitMQ.
-6. Apply migrations.
-7. Start Product, Order, Notification.
+6. Apply the three explicit migrations.
+7. Start Product, Order, Notification, Gateway, and Web.
 8. Verify service readiness.
-9. Start Gateway.
-10. Verify Gateway routes.
-11. Start Web.
-12. Run smoke order.
-13. Verify broker event and notification.
-14. Monitor logs/error queue.
+9. Verify Gateway routes through Web.
+10. Run a smoke order.
+11. Verify broker event and notification.
+12. Monitor logs/error queue.
 
 ## 10. Health and readiness
 
