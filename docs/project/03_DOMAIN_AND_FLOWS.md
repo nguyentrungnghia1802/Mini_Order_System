@@ -1,6 +1,6 @@
 # Domain and Flows
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Domain model
 
@@ -166,7 +166,7 @@ Rules:
 
 This flow demonstrates ordinary service-local CRUD and does not use RabbitMQ.
 
-The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests. Gateway routing and Angular screens are intentionally deferred until Phase 4 and the remaining Phase 1 frontend work.
+The current implementation verifies the Product Service portion of this flow through its native `/api/v1/products` endpoints and PostgreSQL integration tests, and verifies the Gateway `/api/products` transform with an in-process downstream test. Angular screens and same-origin client code remain deferred to the next frontend slice.
 
 ### Product update and lifecycle flow
 
@@ -218,7 +218,7 @@ Activation and deactivation use the same PATCH contract by changing `isActive`. 
 
 ## 11. Insufficient stock flow
 
-The Product-owned part of this flow is implemented by the internal reservation API: it locks requested Product rows in stable ID order, validates every item before decrementing anything, and commits either all stock changes plus snapshots or none. The typed Order-to-Product call verifies the response, stores snapshots, and commits the final Order state; cancellation/release remains the next integration slice.
+The Product-owned part of this flow is implemented by the internal reservation API: it locks requested Product rows in stable ID order, validates every item before decrementing anything, and commits either all stock changes plus snapshots or none. The typed Order-to-Product call verifies the response, stores snapshots, and commits the final Order state; cancellation/release is also implemented and tested. Gateway does not route the internal command.
 
 1. Product Service locks all requested rows.
 2. At least one row has insufficient stock.

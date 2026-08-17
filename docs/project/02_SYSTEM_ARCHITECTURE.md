@@ -1,10 +1,10 @@
 # System Architecture
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Architecture summary
 
-The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, and the Order Service persistence/native API plus typed Product reservation and cancellation orchestration. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, native create/list/detail API, typed HTTP client, and explicit distributed outcome states. Gateway routes, Notification behavior, and message flows remain phase-scoped work.
+The target topology below is implemented incrementally. The repository now contains the Phase 0 foundation, the Product Service catalog/update plus Product-owned reservation slice, the Order Service persistence/native API plus typed Product reservation and cancellation orchestration, and a tested YARP Gateway route boundary. Product owns its EF Core model/migrations, service-native catalog endpoints, and internal reservation/release endpoints; Order owns its domain model, state history, separate EF Core migration, native create/list/detail/cancel API, typed HTTP client, and explicit distributed outcome states. Notification behavior and message flows remain phase-scoped work.
 
 Mini Order System is a small distributed system with one Angular SPA, one YARP Gateway, two HTTP business services, one message-consuming worker/API, RabbitMQ, and service-owned PostgreSQL databases.
 
@@ -157,7 +157,7 @@ YARP uses route/cluster configuration. A representative mapping:
 | `/api/orders/{**catch-all}` | Order Service `/api/v1/orders/{**catch-all}` |
 | `/api/notifications/{**catch-all}` | Notification Service `/api/v1/notifications/{**catch-all}` |
 
-Exact transforms are executable in Gateway configuration and covered by tests.
+Exact transforms are executable in Gateway configuration and covered by 6 Gateway integration tests. The configuration-only Notification cluster is intentionally not routed until its read API exists.
 
 ### Order Service to Product Service
 
@@ -204,7 +204,7 @@ If processing throws, MassTransit retry/error behavior applies. Poison messages 
 
 ## 6. Request flow: successful order
 
-The following flow is implemented through the native service boundary; Gateway forwarding and cancellation are still later slices.
+The following flow is implemented through the native service boundary and Gateway Product/Order forwarding; Notification publication/consumption remains a later slice.
 
 ```text
 1. Angular POST /api/orders

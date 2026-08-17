@@ -434,15 +434,16 @@ Evidence for 3.2:
 - [x] Implement `POST /internal/v1/inventory/reservations/{orderId}/release`.
 - [x] Make release idempotent.
 - [ ] Optionally implement internal reservation query for reconciliation.
-- [ ] Ensure Gateway does not expose internal endpoints.
+- [x] Ensure Gateway does not expose internal endpoints.
 
 Evidence for 3.3 (partial):
 
-- Files: `Features/Inventory/InventoryContracts.cs`, `InventoryReservationService.cs`, `InventoryEndpoints.cs`, and `Program.cs`.
+- Files: `Features/Inventory/InventoryContracts.cs`, `InventoryReservationService.cs`, `InventoryEndpoints.cs`, Product `Program.cs`, `src/Gateway/MicroShop.Gateway/appsettings.json`, and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
 - Tests: `InventoryApiTests` covers `201` creation, authoritative snapshots/totals, `404 PRODUCT_NOT_FOUND`, `409 PRODUCT_INACTIVE`, `409 INSUFFICIENT_STOCK`, replay, mismatch, release, and idempotent release.
-- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Commit: `d2a885a` (`feat(product): add atomic inventory reservations`).
-- Notes: The API is intentionally service-native and internal. Gateway exclusion is verified with the Phase 4 route work; the optional reconciliation query remains deferred.
+- Tests: Gateway integration coverage rejects `/internal/v1/inventory/reservations` without forwarding and rejects invalid HTTP destination configuration; Product reservation behavior remains covered by `InventoryApiTests`.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `git diff --check`.
+- Commits: `d2a885a` (`feat(product): add atomic inventory reservations`) and `569af30` (`feat(gateway): add public yarp routes`).
+- Notes: The API is intentionally service-native and internal. Gateway exclusion is now verified; the optional reconciliation query remains deferred.
 
 ## 3.4 Order Product client
 
@@ -522,13 +523,13 @@ Evidence for 3.6:
 - [x] Verify no partial stock decrement.
 - [x] Verify stock never becomes negative.
 
-Evidence for 3.7 (partial):
+Evidence for 3.7:
 
-- Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs`, `tests/MicroShop.OrderService.Tests/ProductInventoryClientTests.cs`, `OrderOrchestrationTests.cs`, and `OrderProductHttpIntegrationTests.cs`.
-- Tests: 19 Product tests and 38 Order tests pass, including Product atomic reservation/release, known failures, replay/mismatch, concurrent last-stock, typed HTTP response/error mapping, unavailable dependency, timeout ambiguity, cancellation propagation, cancellation release/idempotency, `cancellation_pending`, and Order unknown-state persistence.
+- Files: `tests/MicroShop.ProductService.Tests/InventoryApiTests.cs`, `tests/MicroShop.OrderService.Tests/ProductInventoryClientTests.cs`, `OrderOrchestrationTests.cs`, `OrderProductHttpIntegrationTests.cs`, and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
+- Tests: 19 Product tests, 38 Order tests, and 6 Gateway tests pass, including Product atomic reservation/release, known failures, replay/mismatch, concurrent last-stock, typed HTTP response/error mapping, unavailable dependency, timeout ambiguity, cancellation propagation, cancellation release/idempotency, `cancellation_pending`, Order unknown-state persistence, Gateway internal-route exclusion, and startup destination validation.
 - Commands: `dotnet test MicroShop.sln --configuration Release --no-restore`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`.
-- Commits: `d2a885a` (`feat(product): add atomic inventory reservations`), `8b021f5` (`docs(project): record inventory reservation boundary`), and `e3c2b7c` (`feat(order): integrate product inventory client`).
-- Notes: Product reservation, Order synchronous communication, and cancellation are green; internal-route exclusion remains later Phase 4 work.
+- Commits: `d2a885a` (`feat(product): add atomic inventory reservations`), `8b021f5` (`docs(project): record inventory reservation boundary`), `e3c2b7c` (`feat(order): integrate product inventory client`), `27d57ef` (`feat(order): add reservation cancellation`), and `569af30` (`feat(gateway): add public yarp routes`).
+- Notes: Product reservation, Order synchronous communication, cancellation, and internal-route exclusion are green.
 
 ## 3.8 Phase 3 validation gate
 
@@ -537,7 +538,14 @@ Evidence for 3.7 (partial):
 - [x] All concurrency tests pass using PostgreSQL.
 - [x] All failure states match documentation.
 - [x] Cancellation restores stock exactly once.
-- [ ] Internal Product API is not public.
+- [x] Internal Product API is not public.
+
+Evidence for 3.8:
+
+- Files: Product/Order database configuration and migrations, the typed Product client, cancellation orchestration, and Gateway route/test files.
+- Tests: Full solution validation passes with 64 .NET tests: 1 Architecture, 6 Gateway, 38 Order, and 19 Product.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `569af30` (`feat(gateway): add public yarp routes`) completes the final Gateway safety item for this gate.
 
 ---
 
@@ -545,27 +553,43 @@ Evidence for 3.7 (partial):
 
 ## 4.1 Gateway foundation
 
-- [ ] Configure YARP.
-- [ ] Add Product cluster.
-- [ ] Add Order cluster.
-- [ ] Add Notification cluster placeholder or deferred route.
-- [ ] Add Product public routes.
-- [ ] Add Order public routes.
-- [ ] Configure path transforms.
-- [ ] Configure CORS.
-- [ ] Configure body/request limits.
-- [ ] Add liveness.
-- [ ] Add readiness.
-- [ ] Add structured logging.
-- [ ] Propagate trace headers.
+- [x] Configure YARP.
+- [x] Add Product cluster.
+- [x] Add Order cluster.
+- [x] Add Notification cluster placeholder or deferred route.
+- [x] Add Product public routes.
+- [x] Add Order public routes.
+- [x] Configure path transforms.
+- [x] Configure CORS.
+- [x] Configure body/request limits.
+- [x] Add liveness.
+- [x] Add readiness.
+- [x] Add structured logging.
+- [x] Propagate trace headers.
+
+Evidence for 4.1:
+
+- Files: `src/Gateway/MicroShop.Gateway/BootstrapConfiguration.cs`, `Program.cs`, `appsettings.json`, and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
+- Tests: Gateway route, path transform, trace propagation, health, CORS, downstream failure, and internal-route rejection tests pass.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `569af30` (`feat(gateway): add public yarp routes`).
+- Notes: Product and Order destinations are environment-overridable and validated as absolute HTTP(S) addresses. Notification has a configuration-only cluster placeholder; no Notification route is exposed before its API exists.
 
 ## 4.2 Gateway safety
 
-- [ ] Ensure `/internal/*` is never routed.
-- [ ] Ensure browser receives no internal hostname.
+- [x] Ensure `/internal/*` is never routed.
+- [x] Ensure browser receives no internal hostname.
 - [ ] Ensure service-native ports are not required by Angular.
-- [ ] Handle downstream unavailable as gateway error.
-- [ ] Validate configured clusters at startup.
+- [x] Handle downstream unavailable as gateway error.
+- [x] Validate configured clusters at startup.
+
+Evidence for 4.2 (partial):
+
+- Files: `BootstrapConfiguration.cs`, `Program.cs`, `appsettings.json`, and `GatewayApiTests.cs`.
+- Tests: Internal Product paths return `404 GATEWAY_ROUTE_NOT_FOUND` without forwarding; unavailable destinations return `502 DOWNSTREAM_UNAVAILABLE`; invalid Product/Order destination schemes fail startup configuration.
+- Commands: `dotnet test MicroShop.sln --configuration Release --no-restore` (64 tests pass).
+- Commit: `569af30` (`feat(gateway): add public yarp routes`).
+- Notes: Angular still has no feature API clients, so removing all service-native browser requirements remains in 4.3.
 
 ## 4.3 Angular migration to Gateway
 
@@ -577,20 +601,35 @@ Evidence for 3.7 (partial):
 
 ## 4.4 Gateway tests
 
-- [ ] Test Product route.
-- [ ] Test Order route.
-- [ ] Test path transforms.
-- [ ] Test trace-header propagation.
-- [ ] Test downstream unavailable behavior.
-- [ ] Test internal route rejection.
-- [ ] Test Gateway health.
+- [x] Test Product route.
+- [x] Test Order route.
+- [x] Test path transforms.
+- [x] Test trace-header propagation.
+- [x] Test downstream unavailable behavior.
+- [x] Test internal route rejection.
+- [x] Test Gateway health.
+
+Evidence for 4.4:
+
+- Files: `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs` and `tests/MicroShop.Gateway.Tests/MicroShop.Gateway.Tests.csproj`.
+- Tests: 6 Gateway integration tests pass using a real in-process Kestrel downstream and `WebApplicationFactory`.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet test tests/MicroShop.Gateway.Tests/MicroShop.Gateway.Tests.csproj --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `569af30` (`feat(gateway): add public yarp routes`).
 
 ## 4.5 Phase 4 validation gate
 
 - [ ] Angular works using only Gateway.
-- [ ] Product and Order services are hidden from normal browser use.
-- [ ] Internal inventory API cannot be reached through Gateway.
-- [ ] Gateway tests pass.
+- [~] Product and Order services are hidden from normal browser use.
+- [x] Internal inventory API cannot be reached through Gateway.
+- [x] Gateway tests pass.
+
+Evidence for 4.5 (partial):
+
+- Files: Gateway route configuration and `tests/MicroShop.Gateway.Tests/GatewayApiTests.cs`.
+- Tests: 6 Gateway tests and the full 64-test .NET solution pass.
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Commit: `569af30` (`feat(gateway): add public yarp routes`).
+- Notes: Public routes and internal-route exclusion are complete. Angular migration and application-container port isolation remain before this gate can be complete.
 
 ---
 

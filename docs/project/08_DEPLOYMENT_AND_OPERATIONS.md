@@ -1,10 +1,10 @@
 # Deployment and Operations
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product and Order slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling. The full `web`, Gateway business routes, and Notification Compose service remain deferred.
+The repository now provides PostgreSQL/RabbitMQ infrastructure plus natively runnable Product, Order, and Gateway slices. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling; Gateway exposes tested Product/Order public routes and rejects `/internal/*`. The full `web`, Notification Compose service, and application containers remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -26,6 +26,8 @@ Each process receives only required configuration.
 - allowed public origins;
 - proxy timeout and limits;
 - logging/telemetry settings.
+
+The current Gateway configuration reads `PRODUCT_SERVICE_URL` and `ORDER_SERVICE_URL` first, validates both as absolute HTTP(S) destinations, maps `/api/products/*` and `/api/orders/*` to the versioned native paths, preserves the incoming W3C trace ID, and returns stable `502 DOWNSTREAM_UNAVAILABLE` responses for unavailable destinations. Notification has a placeholder cluster but no public route until its API is implemented.
 
 ### Product Service
 

@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/API, and Phase 3 Product reservation plus Order typed-client/orchestration/cancellation slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, and `27d57ef` (`feat(order): add reservation cancellation`).
+Current implementation slice: Phase 1 Product catalog/update API, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, and Phase 4 Gateway routing/safety/test slices, implemented in `abc9a7a`, `0654c31`, `7bf1692`, `d694a5b`, `d2a885a`, `8b021f5`, `e3c2b7c`, `27d57ef`, and `569af30` (`feat(gateway): add public yarp routes`).
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -44,9 +44,8 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Angular Product screens and Angular checkout/order pages.
+- Angular Product/catalog and checkout/order pages plus migration to same-origin Gateway APIs.
 - Notification business behavior, migration, and integration tests.
-- Public API contracts and YARP business routes.
-- Gateway public routes and internal-route exclusion.
 - MassTransit producer/consumer and transactional outbox.
 - Application Dockerfiles and full-stack Compose services.
 - Docker image build validation.
@@ -56,7 +55,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 4 — configure YARP public Product/Order routes and prove internal Product reservation routes are not exposed; Angular screens remain sequenced behind the Gateway route.
+Phase 4.3 — migrate the Angular workspace to same-origin `/api/products` and `/api/orders` calls, then add the first catalog/checkout UI slice.
 
 ## Phase 1 — Product Service foundation (partial)
 
@@ -88,8 +87,23 @@ Phase 4 — configure YARP public Product/Order routes and prove internal Produc
 | Area | Status | Verified evidence |
 | --- | --- | --- |
 | Reservation domain and schema | `[x]` | Product owns `inventory_reservations` and `inventory_reservation_items`, request hashes, reserved/released states, snapshots, constraints, and migrations `20260817164457_AddInventoryReservations` plus `20260817164536_AddInventoryReservationConstraints`. |
-| Internal reservation API | `[x]` | Native Product endpoints reserve/replay/mismatch and release idempotently; `/internal/*` is not yet routed by the empty Gateway. |
+| Internal reservation API | `[x]` | Native Product endpoints reserve/replay/mismatch and release idempotently; Gateway rejects `/internal/*` without forwarding. |
 | Reservation concurrency and failure tests | `[x]` | 19 Product tests pass, including no partial decrement and concurrent last-stock behavior on PostgreSQL Testcontainers. |
 | Order typed client/orchestration | `[x]` | `ProductInventoryClient` uses the internal URL, explicit <=5s timeout, traceparent/cancellation propagation, stable Product error mapping, no blind retry, stable `orderId`, authoritative snapshot verification, and `inventory_unknown` persistence in `e3c2b7c`. |
 | Order cancellation/release | `[x]` | `POST /api/v1/orders/{id}/cancel` guards state, calls idempotent Product release, confirms only after known release, and persists `cancellation_pending` for ambiguous outcomes in `27d57ef`. |
-| Phase 3 validation gate | `[~]` | Product reservation, Order-to-Product HTTP/orchestration, and cancellation tests pass; final Gateway internal-route safety remains incomplete. |
+| Phase 3 validation gate | `[x]` | Product reservation, Order-to-Product HTTP/orchestration, cancellation, and Gateway internal-route safety tests pass. |
+
+## Phase 4 — YARP API Gateway (partial)
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Gateway foundation | `[x]` | YARP Product/Order clusters, public path transforms, Notification placeholder cluster, CORS, request limit, health, structured logging defaults, and trace forwarding are configured in `src/Gateway/MicroShop.Gateway/`. |
+| Gateway safety | `[~]` | Internal routes are rejected, destinations are validated, and downstream failures map to stable `502`; Angular has not yet migrated and native service ports remain useful for debugging. |
+| Gateway integration tests | `[x]` | 6 `MicroShop.Gateway.Tests` pass for Product/Order transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
+| Phase 4 validation gate | `[~]` | Gateway-side requirements pass; Angular same-origin migration and normal-browser port isolation remain in the next slice. |
+
+Gateway evidence:
+
+- Commit: `569af30` (`feat(gateway): add public yarp routes`).
+- Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
+- Result: 64 .NET tests pass (1 Architecture, 6 Gateway, 38 Order, 19 Product); only the pre-existing NU1903 SSH.NET warning remains.

@@ -1,6 +1,6 @@
 # Roadmap and Decisions
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Roadmap principles
 
@@ -40,7 +40,7 @@ Phase 0 implementation status: the solution/projects, strict Angular workspace, 
 
 Learning objective: one independent .NET service with its own database.
 
-Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create/update service-native API, activate/deactivate lifecycle, optimistic concurrency Problem Details, OpenAPI, readiness, unit tests, and PostgreSQL Testcontainers tests are implemented. Reservation/release, Gateway exposure, and Angular catalog/operator screens remain incomplete.
+Phase 1 status: partial. Product domain/persistence, `InitialProductSchema`, seed, list/detail/create/update service-native API, activate/deactivate lifecycle, optimistic concurrency Problem Details, OpenAPI, readiness, unit tests, and PostgreSQL Testcontainers tests are implemented. Angular catalog/operator screens remain incomplete; Product reservation/release is implemented in Phase 3 and exposed only through the native internal boundary.
 
 ### Phase 2: Order Service without remote inventory
 
@@ -66,7 +66,7 @@ Phase 2 status: partial. Order domain entities, state transition guard, state-hi
 
 Learning objective: request/response coupling and distributed outcome states.
 
-Phase 3 status: partial. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, PostgreSQL concurrency tests, Order's typed client, authoritative orchestration, explicit timeout/availability mapping, `inventory_unknown`, and guarded cancellation/release orchestration are implemented in `d2a885a`, `8b021f5`, `e3c2b7c`, and `27d57ef`. Gateway exposure and internal-route exclusion remain next.
+Phase 3 status: complete. Product-owned reservation entities, migrations, atomic multi-item reserve/release API, canonical replay/mismatch handling, stable Product-ID locking, PostgreSQL concurrency tests, Order's typed client, authoritative orchestration, explicit timeout/availability mapping, `inventory_unknown`, guarded cancellation/release orchestration, and Gateway internal-route exclusion are implemented in `d2a885a`, `8b021f5`, `e3c2b7c`, `27d57ef`, and `569af30`.
 
 ### Phase 4: YARP API Gateway
 
@@ -79,6 +79,8 @@ Phase 3 status: partial. Product-owned reservation entities, migrations, atomic 
 - Angular uses one public origin.
 
 Learning objective: one entry point and hidden service topology.
+
+Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular same-origin migration and normal-browser service-port isolation remain incomplete.
 
 ### Phase 5: RabbitMQ and Notification Service
 

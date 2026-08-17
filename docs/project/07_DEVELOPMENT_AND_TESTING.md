@@ -207,7 +207,7 @@ dotnet ef database update \
 
 Application images, the full application Compose stack, and `compose.test.yaml` remain deferred until the owning roadmap phases. CI applies the Product migration to an empty PostgreSQL service database.
 
-The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. Gateway routing remains Phase 4 work.
+The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. The Gateway suite uses a real in-process Kestrel downstream to verify public Product/Order path transforms, trace propagation, CORS/health, stable downstream `502`, and internal-route rejection.
 
 The exact scripts become source of truth when repository exists.
 
@@ -276,6 +276,19 @@ Cases:
 - transient failure retries;
 - poison message enters error queue;
 - consumer restart processes queued message.
+
+### Gateway integration tests
+
+Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel server as the downstream. The suite must verify:
+
+- Product public route and `/api/v1/products` transform;
+- Order public route and `/api/v1/orders` transform;
+- query preservation and W3C `traceparent` forwarding;
+- CORS, liveness, and readiness;
+- stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
+- `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
+
+The current `MicroShop.Gateway.Tests` project contains 6 passing tests. The full .NET solution contains 64 passing tests: 1 Architecture, 6 Gateway, 38 Order, and 19 Product.
 
 ### Contract tests
 

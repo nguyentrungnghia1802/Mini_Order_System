@@ -4,7 +4,7 @@ MicroShop is a deliberately small learning project for Angular, ASP.NET Core, YA
 
 ## Current status
 
-Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, and guarded cancellation with `cancellation_pending`. The fake Product client is test-only compatibility coverage. Gateway business routes, Notification behavior, Angular screens, and full-stack application containers remain later roadmap work.
+Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migrations, deterministic development seed, service-native catalog/detail/create/update API, activate/deactivate lifecycle, optimistic version checks, Product-owned atomic inventory reservation/release API, readiness/OpenAPI, and PostgreSQL Testcontainers tests. Order has its own database and state history, a native HTTP API, a typed Product inventory client, authoritative reservation orchestration, timeout/availability mapping, `inventory_unknown`, and guarded cancellation with `cancellation_pending`. The YARP Gateway now exposes tested `/api/products/*` and `/api/orders/*` routes with path transforms, CORS, trace propagation, request limits, health endpoints, and stable downstream errors; `/internal/*` is rejected. The fake Product client is test-only compatibility coverage. Notification behavior, Angular screens, and full-stack application containers remain later roadmap work.
 
 ## Target architecture
 
@@ -80,6 +80,19 @@ $env:ORDER_DB_PASSWORD = "<local-password>"
 ```
 
 Order exposes persistence health/readiness, `/openapi/v1.json`, and the native API under `/api/v1/orders` for create, paginated list, and detail. Runtime uses `ProductService:BaseUrl`/`PRODUCT_SERVICE_URL` and an explicit timeout no greater than five seconds to call Product's internal reservation API. Product returns authoritative snapshots and Order persists `confirmed`, known `rejected`, or infrastructure `inventory_unknown` outcomes. Set `ProductService:UseFakeClient=true` only for the legacy deterministic Phase 2 test fixture; the default runtime path is the typed HTTP client.
+
+For the current Gateway slice, run the native Gateway after Product and Order and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL` and `ORDER_SERVICE_URL`; Angular is not yet migrated and should not call service-native ports as a browser fallback.
+
+```powershell
+dotnet run --project src/Gateway/MicroShop.Gateway
+```
+
+Gateway routes:
+
+- `GET|POST|PATCH /api/products/*` -> Product `/api/v1/products/*`
+- `GET|POST /api/orders/*` -> Order `/api/v1/orders/*`
+- `/internal/*` -> `404 GATEWAY_ROUTE_NOT_FOUND`
+- unavailable downstream -> `502 DOWNSTREAM_UNAVAILABLE`
 
 For native application debugging, use the non-default override to publish PostgreSQL and RabbitMQ application ports:
 

@@ -1,10 +1,10 @@
 # API
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 ## 1. Contract sources
 
-Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail/cancel subset through a typed Product inventory client, authoritative reservation snapshots, and explicit `rejected`/`inventory_unknown`/`cancellation_pending` outcomes. Notification, Gateway, and Angular-facing routes remain phase-scoped.
+Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail/cancel subset through a typed Product inventory client, authoritative reservation snapshots, and explicit `rejected`/`inventory_unknown`/`cancellation_pending` outcomes. Gateway implements and tests the public Product/Order route transforms and internal-route rejection. Notification and Angular-facing behavior remain phase-scoped.
 
 Executable contract sources:
 
@@ -28,6 +28,16 @@ Angular calls Gateway using same-origin paths:
 /api/orders
 /api/notifications
 ```
+
+Implemented Gateway mappings:
+
+| Browser path | Gateway destination | Status |
+| --- | --- | --- |
+| `/api/products/{**catch-all}` | Product `/api/v1/products/{**catch-all}` | implemented and tested |
+| `/api/orders/{**catch-all}` | Order `/api/v1/orders/{**catch-all}` | implemented and tested |
+| `/api/notifications/{**catch-all}` | deferred Notification route | not exposed yet |
+
+Gateway rejects `/internal/*` with `404 GATEWAY_ROUTE_NOT_FOUND` and returns `502 DOWNSTREAM_UNAVAILABLE` when a configured Product/Order destination cannot be reached.
 
 ### Service-native public API
 
@@ -112,7 +122,7 @@ RFC 7807 Problem Details with stable extensions:
 
 ### `GET /api/v1/products`
 
-Purpose: list products. Implemented by Product Service; Gateway exposure is deferred to Phase 4.
+Purpose: list products. Implemented by Product Service and exposed through Gateway as `/api/products` with a `/api/v1/products` path transform.
 
 | Query | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -341,7 +351,7 @@ Response:
 
 These contracts are service-to-service only.
 
-The Product Service implementation now exposes the two reservation commands below on its native port. They are not routed by the current Gateway and must not be called by Angular.
+The Product Service implementation now exposes the two reservation commands below on its native port. They are not routed by Gateway and must not be called by Angular. Gateway integration tests verify rejection without forwarding.
 
 ### `POST /internal/v1/inventory/reservations`
 
