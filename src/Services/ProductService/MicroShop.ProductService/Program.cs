@@ -68,6 +68,14 @@ if (!app.Environment.IsProduction())
     app.MapOpenApi("/openapi/v1.json");
 }
 
+if (args.Contains("--migrate", StringComparer.OrdinalIgnoreCase))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var database = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
+    await database.Database.MigrateAsync();
+    return;
+}
+
 if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
 {
     await using var scope = app.Services.CreateAsyncScope();

@@ -1,5 +1,17 @@
 name: microshop
 
+x-dotnet-healthcheck: &dotnet-healthcheck
+  test:
+    - CMD-SHELL
+    - >-
+      bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
+      printf "GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3 &&
+      grep -q "200" <&3'
+  interval: 5s
+  timeout: 5s
+  retries: 20
+  start_period: 10s
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -45,6 +57,195 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  migrate-product:
+    image: ${PRODUCT_IMAGE:-microshop-product-service:phase6}
+    command: ["dotnet", "MicroShop.ProductService.dll", "--migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      PRODUCT_DB_HOST: postgres
+      PRODUCT_DB_PORT: "5432"
+      PRODUCT_DB_NAME: ${PRODUCT_DB_NAME:?Provide the Product database name}
+      PRODUCT_DB_USER: ${PRODUCT_DB_USER:?Provide the Product database user}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?Provide the Product database password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microshop
+    restart: "no"
+
+  migrate-order:
+    image: ${ORDER_IMAGE:-microshop-order-service:phase6}
+    command: ["dotnet", "MicroShop.OrderService.dll", "--migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ORDER_DB_HOST: postgres
+      ORDER_DB_PORT: "5432"
+      ORDER_DB_NAME: ${ORDER_DB_NAME:?Provide the Order database name}
+      ORDER_DB_USER: ${ORDER_DB_USER:?Provide the Order database user}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Provide the Order database password}
+      PRODUCT_SERVICE_URL: http://product-service:8080
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_USER: ${RABBITMQ_USER:?Provide the RabbitMQ local user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Provide the RabbitMQ local password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microshop
+    restart: "no"
+
+  migrate-notification:
+    image: ${NOTIFICATION_IMAGE:-microshop-notification-service:phase6}
+    command: ["dotnet", "MicroShop.NotificationService.dll", "--migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      NOTIFICATION_DB_HOST: postgres
+      NOTIFICATION_DB_PORT: "5432"
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:?Provide the Notification database name}
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:?Provide the Notification database user}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Provide the Notification database password}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_USER: ${RABBITMQ_USER:?Provide the RabbitMQ local user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Provide the RabbitMQ local password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microshop
+    restart: "no"
+
+  product-service:
+    image: ${PRODUCT_IMAGE:-microshop-product-service:phase6}
+    build:
+      context: ..
+      dockerfile: deploy/docker/product-service.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      PRODUCT_DB_HOST: postgres
+      PRODUCT_DB_PORT: "5432"
+      PRODUCT_DB_NAME: ${PRODUCT_DB_NAME:?Provide the Product database name}
+      PRODUCT_DB_USER: ${PRODUCT_DB_USER:?Provide the Product database user}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?Provide the Product database password}
+    depends_on:
+      migrate-product:
+        condition: service_completed_successfully
+    networks:
+      - microshop
+    healthcheck: *dotnet-healthcheck
+    restart: unless-stopped
+
+  order-service:
+    image: ${ORDER_IMAGE:-microshop-order-service:phase6}
+    build:
+      context: ..
+      dockerfile: deploy/docker/order-service.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ORDER_DB_HOST: postgres
+      ORDER_DB_PORT: "5432"
+      ORDER_DB_NAME: ${ORDER_DB_NAME:?Provide the Order database name}
+      ORDER_DB_USER: ${ORDER_DB_USER:?Provide the Order database user}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Provide the Order database password}
+      PRODUCT_SERVICE_URL: http://product-service:8080
+      PRODUCT_SERVICE_TIMEOUT_MS: ${PRODUCT_SERVICE_TIMEOUT_MS:-5000}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_USER: ${RABBITMQ_USER:?Provide the RabbitMQ local user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Provide the RabbitMQ local password}
+      RABBITMQ_USE_IN_MEMORY: "false"
+    depends_on:
+      migrate-order:
+        condition: service_completed_successfully
+      product-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microshop
+    healthcheck: *dotnet-healthcheck
+    restart: unless-stopped
+
+  notification-service:
+    image: ${NOTIFICATION_IMAGE:-microshop-notification-service:phase6}
+    build:
+      context: ..
+      dockerfile: deploy/docker/notification-service.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      NOTIFICATION_DB_HOST: postgres
+      NOTIFICATION_DB_PORT: "5432"
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:?Provide the Notification database name}
+      NOTIFICATION_DB_USER: ${NOTIFICATION_DB_USER:?Provide the Notification database user}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Provide the Notification database password}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_USER: ${RABBITMQ_USER:?Provide the RabbitMQ local user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Provide the RabbitMQ local password}
+      RABBITMQ_USE_IN_MEMORY: "false"
+    depends_on:
+      migrate-notification:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microshop
+    healthcheck: *dotnet-healthcheck
+    restart: unless-stopped
+
+  gateway:
+    image: ${GATEWAY_IMAGE:-microshop-gateway:phase6}
+    build:
+      context: ..
+      dockerfile: deploy/docker/gateway.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      PRODUCT_SERVICE_URL: http://product-service:8080
+      ORDER_SERVICE_URL: http://order-service:8080
+      NOTIFICATION_SERVICE_URL: http://notification-service:8080
+      Gateway__CorsOrigins__0: ${WEB_ORIGIN:-http://localhost:8080}
+    depends_on:
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    networks:
+      - microshop
+    healthcheck: *dotnet-healthcheck
+    restart: unless-stopped
+
+  web:
+    image: ${WEB_IMAGE:-microshop-web:phase6}
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - microshop
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--output-document=-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
 
 volumes:
   microshop-postgres-data:

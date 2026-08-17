@@ -6,3 +6,18 @@ services:
   rabbitmq:
     ports:
       - "5672:5672"
+  web:
+    ports:
+      - "${WEB_DEBUG_PORT:-8080}:8080"
+  gateway:
+    ports:
+      - "${GATEWAY_DEBUG_PORT:-8081}:8080"
+  product-service:
+    ports:
+      - "${PRODUCT_DEBUG_PORT:-5245}:8080"
+  order-service:
+    ports:
+      - "${ORDER_DEBUG_PORT:-5075}:8080"
+  notification-service:
+    ports:
+      - "${NOTIFICATION_DEBUG_PORT:-5088}:8080"
