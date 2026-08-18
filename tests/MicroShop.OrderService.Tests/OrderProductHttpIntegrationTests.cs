@@ -56,7 +56,13 @@ public sealed class OrderProductHttpIntegrationTests(OrderDatabaseFixture fixtur
         using var response = await orderClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal(
+        Assert.NotNull(receivedTraceParent);
+        Assert.StartsWith(
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-",
+            receivedTraceParent,
+            StringComparison.Ordinal);
+        Assert.EndsWith("-01", receivedTraceParent, StringComparison.Ordinal);
+        Assert.NotEqual(
             "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
             receivedTraceParent);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

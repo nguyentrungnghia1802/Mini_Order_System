@@ -14,6 +14,8 @@ Phase 7.4 adds a controlled Order-native reconciliation path at `/internal/v1/re
 
 Phase 7.5 adds bounded resilience policies: Product calls retain an explicit timeout of at most five seconds, reserve never retries an ambiguous command, and only the order-keyed idempotent release operation plus the read-only reservation lookup use a configurable safe retry (`PRODUCT_SERVICE_SAFE_RETRY_COUNT`, default 1; delay default 100 ms). All .NET hosts use a bounded shutdown timeout (`MICROSHOP_SHUTDOWN_TIMEOUT_MS`, default 10 seconds); MassTransit startup/consumer stop is tied to that bound, cancellation tokens propagate through dependency calls, and `/health/ready` becomes unhealthy during shutdown while `/health/live` remains a liveness signal.
 
+Phase 8.1–8.3 now adds the observability core: every .NET host uses JSON console scopes with `service.name`, environment, W3C trace/span IDs, and bounded entity identifiers; ASP.NET Core and HttpClient OpenTelemetry tracing/metrics are registered centrally; Order, Product inventory, Product dependency, outbox, and Notification outcomes emit low-cardinality meters; and an optional `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP export without requiring a collector for local operation. The default Compose stack remains limited to the planned services and does not add an observability backend.
+
 ## Target architecture
 
 ```text
@@ -58,6 +60,8 @@ docker compose --env-file .env -f deploy/compose.yaml ps --all
 ```
 
 The base Compose file starts PostgreSQL, RabbitMQ, three migration one-shots, Product, Order, Notification, Gateway, and Web. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; application services wait for their own migration one-shot and dependency health. Only Web `http://localhost:8080` and RabbitMQ management `http://localhost:15672` are published by default. The Web container proxies `/api/*` to the private Gateway. Existing PostgreSQL/RabbitMQ volumes are retained by normal `docker compose down`.
+
+Leave `OTEL_EXPORTER_OTLP_ENDPOINT` empty for the self-contained local workflow. To connect an existing OTLP collector, set that variable in the uncommitted `.env` file; no collector, trace viewer, credentials, or telemetry volume is added to the baseline Compose stack.
 
 Useful local operations:
 

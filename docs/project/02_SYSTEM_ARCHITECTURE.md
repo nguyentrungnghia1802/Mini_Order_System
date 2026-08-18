@@ -378,6 +378,8 @@ All processes use structured logs with:
 
 W3C trace context is the primary distributed trace standard. `X-Correlation-ID` may be accepted for human support, but it must not replace `traceparent`.
 
+The current implementation registers ASP.NET Core HTTP tracing/metrics, HttpClient tracing, a MicroShop ActivitySource/Meter, and an optional OTLP exporter in `MicroShop.ServiceDefaults`. `OTEL_EXPORTER_OTLP_ENDPOINT` is empty by default, so local operation does not depend on a collector. No OpenTelemetry backend is added to the baseline Compose stack.
+
 Optional OpenTelemetry pipeline:
 
 ```text

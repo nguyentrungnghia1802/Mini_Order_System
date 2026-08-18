@@ -29,7 +29,7 @@ Order confirmation writes the `orders` state and its `outbox_messages` event in 
 - dead-lettered rows are degraded by default and unhealthy when `ORDER_OUTBOX_FAIL_READINESS_ON_DEAD_LETTERED=true`;
 - a pending backlog within policy does not fail readiness merely because RabbitMQ is unavailable—the Order database is the durability boundary for confirmation.
 
-The baseline has no metrics provider or metrics endpoint, so Phase 7.2 uses health data and structured logs. The metrics surface remains owned by Phase 8.3.
+Phase 8.1–8.3 now registers the shared OpenTelemetry metric provider. ASP.NET Core request metrics and the service-owned low-cardinality meters are available to an OTLP collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured; local operation remains independent because the variable is empty by default. The outbox health check and structured backlog log remain the operator-facing local fallback.
 
 ### Outbox operator query
 
@@ -291,39 +291,39 @@ No circuit breaker is enabled in this learning baseline. The Product dependency 
 
 ## 11. Observability
 
-Minimum:
+The .NET hosts emit JSON console logs with the following stable scope fields:
+
+- `service.name`;
+- `deployment.environment`;
+- `trace.id` and `span.id`;
+- `order.id`, `reservation.id`, or `notification.id` only when present in the route;
+- stable `EventCode` values and important MessageId/OrderId/ReservationId fields from business logs.
+
+Request middleware records method, endpoint name, status, and duration only. It never records request bodies, customer email, credentials, connection strings, broker passwords, or tokens. Existing Product/Order/Notification logs follow the same rule.
+
+The shared `MicroShop.ServiceDefaults` package registers W3C OpenTelemetry tracing and metrics. ASP.NET Core requests, HttpClient calls, custom Order/Product/Notification meters, and the explicit RabbitMQ consumer span are connected to the current trace. Set `OTEL_EXPORTER_OTLP_ENDPOINT` in an uncommitted `.env` file to export telemetry to an existing OTLP collector; no collector is part of the baseline Compose topology.
+
+Local operator signals remain:
 
 - structured stdout logs;
-- service name;
-- environment;
-- trace/span IDs;
-- important entity/message IDs;
-- health endpoints;
-- RabbitMQ management view in local/demo;
+- `/health/live` for process liveness only;
+- `/health/ready` for owned database, broker, lifecycle, and Order outbox readiness checks;
+- RabbitMQ management view;
 - database migration status.
-
-Hardening extension:
-
-- OpenTelemetry traces;
-- metrics for request duration/error;
-- dependency duration/error;
-- order outcomes;
-- outbox pending count;
-- RabbitMQ queue depth;
-- consumer retry/error count.
 
 ## 12. Suggested metrics
 
 | Metric | Meaning |
 | --- | --- |
-| `http_server_request_duration` | Service API latency |
-| `http_client_product_duration` | Order -> Product latency |
-| `orders_created_total{status}` | Confirmed/rejected/unknown outcomes |
-| `inventory_reservations_total{result}` | Reservation results |
-| `inventory_available_stock` | Optional product gauge, careful cardinality |
-| `outbox_pending` | Unpublished events |
-| `notifications_consumed_total{result}` | New/duplicate/failed |
-| `consumer_error_queue_total` | Poison-message operational count |
+| `http.server.request.duration` | ASP.NET Core request latency |
+| `http.client.request.duration` | HttpClient dependency latency, including Order -> Product |
+| `microshop.order.outcomes` | Order create/cancel outcomes by bounded operation/result |
+| `microshop.inventory.reservation.results` | Reserve/release/lookup outcomes by bounded operation/result |
+| `microshop.product.dependency.requests` | Product client calls by operation |
+| `microshop.product.dependency.failures` | Product client failures by bounded operation/result |
+| `microshop.order.outbox.pending` | Current unpublished outbox messages |
+| `microshop.order.outbox.failures` | Outbox publish failures |
+| `microshop.notification.consume.results` | New/duplicate/failed OrderConfirmedV1 consumption |
 
 Metrics are optional for baseline but names/labels should avoid unbounded customer/order IDs.
 

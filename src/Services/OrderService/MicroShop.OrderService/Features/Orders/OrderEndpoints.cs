@@ -1,6 +1,7 @@
 using MicroShop.OrderService.Domain;
 using MicroShop.OrderService.Persistence;
 using MicroShop.OrderService.Persistence.Entities;
+using MicroShop.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
 
 namespace MicroShop.OrderService.Features.Orders;
@@ -41,11 +42,18 @@ public static class OrderEndpoints
         CreateOrderRequest? request,
         HttpContext httpContext,
         OrderApplicationService applicationService,
+        ILogger<OrderApplicationService> logger,
         CancellationToken cancellationToken)
     {
         var validationErrors = OrderValidator.ValidateCreate(request);
         if (validationErrors.Count > 0)
         {
+            RecordOutcome("create", "VALIDATION_ERROR");
+            OrderLog.Outcome(
+                logger,
+                "ORDER_CREATE_VALIDATION_FAILED",
+                Guid.Empty,
+                "VALIDATION_ERROR");
             return OrderProblems.Validation(httpContext, validationErrors);
         }
 
@@ -54,6 +62,12 @@ public static class OrderEndpoints
             httpContext.TraceIdentifier,
             httpContext.Request.Headers.TraceParent.ToString(),
             cancellationToken);
+        RecordOutcome("create", outcome.IsSuccess ? "confirmed" : outcome.Code);
+        OrderLog.Outcome(
+            logger,
+            outcome.IsSuccess ? "ORDER_CONFIRMED" : "ORDER_CREATE_REJECTED",
+            outcome.Order.Id,
+            outcome.IsSuccess ? "SUCCESS" : outcome.Code);
         if (!outcome.IsSuccess)
         {
             return OrderProblems.Business(
@@ -136,6 +150,7 @@ public static class OrderEndpoints
         Guid orderId,
         HttpContext httpContext,
         OrderApplicationService applicationService,
+        ILogger<OrderApplicationService> logger,
         CancellationToken cancellationToken)
     {
         var outcome = await applicationService.CancelAsync(
@@ -145,9 +160,21 @@ public static class OrderEndpoints
             cancellationToken);
         if (outcome.Order is null)
         {
+            RecordOutcome("cancel", "ORDER_NOT_FOUND");
+            OrderLog.Outcome(
+                logger,
+                "ORDER_CANCEL_NOT_FOUND",
+                orderId,
+                "ORDER_NOT_FOUND");
             return OrderProblems.NotFound(httpContext, orderId);
         }
 
+        RecordOutcome("cancel", outcome.IsSuccess ? "cancelled" : outcome.Code);
+        OrderLog.Outcome(
+            logger,
+            outcome.IsSuccess ? "ORDER_CANCELLED" : "ORDER_CANCEL_FAILED",
+            outcome.Order.Id,
+            outcome.IsSuccess ? "SUCCESS" : outcome.Code);
         if (!outcome.IsSuccess)
         {
             return OrderProblems.Business(
@@ -160,6 +187,13 @@ public static class OrderEndpoints
         }
 
         return Results.Ok(ToResponse(outcome.Order));
+    }
+
+    private static void RecordOutcome(string operation, string result)
+    {
+        MicroShopTelemetry.OrderOutcomes.Add(
+            1,
+            MicroShopTelemetry.Tags(operation, result));
     }
 
     internal static OrderResponse ToResponse(Order order)
@@ -189,6 +223,19 @@ public static class OrderEndpoints
             order.CancelledAtUtc,
             order.Version);
     }
+}
+
+internal static partial class OrderLog
+{
+    [LoggerMessage(
+        EventId = 6101,
+        Level = LogLevel.Information,
+        Message = "Order operation completed. EventCode={EventCode} OrderId={OrderId} Result={Result}")]
+    public static partial void Outcome(
+        ILogger logger,
+        string eventCode,
+        Guid orderId,
+        string result);
 }
 
 internal static class OrderProblems

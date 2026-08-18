@@ -1,5 +1,6 @@
 using System.Globalization;
 using MicroShop.ProductService.Persistence;
+using MicroShop.ServiceDefaults;
 
 namespace MicroShop.ProductService.Features.Inventory;
 
@@ -45,6 +46,9 @@ public static class InventoryEndpoints
         }
 
         var response = await reservationService.GetByOrderIdAsync(orderId, cancellationToken);
+        MicroShopTelemetry.ReservationResults.Add(
+            1,
+            MicroShopTelemetry.Tags("lookup", response is null ? "not_found" : "found"));
         return response is null
             ? InventoryProblems.NotFound(httpContext, orderId)
             : Results.Ok(response);
@@ -54,6 +58,7 @@ public static class InventoryEndpoints
         ReserveInventoryRequest? request,
         HttpContext httpContext,
         InventoryReservationService reservationService,
+        ILogger<InventoryReservationService> logger,
         CancellationToken cancellationToken)
     {
         var validationErrors = InventoryValidator.ValidateReserve(request);
@@ -63,6 +68,15 @@ public static class InventoryEndpoints
         }
 
         var outcome = await reservationService.ReserveAsync(request!, cancellationToken);
+        MicroShopTelemetry.ReservationResults.Add(
+            1,
+            MicroShopTelemetry.Tags("reserve", outcome.IsSuccess ? "success" : outcome.Code));
+        InventoryLog.ReservationCompleted(
+            logger,
+            "INVENTORY_RESERVATION_RESULT",
+            request!.OrderId,
+            outcome.Response?.ReservationId,
+            outcome.IsSuccess ? "SUCCESS" : outcome.Code);
         if (!outcome.IsSuccess)
         {
             return InventoryProblems.Business(httpContext, outcome);
@@ -79,9 +93,19 @@ public static class InventoryEndpoints
         Guid orderId,
         HttpContext httpContext,
         InventoryReservationService reservationService,
+        ILogger<InventoryReservationService> logger,
         CancellationToken cancellationToken)
     {
         var outcome = await reservationService.ReleaseAsync(orderId, cancellationToken);
+        MicroShopTelemetry.ReservationResults.Add(
+            1,
+            MicroShopTelemetry.Tags("release", outcome.IsSuccess ? "success" : outcome.Code));
+        InventoryLog.ReleaseCompleted(
+            logger,
+            "INVENTORY_RELEASE_RESULT",
+            orderId,
+            outcome.Response?.ReservationId,
+            outcome.IsSuccess ? "SUCCESS" : outcome.Code);
         if (!outcome.IsSuccess)
         {
             return InventoryProblems.Business(httpContext, outcome);
@@ -89,6 +113,31 @@ public static class InventoryEndpoints
 
         return Results.Ok(outcome.Response);
     }
+}
+
+internal static partial class InventoryLog
+{
+    [LoggerMessage(
+        EventId = 4101,
+        Level = LogLevel.Information,
+        Message = "Inventory reservation completed. EventCode={EventCode} OrderId={OrderId} ReservationId={ReservationId} Result={Result}")]
+    public static partial void ReservationCompleted(
+        ILogger logger,
+        string eventCode,
+        Guid orderId,
+        Guid? reservationId,
+        string result);
+
+    [LoggerMessage(
+        EventId = 4102,
+        Level = LogLevel.Information,
+        Message = "Inventory release completed. EventCode={EventCode} OrderId={OrderId} ReservationId={ReservationId} Result={Result}")]
+    public static partial void ReleaseCompleted(
+        ILogger logger,
+        string eventCode,
+        Guid orderId,
+        Guid? reservationId,
+        string result);
 }
 
 internal static class InventoryProblems

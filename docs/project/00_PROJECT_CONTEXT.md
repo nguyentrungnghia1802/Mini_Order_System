@@ -163,19 +163,19 @@ This status table is updated from verified repository code and runtime checks. T
 | Area | Status |
 | --- | --- |
 | Requirements and boundaries | Specified |
-| Repository | Phase 0 bootstrap, Product catalog/reservation plus Angular catalog/operator UI, and Order persistence/native HTTP plus Product reservation orchestration slices implemented |
-| Gateway | ASP.NET Core/YARP host, public Product/Order/Notification routes, internal-route rejection, and Gateway tests implemented |
-| Product Service | Partial Phase 1/3: Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, and PostgreSQL integration tests implemented |
-| Order Service | Partial Phase 2/3: Order domain, state history, PostgreSQL schema/migration, readiness, native create/list/detail API, typed Product reservation client, authoritative snapshot orchestration, explicit timeout/availability mapping, `inventory_unknown`, and PostgreSQL integration tests implemented |
-| Notification Service | Independent host, owned PostgreSQL schema/migration, durable `OrderConfirmedV1` consumer, duplicate suppression, database-backed readiness, read/mark-as-read API, OpenAPI, and RabbitMQ integration/restart tests implemented; full-stack recovery remains |
+| Repository | Phase 0 bootstrap, Product/Order/Notification/Gateway/Angular baseline, Phase 7 reliability slices, and Phase 8.1-8.3 observability core implemented; E2E/failure-injection/security/final-gate work remains |
+| Gateway | ASP.NET Core/YARP host, public Product/Order/Notification routes, internal-route rejection, W3C request propagation, structured logging, health/metrics instrumentation, and Gateway tests implemented |
+| Product Service | Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, structured logs, Product dependency/reservation telemetry, and PostgreSQL integration tests implemented |
+| Order Service | Order domain/state history/schema, native create/list/detail/cancel/reconciliation APIs, typed Product reservation client, outbox/recovery/reconciliation, bounded timeout/retry/shutdown, structured logs, distributed tracing, outcome/outbox telemetry, and PostgreSQL integration tests implemented |
+| Notification Service | Independent host, owned PostgreSQL schema/migration, durable/idempotent `OrderConfirmedV1` consumer, database-backed readiness, read/mark-as-read API, OpenAPI, structured logs, consumer tracing/metrics, and RabbitMQ integration/restart tests implemented |
 | Angular frontend | Angular 22 strict workspace, same-origin Gateway clients, Product catalog/operator screens, checkout, Order list/detail/cancellation screens, Notification route/list/refresh/polling UI, and UI tests implemented |
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
 | RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers cover retry/error queue, duplicate, restart, and queued recovery, while full-stack Compose publish/consume smoke passes |
 | Docker Compose | Full Web/Gateway/Product/Order/Notification stack, three logical databases, migration one-shots, private service ports, and Phase 6.1 runtime image builds implemented |
-| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations implemented; Angular E2E tests remain |
+| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations plus observability/Compose smoke checks implemented; Playwright E2E and failure-injection automation remain |
 | Deployment | Optional after local completion |
 
-Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, and synchronous reservation path from the remaining full-stack Compose and end-to-end behavior.
+Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, synchronous reservation path, and observability core from the remaining E2E, failure-injection, security/deployment, and final-gate work.
 
 ## 10. Main technical constraints
 

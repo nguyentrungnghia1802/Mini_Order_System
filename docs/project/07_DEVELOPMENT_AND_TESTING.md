@@ -502,3 +502,9 @@ After baseline:
 - verify one order trace can be searched across services.
 
 This is an extension, not a dependency of Mini Order System.
+
+### Observability core validation
+
+`MicroShop.ServiceDefaults` configures JSON console logging scopes, W3C activity IDs, ASP.NET Core request instrumentation, HttpClient tracing, a shared ActivitySource/Meter, and optional OTLP export through `OTEL_EXPORTER_OTLP_ENDPOINT`. `UseMicroShopRequestObservability` records only method, endpoint, status, duration, trace/span IDs, service/environment, and bounded route IDs; it does not log request bodies, query payloads, credentials, or tokens. Order/Product/Notification code adds low-cardinality outcome metrics and stable event codes while retaining Order, Reservation, and Message IDs in relevant logs.
+
+`ObservabilityTests` verifies service identity registration, W3C parent/consumer span relationships, and bounded operation/result metric tags. Gateway route tests continue to verify incoming `traceparent` reaches the downstream route; Order Product-client integration tests verify the same context reaches Product; Notification RabbitMQ integration tests verify durable publish/consume behavior used by the consumer span boundary. The cross-service trace/log walkthrough remains a Phase 8 final-gate check.

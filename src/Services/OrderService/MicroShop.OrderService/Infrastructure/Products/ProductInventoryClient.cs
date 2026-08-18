@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using MicroShop.ServiceDefaults;
 using Microsoft.Extensions.Options;
 
 namespace MicroShop.OrderService.Infrastructure.Products;
@@ -17,6 +19,10 @@ public sealed partial class ProductInventoryClient(
         ProductReservationRequest request,
         CancellationToken cancellationToken)
     {
+        MicroShopTelemetry.ProductDependencyRequests.Add(
+            1,
+            MicroShopTelemetry.Tags("reserve", "request"));
+        using var activity = StartDependencyActivity("reserve", request.OrderId);
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
             "internal/v1/inventory/reservations")
@@ -52,12 +58,18 @@ public sealed partial class ProductInventoryClient(
                 return ParseReservationResponse(request.OrderId, response.StatusCode, body);
             }
 
+            MicroShopTelemetry.ProductDependencyFailures.Add(
+                1,
+                MicroShopTelemetry.Tags("reserve", "http_error"));
             return MapReservationProblem(response.StatusCode, body);
         }
         catch (OperationCanceledException) when (
             !cancellationToken.IsCancellationRequested
             && timeout.IsCancellationRequested)
         {
+            MicroShopTelemetry.ProductDependencyFailures.Add(
+                1,
+                MicroShopTelemetry.Tags("reserve", "timeout"));
             ReservationTimedOut(request.OrderId);
             return new ProductReservationResult(
                 ProductReservationFailure.OutcomeUnknown,
@@ -72,6 +84,9 @@ public sealed partial class ProductInventoryClient(
         }
         catch (HttpRequestException exception)
         {
+            MicroShopTelemetry.ProductDependencyFailures.Add(
+                1,
+                MicroShopTelemetry.Tags("reserve", "unavailable"));
             ReservationUnavailable(exception, request.OrderId);
             return new ProductReservationResult(
                 ProductReservationFailure.DependencyUnavailable,
@@ -90,6 +105,10 @@ public sealed partial class ProductInventoryClient(
         ProductReleaseRequest request,
         CancellationToken cancellationToken)
     {
+        MicroShopTelemetry.ProductDependencyRequests.Add(
+            1,
+            MicroShopTelemetry.Tags("release", "request"));
+        using var activity = StartDependencyActivity("release", request.OrderId);
         using var timeout = new CancellationTokenSource(serviceOptions.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
@@ -119,14 +138,23 @@ public sealed partial class ProductInventoryClient(
                     continue;
                 }
 
-                return response.IsSuccessStatusCode
-                    ? ParseReleaseResponse(request.OrderId, body)
-                    : MapReleaseProblem(response.StatusCode, body);
+                if (!response.IsSuccessStatusCode)
+                {
+                    MicroShopTelemetry.ProductDependencyFailures.Add(
+                        1,
+                        MicroShopTelemetry.Tags("release", "http_error"));
+                    return MapReleaseProblem(response.StatusCode, body);
+                }
+
+                return ParseReleaseResponse(request.OrderId, body);
             }
             catch (OperationCanceledException) when (
                 !cancellationToken.IsCancellationRequested
                 && timeout.IsCancellationRequested)
             {
+                MicroShopTelemetry.ProductDependencyFailures.Add(
+                    1,
+                    MicroShopTelemetry.Tags("release", "timeout"));
                 ReleaseTimedOut(request.OrderId);
                 return new ProductReleaseResult(
                     ProductReservationFailure.OutcomeUnknown,
@@ -140,6 +168,9 @@ public sealed partial class ProductInventoryClient(
 
                 if (timeout.IsCancellationRequested)
                 {
+                    MicroShopTelemetry.ProductDependencyFailures.Add(
+                        1,
+                        MicroShopTelemetry.Tags("release", "timeout"));
                     ReleaseTimedOut(request.OrderId);
                     return new ProductReleaseResult(
                         ProductReservationFailure.OutcomeUnknown,
@@ -162,6 +193,9 @@ public sealed partial class ProductInventoryClient(
                         !cancellationToken.IsCancellationRequested
                         && timeout.IsCancellationRequested)
                     {
+                        MicroShopTelemetry.ProductDependencyFailures.Add(
+                            1,
+                            MicroShopTelemetry.Tags("release", "timeout"));
                         ReleaseTimedOut(request.OrderId);
                         return new ProductReleaseResult(
                             ProductReservationFailure.OutcomeUnknown,
@@ -174,6 +208,9 @@ public sealed partial class ProductInventoryClient(
                 }
 
                 ReleaseUnavailable(exception, request.OrderId);
+                MicroShopTelemetry.ProductDependencyFailures.Add(
+                    1,
+                    MicroShopTelemetry.Tags("release", "unavailable"));
                 return new ProductReleaseResult(
                     ProductReservationFailure.DependencyUnavailable,
                     null,
@@ -187,6 +224,10 @@ public sealed partial class ProductInventoryClient(
         ProductReservationLookupRequest request,
         CancellationToken cancellationToken)
     {
+        MicroShopTelemetry.ProductDependencyRequests.Add(
+            1,
+            MicroShopTelemetry.Tags("lookup", "request"));
+        using var activity = StartDependencyActivity("lookup", request.OrderId);
         using var timeout = new CancellationTokenSource(serviceOptions.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
@@ -216,14 +257,23 @@ public sealed partial class ProductInventoryClient(
                     continue;
                 }
 
-                return response.IsSuccessStatusCode
-                    ? ParseReservationLookupResponse(request.OrderId, body)
-                    : MapReservationLookupProblem(response.StatusCode, body);
+                if (!response.IsSuccessStatusCode)
+                {
+                    MicroShopTelemetry.ProductDependencyFailures.Add(
+                        1,
+                        MicroShopTelemetry.Tags("lookup", "http_error"));
+                    return MapReservationLookupProblem(response.StatusCode, body);
+                }
+
+                return ParseReservationLookupResponse(request.OrderId, body);
             }
             catch (OperationCanceledException) when (
                 !cancellationToken.IsCancellationRequested
                 && timeout.IsCancellationRequested)
             {
+                MicroShopTelemetry.ProductDependencyFailures.Add(
+                    1,
+                    MicroShopTelemetry.Tags("lookup", "timeout"));
                 ReservationLookupTimedOut(request.OrderId);
                 return new ProductReservationLookupResult(
                     ProductReservationFailure.OutcomeUnknown,
@@ -242,6 +292,9 @@ public sealed partial class ProductInventoryClient(
 
                 if (timeout.IsCancellationRequested)
                 {
+                    MicroShopTelemetry.ProductDependencyFailures.Add(
+                        1,
+                        MicroShopTelemetry.Tags("lookup", "timeout"));
                     ReservationLookupTimedOut(request.OrderId);
                     return new ProductReservationLookupResult(
                         ProductReservationFailure.OutcomeUnknown,
@@ -269,6 +322,9 @@ public sealed partial class ProductInventoryClient(
                         !cancellationToken.IsCancellationRequested
                         && timeout.IsCancellationRequested)
                     {
+                        MicroShopTelemetry.ProductDependencyFailures.Add(
+                            1,
+                            MicroShopTelemetry.Tags("lookup", "timeout"));
                         ReservationLookupTimedOut(request.OrderId);
                         return new ProductReservationLookupResult(
                             ProductReservationFailure.OutcomeUnknown,
@@ -286,6 +342,9 @@ public sealed partial class ProductInventoryClient(
                 }
 
                 ReservationLookupUnavailable(exception, request.OrderId);
+                MicroShopTelemetry.ProductDependencyFailures.Add(
+                    1,
+                    MicroShopTelemetry.Tags("lookup", "unavailable"));
                 return new ProductReservationLookupResult(
                     ProductReservationFailure.DependencyUnavailable,
                     null,
@@ -307,6 +366,17 @@ public sealed partial class ProductInventoryClient(
     {
         IdempotentOperationRetrying(orderId, attempt);
         await Task.Delay(serviceOptions.SafeRetryDelay, cancellationToken);
+    }
+
+    private static Activity? StartDependencyActivity(string operation, Guid orderId)
+    {
+        var activity = MicroShopTelemetry.ActivitySource.StartActivity(
+            $"microshop.product.{operation}",
+            ActivityKind.Client);
+        activity?.SetTag("peer.service", "product-service");
+        activity?.SetTag("microshop.operation", operation);
+        activity?.SetTag("microshop.order.id", orderId);
+        return activity;
     }
 
     private static bool IsTransient(HttpStatusCode statusCode)
@@ -592,9 +662,12 @@ public sealed partial class ProductInventoryClient(
 
     private static void AddTraceParent(HttpRequestMessage request, string? traceParent)
     {
-        if (!string.IsNullOrWhiteSpace(traceParent))
+        var propagatedTraceParent = Activity.Current?.Id ?? traceParent;
+        if (!string.IsNullOrWhiteSpace(propagatedTraceParent))
         {
-            request.Headers.TryAddWithoutValidation("traceparent", traceParent);
+            request.Headers.TryAddWithoutValidation(
+                "traceparent",
+                propagatedTraceParent);
         }
     }
 

@@ -450,13 +450,13 @@ A single trace should connect:
 ```text
 Gateway inbound span
   -> Order API span
-     -> PostgreSQL span
+     -> Order database work (correlated by Order logs)
      -> Product HTTP client span
         -> Product API span
-           -> Product PostgreSQL span
-     -> publish/outbox span
+           -> Product database work (correlated by Reservation logs)
+     -> outbox producer/publish span
         -> Notification consume span
-           -> Notification PostgreSQL span
+           -> Notification database work (correlated by MessageId logs)
 ```
 
 Even before a trace backend is installed, structured logs should expose trace IDs.

@@ -1,7 +1,7 @@
 using Yarp.ReverseProxy.Forwarder;
 
 var builder = WebApplication.CreateBuilder(args);
-MicroShop.ServiceDefaults.ServiceDefaultsExtensions.AddMicroShopServiceDefaults(builder.Services);
+MicroShop.ServiceDefaults.ServiceDefaultsExtensions.AddMicroShopServiceDefaults(builder, "gateway");
 MicroShop.Gateway.BootstrapConfiguration.AddYarp(builder.Services, builder.Configuration);
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -10,6 +10,7 @@ builder.WebHost.ConfigureKestrel(options =>
 
 var app = builder.Build();
 
+MicroShop.ServiceDefaults.RequestObservabilityExtensions.UseMicroShopRequestObservability(app);
 MicroShop.ServiceDefaults.ServiceDefaultsExtensions.MapMicroShopHealth(app);
 app.UseCors("frontend");
 app.Use(async (httpContext, next) =>

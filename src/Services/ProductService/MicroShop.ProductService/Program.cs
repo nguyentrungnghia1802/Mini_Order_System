@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-MicroShop.ServiceDefaults.ServiceDefaultsExtensions.AddMicroShopServiceDefaults(builder.Services);
+MicroShop.ServiceDefaults.ServiceDefaultsExtensions.AddMicroShopServiceDefaults(builder, "product-service");
 
 var configuration = builder.Configuration;
 builder.Services.AddProblemDetails(options =>
@@ -53,6 +53,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<ProductDbContext>("product-
 var app = builder.Build();
 
 app.UseExceptionHandler();
+MicroShop.ServiceDefaults.RequestObservabilityExtensions.UseMicroShopRequestObservability(app);
 MicroShop.ServiceDefaults.ServiceDefaultsExtensions.MapMicroShopHealth(app);
 app.MapGet("/", () => Results.Ok(new
 {

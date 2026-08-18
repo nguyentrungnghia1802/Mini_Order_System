@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.6 outbox operations, Notification inbox hardening, controlled reconciliation, bounded resilience, and validation gates, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, Phase 7.1-7.6 outbox operations/Notification inbox hardening/controlled reconciliation/bounded resilience, and Phase 8.1-8.3 structured logs, W3C/OpenTelemetry tracing, metrics, and health instrumentation, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -37,6 +37,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - `docker compose --env-file .env.example -f deploy/compose.yaml up --build -d`
 - `docker compose --env-file .env.example -f deploy/compose.yaml ps --all`
 - Full-stack Web/Gateway Product, Order, Notification API smoke through port 8080, including confirmed Order and eventual Notification delivery
+- Compose observability smoke with W3C trace root `11111111111111111111111111111111` crossing Gateway, Order, Product, outbox/RabbitMQ, and Notification; structured logs retained bounded Order/Reservation/Message identifiers
 - `dotnet ef migrations script --project src/Services/ProductService/MicroShop.ProductService --startup-project src/Services/ProductService/MicroShop.ProductService`
 - Product `InitialProductSchema` applied to a fresh PostgreSQL Testcontainer and the local Product database
 - Product seed command executed twice; database remained at four deterministic seed products
@@ -45,7 +46,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Phase 8 observability, E2E/failure-injection automation, security/deployment review, and final completion gate.
+- Phase 8.4 centralized-log decision, 8.5 E2E, 8.6 failure-injection automation, 8.7 security/deployment review, 8.8 documentation audit, and 8.9 final completion gate.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +54,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 8.1–8.3 — add consistent structured logging, W3C/OpenTelemetry tracing, and metrics/health instrumentation.
+Phase 8.4–8.7 — decide/document centralized-log integration, add Playwright Compose E2E and failure-injection automation, then complete the security/deployment review.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -78,7 +79,7 @@ Phase 8.1–8.3 — add consistent structured logging, W3C/OpenTelemetry tracing
 | Backlog logging and readiness | `[x]` | `OutboxDispatcher` emits pending/oldest/dead-letter summaries; `OrderOutboxHealthCheck` applies configurable pending count/age and dead-letter policy to `/health/ready`. |
 | Operator status and recovery | `[x]` | Read-only `scripts/db-outbox-status.ps1/.sh` report backlog and actionable rows; recovery steps are documented in `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md` without deleting outbox data. |
 | RabbitMQ outage/recovery | `[x]` | PostgreSQL/RabbitMQ Testcontainers test confirms confirmed Order durability while RabbitMQ is stopped, readiness within policy, lease/retry recovery, and eventual publish after broker/dispatcher recovery. |
-| Metrics scope | `[x]` | No metrics provider exists in the baseline; health data and structured backlog logs are implemented, with the metrics surface explicitly deferred to Phase 8.3. |
+| Metrics scope | `[x]` | Phase 7 established health/backlog logging; Phase 8.3 now adds the shared OpenTelemetry meters and bounded outcome/backlog instruments while preserving health as the local operator surface. |
 
 ## Phase 7.3 — Notification inbox/idempotency hardening
 
@@ -117,6 +118,30 @@ Phase 8.1–8.3 — add consistent structured logging, W3C/OpenTelemetry tracing
 | Notification idempotency | `[x]` | Concurrent duplicate and process-restart redelivery tests leave one consumed-message row and one Notification. |
 | Reconciliation | `[x]` | Inventory-unknown and cancellation-pending reconciliation tests prove controlled known/unknown outcomes and audit history. |
 | Shutdown gate | `[x]` | Bounded shutdown-option and readiness-transition tests pass; Compose configuration validates with the new environment settings. |
+
+## Phase 8.1 — Structured logging
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Shared JSON logging | `[x]` | `MicroShop.ServiceDefaults` configures JSON scopes and shared request/background logging for Product, Order, Notification, and Gateway. |
+| Correlation and bounded fields | `[x]` | Service/environment/trace/span fields are standard; Order, Reservation, and Message IDs are added only where relevant. Stable event codes avoid full customer payloads and secrets. |
+| Validation | `[x]` | `ObservabilityTests`, full .NET suite (111 passed), Compose config/startup, and a confirmed-order smoke with trace/log evidence pass. |
+
+## Phase 8.2 — Distributed tracing
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| W3C and OpenTelemetry | `[x]` | Gateway, Order, Product, and Notification use W3C activity identity and centralized OpenTelemetry ASP.NET Core/HTTP/custom source registration. |
+| HTTP/RabbitMQ propagation | `[x]` | Gateway preserves the request parent; Product client and outbox producer spans propagate context; Notification creates a consumer span from the message `traceparent`. |
+| Optional backend and validation | `[x]` | `OTEL_EXPORTER_OTLP_ENDPOINT` is optional and documented; Compose trace root `11111111111111111111111111111111` crosses all participating services for Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c`. |
+
+## Phase 8.3 — Metrics and health
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Shared instruments | `[x]` | `MicroShopTelemetry` provides HTTP/dependency/order/reservation/notification counters plus outbox pending/dead-letter gauges with bounded labels. |
+| Health semantics | `[x]` | Liveness remains process-only; readiness includes dependency/backlog signals and becomes unhealthy during bounded shutdown. |
+| Validation | `[x]` | `ObservabilityTests` and `ServiceReadinessTests` pass; Release build/test and Compose config/rebuild/startup/health/API smoke pass. |
 
 ## Phase 1 — Product Service foundation
 

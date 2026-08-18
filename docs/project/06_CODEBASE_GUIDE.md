@@ -87,6 +87,8 @@ Phase 6.1 adds only runtime packaging under `deploy/docker/`. Dockerfiles restor
 
 - structured logging setup;
 - OpenTelemetry registration;
+- `MicroShopTelemetry` counters and ActivitySource;
+- request observability middleware with bounded entity scopes;
 - health endpoint mapping;
 - Problem Details helpers;
 - common JSON configuration;
@@ -371,7 +373,7 @@ Each process validates required options at startup. Missing Product Service addr
 - [ ] Failure path tested.
 - [ ] Cancellation token propagated.
 - [ ] Idempotency considered.
-- [ ] Logs contain trace/entity context without secrets.
+- [x] Logs contain trace/entity context without secrets.
 - [ ] OpenAPI/event contract updated.
 - [ ] Migration reviewed.
 - [ ] Angular states handled.

@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using MassTransit;
 using MicroShop.Contracts.Orders;
 using MicroShop.NotificationService.Persistence;
 using MicroShop.NotificationService.Persistence.Entities;
+using MicroShop.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -9,7 +11,8 @@ namespace MicroShop.NotificationService.Features.Messaging;
 
 public sealed partial class OrderConfirmedNotificationHandler(
     NotificationDbContext dbContext,
-    ILogger<OrderConfirmedNotificationHandler> logger)
+    ILogger<OrderConfirmedNotificationHandler> logger,
+    MicroShopServiceIdentity? identity = null)
 {
     public async Task HandleAsync(
         OrderConfirmedV1 message,
@@ -19,11 +22,20 @@ public sealed partial class OrderConfirmedNotificationHandler(
     {
         ArgumentNullException.ThrowIfNull(message);
         Validate(message, messageId);
+        using var logScope = MicroShopLogging.BeginScope(
+            logger,
+            identity,
+            Activity.Current,
+            orderId: message.OrderId,
+            messageId: messageId);
 
         if (await dbContext.ConsumedMessages.AnyAsync(
                 consumed => consumed.MessageId == messageId,
                 cancellationToken))
         {
+            MicroShopTelemetry.NotificationConsumeResults.Add(
+                1,
+                MicroShopTelemetry.Tags("order_confirmed", "duplicate"));
             LogDuplicate(messageId, message.OrderId);
             return;
         }
@@ -43,25 +55,45 @@ public sealed partial class OrderConfirmedNotificationHandler(
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            MicroShopTelemetry.NotificationConsumeResults.Add(
+                1,
+                MicroShopTelemetry.Tags("order_confirmed", "success"));
+            LogProcessed(messageId, message.OrderId);
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
             await transaction.RollbackAsync(CancellationToken.None);
+            MicroShopTelemetry.NotificationConsumeResults.Add(
+                1,
+                MicroShopTelemetry.Tags("order_confirmed", "duplicate_concurrent"));
             LogConcurrentDuplicate(exception, messageId, message.OrderId);
+        }
+        catch
+        {
+            MicroShopTelemetry.NotificationConsumeResults.Add(
+                1,
+                MicroShopTelemetry.Tags("order_confirmed", "failure"));
+            throw;
         }
     }
 
     [LoggerMessage(
         EventId = 5101,
         Level = LogLevel.Information,
-        Message = "Duplicate OrderConfirmedV1 suppressed. MessageId={MessageId} OrderId={OrderId}")]
+        Message = "Duplicate OrderConfirmedV1 suppressed. EventCode=NOTIFICATION_DUPLICATE_SUPPRESSED MessageId={MessageId} OrderId={OrderId}")]
     private partial void LogDuplicate(Guid messageId, Guid orderId);
 
     [LoggerMessage(
         EventId = 5102,
         Level = LogLevel.Information,
-        Message = "Concurrent duplicate OrderConfirmedV1 suppressed. MessageId={MessageId} OrderId={OrderId}")]
+        Message = "Concurrent duplicate OrderConfirmedV1 suppressed. EventCode=NOTIFICATION_DUPLICATE_CONCURRENT MessageId={MessageId} OrderId={OrderId}")]
     private partial void LogConcurrentDuplicate(Exception exception, Guid messageId, Guid orderId);
+
+    [LoggerMessage(
+        EventId = 5103,
+        Level = LogLevel.Information,
+        Message = "OrderConfirmedV1 notification processed. EventCode=NOTIFICATION_CONSUMED MessageId={MessageId} OrderId={OrderId}")]
+    private partial void LogProcessed(Guid messageId, Guid orderId);
 
     private static void Validate(OrderConfirmedV1 message, Guid messageId)
     {
@@ -96,13 +128,44 @@ public sealed class OrderConfirmedConsumer(OrderConfirmedNotificationHandler han
     public Task Consume(ConsumeContext<OrderConfirmedV1> context)
     {
         var messageId = context.MessageId ?? context.Message.MessageId;
-        var traceId = context.Headers.TryGetHeader("traceparent", out var traceParent)
-            ? traceParent?.ToString()
+        var traceParent = context.Headers.TryGetHeader("traceparent", out var traceParentHeader)
+            ? traceParentHeader?.ToString()
             : null;
+        using var activity = StartConsumerActivity(
+            traceParent,
+            messageId,
+            context.Message.OrderId);
         return handler.HandleAsync(
             context.Message,
             messageId,
-            traceId,
+            traceParent,
             context.CancellationToken);
+    }
+
+    private static Activity? StartConsumerActivity(
+        string? traceParent,
+        Guid messageId,
+        Guid orderId)
+    {
+        Activity? activity;
+        if (ActivityContext.TryParse(traceParent, null, isRemote: true, out var parentContext))
+        {
+            activity = MicroShopTelemetry.ActivitySource.StartActivity(
+                "microshop.order_confirmed.consume",
+                ActivityKind.Consumer,
+                parentContext);
+        }
+        else
+        {
+            activity = MicroShopTelemetry.ActivitySource.StartActivity(
+                "microshop.order_confirmed.consume",
+                ActivityKind.Consumer);
+        }
+
+        activity?.SetTag("messaging.system", "rabbitmq");
+        activity?.SetTag("messaging.operation.name", "process");
+        activity?.SetTag("messaging.message.id", messageId);
+        activity?.SetTag("microshop.order.id", orderId);
+        return activity;
     }
 }

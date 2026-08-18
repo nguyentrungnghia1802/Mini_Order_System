@@ -124,12 +124,11 @@ Phase 7 status: complete. Phase 7.1 implements the Order-owned transactional out
 
 ### Phase 8: Observability and quality
 
-- structured logs;
-- W3C trace propagation;
-- OpenTelemetry optional stack;
-- Playwright E2E;
-- CI container smoke tests;
-- integration with existing log monitoring optional.
+- 8.1 structured logs, service/environment/trace identifiers, bounded business identifiers, and stable event codes are implemented and Compose-verified;
+- 8.2 W3C trace propagation through Gateway, Order -> Product, and outbox/RabbitMQ -> Notification is implemented with OpenTelemetry registration and an optional OTLP endpoint;
+- 8.3 shared HTTP/dependency/outcome/outbox metrics plus liveness/readiness semantics are implemented and tested;
+- 8.4-8.7 centralized-log decision, Playwright E2E, failure-injection automation, and security/deployment review remain;
+- 8.8 documentation audit and 8.9 final CI/release gate remain.
 
 Learning objective: debugging distributed systems.
 

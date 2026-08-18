@@ -1045,39 +1045,57 @@ Evidence for 7.6:
 
 ## 8.1 Structured logging
 
-- [ ] Add consistent structured logging to all .NET processes.
-- [ ] Add `service.name`.
-- [ ] Add environment.
-- [ ] Add trace/span IDs.
-- [ ] Add Order ID where relevant.
-- [ ] Add reservation ID where relevant.
-- [ ] Add message ID where relevant.
-- [ ] Add stable error/event codes.
-- [ ] Ensure logs contain no secrets.
-- [ ] Ensure logs avoid full customer payloads.
+- [x] Add consistent structured logging to all .NET processes.
+- [x] Add `service.name`.
+- [x] Add environment.
+- [x] Add trace/span IDs.
+- [x] Add Order ID where relevant.
+- [x] Add reservation ID where relevant.
+- [x] Add message ID where relevant.
+- [x] Add stable error/event codes.
+- [x] Ensure logs contain no secrets.
+- [x] Ensure logs avoid full customer payloads.
+
+Evidence for 8.1:
+
+- `MicroShop.ServiceDefaults` configures JSON console scopes and shared `MicroShopRequestLog`, `MicroShopLogging`, and service identity helpers. Product, Order, Notification, and Gateway all register the shared defaults and request middleware.
+- Domain/background logs use bounded identifiers and stable codes such as `ORDER_CONFIRMED`, `INVENTORY_RESERVATION_RESULT`, `ORDER_OUTBOX_PUBLISH_FAILED`, and `NOTIFICATION_CONSUMED`; customer request bodies and credentials are not logged. Compose logs show `service.name`, `deployment.environment`, `trace.id`, `span.id`, `order.id`, `reservation.id`, and `message.id` on the relevant operations.
+- Validation: `tests/MicroShop.Gateway.Tests/ObservabilityTests.cs`, full .NET suite (111 tests passed), `docker compose ... config`, and the confirmed-order Compose smoke with trace root `11111111111111111111111111111111` and Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c`.
 
 ## 8.2 Distributed tracing
 
-- [ ] Propagate W3C `traceparent` through Gateway.
-- [ ] Propagate trace context Order -> Product.
-- [ ] Propagate trace context through RabbitMQ.
-- [ ] Connect consumer spans.
-- [ ] Add OpenTelemetry registration.
-- [ ] Add optional collector/trace backend.
-- [ ] Verify one Order trace crosses all participating services.
+- [x] Propagate W3C `traceparent` through Gateway.
+- [x] Propagate trace context Order -> Product.
+- [x] Propagate trace context through RabbitMQ.
+- [x] Connect consumer spans.
+- [x] Add OpenTelemetry registration.
+- [x] Add optional collector/trace backend.
+- [x] Verify one Order trace crosses all participating services.
+
+Evidence for 8.2:
+
+- Gateway preserves the incoming W3C parent; Order creates a Product client span and forwards its W3C context; the outbox dispatcher creates a producer span and stores the propagated context in the RabbitMQ message; Notification creates a linked consumer span.
+- `OpenTelemetry.Extensions.Hosting`, ASP.NET Core/HTTP instrumentation, and OTLP exporter registration are centralized in `MicroShop.ServiceDefaults`. `OTEL_EXPORTER_OTLP_ENDPOINT` is optional and empty by default, so local operation remains independent of an external collector.
+- `ObservabilityTests` verifies W3C identity and consumer-span parentage. Compose smoke evidence: trace root `11111111111111111111111111111111` is present in Gateway `/api/orders` request logs, Order confirmation/Product reservation logs, Order outbox producer scopes, and Notification consumer logs for Message `29dabbca-e878-4646-bce9-98511b37ea45`.
 
 ## 8.3 Metrics and health
 
-- [ ] Add HTTP request metrics.
-- [ ] Add Product client dependency metrics.
-- [ ] Add Order outcome counters.
-- [ ] Add reservation result counters.
-- [ ] Add outbox pending/failure metrics.
-- [ ] Add Notification consume result counters.
-- [ ] Avoid high-cardinality labels.
-- [ ] Review all liveness checks.
-- [ ] Review all readiness checks.
-- [ ] Ensure dependency failure does not incorrectly fail liveness.
+- [x] Add HTTP request metrics.
+- [x] Add Product client dependency metrics.
+- [x] Add Order outcome counters.
+- [x] Add reservation result counters.
+- [x] Add outbox pending/failure metrics.
+- [x] Add Notification consume result counters.
+- [x] Avoid high-cardinality labels.
+- [x] Review all liveness checks.
+- [x] Review all readiness checks.
+- [x] Ensure dependency failure does not incorrectly fail liveness.
+
+Evidence for 8.3:
+
+- `MicroShopTelemetry` registers bounded counters for HTTP/dependency/order/reservation/notification/outbox outcomes and observable outbox pending/dead-letter gauges. Labels are limited to operation/result values; identifiers are kept in logs, not metric dimensions.
+- `ServiceDefaultsExtensions` registers ASP.NET Core and custom meters. `ApplicationLifecycleHealthCheck` keeps liveness process-only and makes readiness unhealthy during shutdown; dependency checks remain readiness signals.
+- `ObservabilityTests` verifies the custom instrument names and bounded tags. `ServiceReadinessTests` covers lifecycle behavior; Release build and full .NET suite passed 111 tests; Compose `config`, image rebuild, startup, health checks, and API smoke passed.
 
 ## 8.4 Centralized log integration
 
