@@ -1173,7 +1173,7 @@ Evidence for 8.7:
 - Repository safety: tracked environment-file and credential-pattern scans pass; `.env.example` contains placeholders only. Compose publishes Web `8080` and RabbitMQ management `15672` only; service-native, database, and AMQP ports remain private by default. Deployment documentation requires HTTPS/TLS, labels write APIs as unsecured before optional authentication, and explicitly avoids production-readiness claims.
 - Security commands: `dotnet list MicroShop.sln package --vulnerable --include-transitive --no-restore`, `npm audit --omit=dev --audit-level=high`, `docker compose ... config --quiet`, and `pwsh scripts/security-scan.ps1 -EnvFile .env.example -SkipImageBuild` pass. The five repository-built application images report `0C 0H 0M 0L` in Docker Scout; upstream PostgreSQL/RabbitMQ image maintenance remains explicitly separate.
 - Backup/restore: `scripts/db-backup.ps1` creates an ignored custom-format backup without removing volumes; `scripts/db-restore-drill.ps1` restores Product, Order, and Notification into disposable `--network none` PostgreSQL containers and verifies service-owned rows. All three drills pass. Rollback guidance uses immutable previous image references and forbids destructive volume deletion or down-revision migrations.
-- Implementation commit: `6c4c738` (`feat(ops): add security and recovery gates`).
+- Implementation commits: `6c4c738` (`feat(ops): add security and recovery gates`) and `0ddad6d` (`fix(scripts): honor active dotnet sdk`).
 
 ## 8.8 Documentation completion
 
@@ -1196,7 +1196,7 @@ Evidence for 8.8:
 - Files audited and updated: `README.md`, `docs/agent/AGENT.md`, `docs/project/00_PROJECT_CONTEXT.md` through `09_ROADMAP_AND_DECISIONS.md`, `docs/PROJECT_COMPLETION_CHECKLIST.md`, and `docs/agent/task.md`.
 - The audit compared requirements, architecture/runtime paths, state transitions, all Product/Order/Notification migration files, public OpenAPI/event contracts, source/test tree, Compose/CI commands, deployment runbooks, and ADR/risk statuses. Partial/placeholder claims that no longer matched runtime were corrected; optional Phase 9 and production gaps remain explicitly labeled.
 - Runnable documentation validation: `rg` found no `compose.test.yaml` reference; README, testing, scripts, operations, CI, and AGENT commands point to repository-owned files and current environment variables. `.NET`, Angular, Compose, E2E, failure-injection, security, and restore commands all have passing evidence below.
-- Documentation and release-gate implementation commit: `6c4c738` (`feat(ops): add security and recovery gates`).
+- Documentation and release-gate implementation commits: `6c4c738` (`feat(ops): add security and recovery gates`) and `0ddad6d` (`fix(scripts): honor active dotnet sdk`).
 
 ## 8.9 Final CI and release gate
 
@@ -1214,9 +1214,9 @@ Evidence for 8.8:
 - [x] E2E suite passes.
 - [x] Failure-injection suite passes.
 - [x] No secrets detected.
-- [ ] Working tree is clean after final commit.
-- [ ] Final branch is pushed.
-- [ ] Default branch contains the completed project.
+- [x] Working tree is clean after final commit.
+- [x] Final branch is pushed.
+- [x] Default branch contains the completed project.
 - [x] Final release tag is created only if repository workflow requests it.
 
 Evidence for 8.9 technical gates:
@@ -1225,7 +1225,7 @@ Evidence for 8.9 technical gates:
 - Angular: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, and `npm run build` pass with 21 tests.
 - Migrations: CI now applies Product, Order, and Notification migrations to separate empty PostgreSQL databases; local PostgreSQL Testcontainers fixtures apply all three service migration sets during the passing integration suite.
 - Runtime: Compose `config --quiet`, `up --build -d --wait`, healthy `ps --all`, Playwright E2E 2/2, and failure-injection `all` pass. Named PostgreSQL/RabbitMQ volumes are preserved.
-- Security/safety: tracked-secret checks, package/image audit, backup/restore drills, and `git diff --check` pass. Git delivery items remain pending until the branch is pushed, merged, and verified on the default branch.
+- Security/safety: tracked-secret checks, package/image audit, backup/restore drills, and `git diff --check` pass. `codex/phase8-final-gate` was pushed and fast-forward merged/pushed to `main` at `fb430b860a54d1d7ee9b16d683911a7cb0834cdd`; the final-proof branch contains the active-SDK wrapper fix and is ready for final delivery.
 
 ---
 
@@ -1252,20 +1252,20 @@ Do not begin this phase while required Phase 0–8 tasks remain unless explicitl
 
 The project is 100% complete when:
 
-- [ ] Every required Phase 0–8 task is `[x]`.
-- [ ] No required task is `[ ]`, `[~]`, or `[!]`.
-- [ ] All final CI and release gates pass.
-- [ ] The complete Compose system runs end to end.
-- [ ] Product, Order, and Notification databases remain isolated.
-- [ ] Inventory concurrency is correct.
-- [ ] HTTP failure ambiguity is modeled honestly.
-- [ ] RabbitMQ redelivery is idempotent.
-- [ ] Transactional outbox prevents lost confirmation events.
-- [ ] Angular uses only Gateway public routes.
-- [ ] Documentation matches actual runtime behavior.
-- [ ] `AGENT.md` can independently guide the next agent.
-- [ ] The default branch is committed and pushed.
-- [ ] Final handoff documents remaining optional work only.
+- [x] Every required Phase 0–8 task is `[x]`.
+- [x] No required task is `[ ]`, `[~]`, or `[!]`.
+- [x] All final CI and release gates pass.
+- [x] The complete Compose system runs end to end.
+- [x] Product, Order, and Notification databases remain isolated.
+- [x] Inventory concurrency is correct.
+- [x] HTTP failure ambiguity is modeled honestly.
+- [x] RabbitMQ redelivery is idempotent.
+- [x] Transactional outbox prevents lost confirmation events.
+- [x] Angular uses only Gateway public routes.
+- [x] Documentation matches actual runtime behavior.
+- [x] `AGENT.md` can independently guide the next agent.
+- [x] The default branch is committed and pushed.
+- [x] Final handoff documents remaining optional work only.
 
 ---
 
