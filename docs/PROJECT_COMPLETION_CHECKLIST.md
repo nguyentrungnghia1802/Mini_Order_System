@@ -194,7 +194,7 @@ Optional Phase 9 authentication/authorization, only if the learning objective la
 | --- | --- | --- |
 | Local quality gates | `[x]` | `git diff --check`, `dotnet format --verify-no-changes`, Release restore/build/test, Angular `npm ci`/lint/test/build, and all three empty-database migration checks pass. |
 | Runtime quality gates | `[x]` | Application image builds, Compose config/startup/health, Playwright E2E 2/2, failure-injection `all`, security scan, and three database restore drills pass. |
-| Git delivery | `[x]` | Required commits are pushed, default branch contains the completed release, and only merged no-value task branches are eligible for final cleanup. No release tag is created because repository workflow does not request one. |
+| Git delivery | `[~]` | `6c4c738` contains the completed implementation/documentation slice; task-branch push, default-branch merge/push, and final branch cleanup remain the current delivery step. No release tag is created because repository workflow does not request one. |
 
 ## Phase 1 — Product Service foundation
 

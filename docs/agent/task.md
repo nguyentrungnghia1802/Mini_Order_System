@@ -1173,7 +1173,7 @@ Evidence for 8.7:
 - Repository safety: tracked environment-file and credential-pattern scans pass; `.env.example` contains placeholders only. Compose publishes Web `8080` and RabbitMQ management `15672` only; service-native, database, and AMQP ports remain private by default. Deployment documentation requires HTTPS/TLS, labels write APIs as unsecured before optional authentication, and explicitly avoids production-readiness claims.
 - Security commands: `dotnet list MicroShop.sln package --vulnerable --include-transitive --no-restore`, `npm audit --omit=dev --audit-level=high`, `docker compose ... config --quiet`, and `pwsh scripts/security-scan.ps1 -EnvFile .env.example -SkipImageBuild` pass. The five repository-built application images report `0C 0H 0M 0L` in Docker Scout; upstream PostgreSQL/RabbitMQ image maintenance remains explicitly separate.
 - Backup/restore: `scripts/db-backup.ps1` creates an ignored custom-format backup without removing volumes; `scripts/db-restore-drill.ps1` restores Product, Order, and Notification into disposable `--network none` PostgreSQL containers and verifies service-owned rows. All three drills pass. Rollback guidance uses immutable previous image references and forbids destructive volume deletion or down-revision migrations.
-- Implementation commit: pending Phase 8.7 delivery commit.
+- Implementation commit: `6c4c738` (`feat(ops): add security and recovery gates`).
 
 ## 8.8 Documentation completion
 
@@ -1196,7 +1196,7 @@ Evidence for 8.8:
 - Files audited and updated: `README.md`, `docs/agent/AGENT.md`, `docs/project/00_PROJECT_CONTEXT.md` through `09_ROADMAP_AND_DECISIONS.md`, `docs/PROJECT_COMPLETION_CHECKLIST.md`, and `docs/agent/task.md`.
 - The audit compared requirements, architecture/runtime paths, state transitions, all Product/Order/Notification migration files, public OpenAPI/event contracts, source/test tree, Compose/CI commands, deployment runbooks, and ADR/risk statuses. Partial/placeholder claims that no longer matched runtime were corrected; optional Phase 9 and production gaps remain explicitly labeled.
 - Runnable documentation validation: `rg` found no `compose.test.yaml` reference; README, testing, scripts, operations, CI, and AGENT commands point to repository-owned files and current environment variables. `.NET`, Angular, Compose, E2E, failure-injection, security, and restore commands all have passing evidence below.
-- Implementation commit: pending Phase 8.8 documentation delivery commit.
+- Documentation and release-gate implementation commit: `6c4c738` (`feat(ops): add security and recovery gates`).
 
 ## 8.9 Final CI and release gate
 
