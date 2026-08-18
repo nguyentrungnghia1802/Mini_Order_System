@@ -162,7 +162,7 @@ public static class OrderEndpoints
         return Results.Ok(ToResponse(outcome.Order));
     }
 
-    private static OrderResponse ToResponse(Order order)
+    internal static OrderResponse ToResponse(Order order)
     {
         return new OrderResponse(
             order.Id,

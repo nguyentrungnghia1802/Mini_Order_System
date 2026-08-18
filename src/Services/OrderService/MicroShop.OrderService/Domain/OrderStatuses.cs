@@ -39,6 +39,8 @@ public static class OrderStatuses
             (PendingInventory, Confirmed) => true,
             (PendingInventory, Rejected) => true,
             (PendingInventory, InventoryUnknown) => true,
+            (InventoryUnknown, Confirmed) => true,
+            (InventoryUnknown, Rejected) => true,
             (Confirmed, CancellationPending) => true,
             (Confirmed, Cancelled) => true,
             (CancellationPending, Cancelled) => true,

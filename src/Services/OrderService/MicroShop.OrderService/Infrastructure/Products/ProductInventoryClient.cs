@@ -136,6 +136,66 @@ public sealed partial class ProductInventoryClient(
         }
     }
 
+    public async Task<ProductReservationLookupResult> GetReservationByOrderAsync(
+        ProductReservationLookupRequest request,
+        CancellationToken cancellationToken)
+    {
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"internal/v1/inventory/reservations/by-order/{request.OrderId:D}");
+        AddTraceParent(httpRequest, request.TraceParent);
+
+        using var timeout = new CancellationTokenSource(serviceOptions.Timeout);
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            timeout.Token);
+
+        try
+        {
+            using var response = await httpClient.SendAsync(
+                httpRequest,
+                HttpCompletionOption.ResponseHeadersRead,
+                linkedCancellation.Token);
+            var body = await response.Content.ReadAsStringAsync(linkedCancellation.Token);
+            if (response.IsSuccessStatusCode)
+            {
+                return ParseReservationLookupResponse(request.OrderId, body);
+            }
+
+            return MapReservationLookupProblem(response.StatusCode, body);
+        }
+        catch (OperationCanceledException) when (
+            !cancellationToken.IsCancellationRequested
+            && timeout.IsCancellationRequested)
+        {
+            ReservationLookupTimedOut(request.OrderId);
+            return new ProductReservationLookupResult(
+                ProductReservationFailure.OutcomeUnknown,
+                null,
+                null,
+                null,
+                [],
+                0,
+                null,
+                null,
+                "The Product reservation lookup outcome could not be determined before the timeout.");
+        }
+        catch (HttpRequestException exception)
+        {
+            ReservationLookupUnavailable(exception, request.OrderId);
+            return new ProductReservationLookupResult(
+                ProductReservationFailure.DependencyUnavailable,
+                null,
+                null,
+                null,
+                [],
+                0,
+                null,
+                null,
+                "The Product Service is unavailable.");
+        }
+    }
+
     private static ProductReservationResult ParseReservationResponse(
         Guid requestedOrderId,
         HttpStatusCode statusCode,
@@ -202,6 +262,49 @@ public sealed partial class ProductInventoryClient(
         }
     }
 
+    private static ProductReservationLookupResult ParseReservationLookupResponse(
+        Guid requestedOrderId,
+        string body)
+    {
+        try
+        {
+            var response = JsonSerializer.Deserialize<ProductReservationQueryResponseDto>(body, JsonOptions);
+            if (response is null
+                || response.OrderId != requestedOrderId
+                || response.ReservationId == Guid.Empty
+                || response.Status is not ("reserved" or "released")
+                || !string.Equals(response.Currency, "VND", StringComparison.Ordinal)
+                || response.Items is null
+                || response.Items.Count == 0
+                || response.TotalAmount < 0)
+            {
+                return InvalidReservationLookupResponse();
+            }
+
+            return new ProductReservationLookupResult(
+                ProductReservationFailure.None,
+                response.ReservationId,
+                response.Status,
+                response.Currency,
+                response.Items
+                    .Select(item => new ProductReservationSnapshot(
+                        item.ProductId,
+                        item.ProductName,
+                        item.UnitPrice,
+                        item.Quantity,
+                        item.Subtotal))
+                    .ToArray(),
+                response.TotalAmount,
+                response.CreatedAtUtc,
+                response.ReleasedAtUtc,
+                null);
+        }
+        catch (JsonException)
+        {
+            return InvalidReservationLookupResponse();
+        }
+    }
+
     private static ProductReservationResult MapReservationProblem(
         HttpStatusCode statusCode,
         string body)
@@ -242,6 +345,30 @@ public sealed partial class ProductInventoryClient(
             _ => ProductReservationFailure.InvalidResponse
         };
         return new ProductReleaseResult(failure, null, problem.Detail, false);
+    }
+
+    private static ProductReservationLookupResult MapReservationLookupProblem(
+        HttpStatusCode statusCode,
+        string body)
+    {
+        var problem = ReadProblem(body);
+        var failure = problem.Code switch
+        {
+            "RESERVATION_NOT_FOUND" => ProductReservationFailure.ReservationNotFound,
+            _ when statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => ProductReservationFailure.OutcomeUnknown,
+            _ when (int)statusCode >= 500 => ProductReservationFailure.DependencyUnavailable,
+            _ => ProductReservationFailure.InvalidResponse
+        };
+        return new ProductReservationLookupResult(
+            failure,
+            null,
+            null,
+            null,
+            [],
+            0,
+            null,
+            null,
+            problem.Detail ?? "The Product reservation lookup did not return a usable outcome.");
     }
 
     private static ProblemResponse ReadProblem(string body)
@@ -329,6 +456,20 @@ public sealed partial class ProductInventoryClient(
             false);
     }
 
+    private static ProductReservationLookupResult InvalidReservationLookupResponse()
+    {
+        return new ProductReservationLookupResult(
+            ProductReservationFailure.InvalidResponse,
+            null,
+            null,
+            null,
+            [],
+            0,
+            null,
+            null,
+            "The Product Service returned an invalid reservation lookup response.");
+    }
+
     private static void AddTraceParent(HttpRequestMessage request, string? traceParent)
     {
         if (!string.IsNullOrWhiteSpace(traceParent))
@@ -360,6 +501,16 @@ public sealed partial class ProductInventoryClient(
         bool IdempotentReplay,
         DateTimeOffset? ReleasedAtUtc);
 
+    private sealed record ProductReservationQueryResponseDto(
+        Guid ReservationId,
+        Guid OrderId,
+        string Status,
+        string Currency,
+        decimal TotalAmount,
+        IReadOnlyList<ProductReservationItemResponseDto>? Items,
+        DateTimeOffset CreatedAtUtc,
+        DateTimeOffset? ReleasedAtUtc);
+
     private sealed record ProblemResponse(
         string? Code,
         string? Detail,
@@ -389,4 +540,16 @@ public sealed partial class ProductInventoryClient(
         Level = LogLevel.Warning,
         Message = "Product release dependency was unavailable for order {OrderId}")]
     private partial void ReleaseUnavailable(Exception exception, Guid orderId);
+
+    [LoggerMessage(
+        EventId = 3105,
+        Level = LogLevel.Warning,
+        Message = "Product reservation lookup timed out for order {OrderId}")]
+    private partial void ReservationLookupTimedOut(Guid orderId);
+
+    [LoggerMessage(
+        EventId = 3106,
+        Level = LogLevel.Warning,
+        Message = "Product reservation lookup dependency was unavailable for order {OrderId}")]
+    private partial void ReservationLookupUnavailable(Exception exception, Guid orderId);
 }

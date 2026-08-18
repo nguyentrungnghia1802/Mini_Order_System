@@ -36,7 +36,13 @@ public sealed class Order
 
     public ICollection<OrderItem> Items { get; private set; } = new List<OrderItem>();
 
+    public ICollection<OrderInventoryRequestItem> InventoryRequestItems { get; private set; }
+        = new List<OrderInventoryRequestItem>();
+
     public ICollection<OrderStateHistory> StateHistory { get; private set; } = new List<OrderStateHistory>();
+
+    public ICollection<OrderReconciliationAudit> ReconciliationAudits { get; private set; }
+        = new List<OrderReconciliationAudit>();
 
     public static Order Create(
         Guid id,
@@ -103,6 +109,19 @@ public sealed class Order
         RecalculateTotal();
     }
 
+    public void AddInventoryRequestItem(OrderInventoryRequestItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (InventoryRequestItems.Any(existing => existing.ProductId == item.ProductId))
+        {
+            throw new InvalidOperationException("An order cannot contain duplicate inventory request Product IDs.");
+        }
+
+        item.AttachTo(this);
+        InventoryRequestItems.Add(item);
+    }
+
     public void RecalculateTotal()
     {
         TotalAmount = decimal.Round(
@@ -120,6 +139,13 @@ public sealed class Order
 
         FailureCode = code.Trim();
         FailureDetail = string.IsNullOrWhiteSpace(detail) ? null : detail.Trim();
+        UpdatedAtUtc = now;
+    }
+
+    public void ClearFailure(DateTimeOffset now)
+    {
+        FailureCode = null;
+        FailureDetail = null;
         UpdatedAtUtc = now;
     }
 

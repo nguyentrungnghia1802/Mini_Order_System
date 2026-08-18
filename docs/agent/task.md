@@ -988,14 +988,22 @@ Evidence for 7.3:
 
 ## 7.4 Reconciliation
 
-- [ ] Add internal/manual reconciliation path for `inventory_unknown`.
-- [ ] Query Product reservation by order ID.
-- [ ] Reconcile known existing reservation to confirmed Order.
-- [ ] Reconcile known absent reservation safely.
-- [ ] Add reconciliation audit/history.
-- [ ] Add reconciliation tests.
-- [ ] Add `cancellation_pending` reconciliation.
-- [ ] Document runbook.
+- [x] Add internal/manual reconciliation path for `inventory_unknown`.
+- [x] Query Product reservation by order ID.
+- [x] Reconcile known existing reservation to confirmed Order.
+- [x] Reconcile known absent reservation safely.
+- [x] Add reconciliation audit/history.
+- [x] Add reconciliation tests.
+- [x] Add `cancellation_pending` reconciliation.
+- [x] Document runbook.
+
+Evidence for 7.4:
+
+- Files: `Features/Reconciliation/OrderReconciliationService.cs`, `Features/Reconciliation/ReconciliationEndpoints.cs`, `Infrastructure/Products/ProductInventoryClient.cs`, `Persistence/Entities/OrderInventoryRequestItem.cs`, `Persistence/Entities/OrderReconciliationAudit.cs`, `Persistence/Migrations/20260818044623_AddOrderReconciliation.cs`, and `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md`.
+- Behavior: `POST /internal/v1/reconciliation/orders/{orderId}` is an Order-native manual path and is not mapped by the Gateway. It queries Product's order-keyed reservation state, matches the persisted inventory intent against Product-authoritative snapshots before confirming, rejects a known absent/released reservation safely, records every outcome in `order_reconciliation_audits`, and handles both `inventory_unknown` and `cancellation_pending` without blind repeated compensation.
+- Tests: `ProductInventoryClientTests` covers lookup request/response/error mapping; `OrderReconciliationTests` covers matching reservation confirmation plus outbox, absent reservation rejection, cancellation with absent reservation, cancellation after release, dependency-unavailable pending state, and mismatch conflict; `OrderApiTests.InternalReconciliationRouteRejectsUnknownOrderWhenReservationIsAbsent` covers the internal HTTP route. The Order suite has 55 passing tests.
+- Commands: `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `dotnet build tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `git diff --check`.
+- Notes: The migration adds only Order-owned request-intent and audit tables with local foreign keys. Confirming through reconciliation writes the Order, audit, and transactional outbox in the same save; dependency or snapshot conflicts leave the ambiguous state intact for a later controlled retry.
 
 ## 7.5 Resilience policies
 

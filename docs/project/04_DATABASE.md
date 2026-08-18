@@ -236,6 +236,38 @@ Recommended even in a learning project because it makes flows visible.
 | `trace_id` | diagnostic |
 | `occurred_at_utc` | required |
 
+### `order_inventory_request_items`
+
+This Order-owned table stores the Product ID and quantity requested before the remote reservation call. It is the reconciliation intent and does not copy Product entities or read the Product database.
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `order_id` | uuid | local FK, cascade with Order |
+| `product_id` | uuid | external semantic reference |
+| `quantity` | integer | positive |
+
+There is a unique `(order_id, product_id)` constraint and a Product-ID lookup index.
+
+### `order_reconciliation_audits`
+
+Every controlled reconciliation attempt is append-only audit history owned by Order.
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `order_id` | uuid | local FK, cascade with Order |
+| `operation` | varchar(32) | `inventory` or `cancellation` |
+| `from_status` / `to_status` | varchar(32) | Order state transition context |
+| `reservation_status` | varchar(32) | nullable Product observation |
+| `reservation_id` | uuid | nullable |
+| `outcome` | varchar(64) | stable reconciliation outcome |
+| `detail` | varchar(1000) | nullable, sanitized |
+| `trace_id` | varchar(128) | nullable |
+| `occurred_at_utc` | timestamptz | required |
+
+The migration `20260818044623_AddOrderReconciliation` creates both tables and does not add any cross-service foreign key.
+
 ### `outbox_messages`
 
 The executable Phase 7.1 schema is:

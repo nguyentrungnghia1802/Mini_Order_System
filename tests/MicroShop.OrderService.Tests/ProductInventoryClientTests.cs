@@ -101,6 +101,104 @@ public sealed class ProductInventoryClientTests
     }
 
     [Fact]
+    public async Task LookupSendsOrderIdentityAndParsesReservedReservation()
+    {
+        var orderId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var createdAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var handler = new StubHandler((request, _) =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal(
+                $"http://product.test/internal/v1/inventory/reservations/by-order/{orderId:D}",
+                request.RequestUri!.ToString());
+            Assert.Equal(
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+                request.Headers.GetValues("traceparent").Single());
+            return Task.FromResult(JsonResponse(
+                HttpStatusCode.OK,
+                new
+                {
+                    reservationId,
+                    orderId,
+                    status = "reserved",
+                    currency = "VND",
+                    totalAmount = 250_000m,
+                    items = new[]
+                    {
+                        new
+                        {
+                            productId,
+                            productName = "Keyboard",
+                            unitPrice = 125_000m,
+                            quantity = 2,
+                            subtotal = 250_000m
+                        }
+                    },
+                    createdAtUtc,
+                    releasedAtUtc = (DateTimeOffset?)null
+                }));
+        });
+        var client = CreateClient(handler);
+
+        var result = await client.GetReservationByOrderAsync(
+            new ProductReservationLookupRequest(
+                orderId,
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(reservationId, result.ReservationId);
+        Assert.Equal("reserved", result.Status);
+        Assert.Equal("VND", result.Currency);
+        Assert.Equal(createdAtUtc, result.CreatedAtUtc);
+        Assert.Equal(250_000m, result.TotalAmount);
+        Assert.Equal(productId, Assert.Single(result.Items).ProductId);
+    }
+
+    [Fact]
+    public async Task LookupMapsReservationNotFoundProblem()
+    {
+        var orderId = Guid.NewGuid();
+        var handler = new StubHandler((_, _) => Task.FromResult(JsonResponse(
+            HttpStatusCode.NotFound,
+            new
+            {
+                title = "Reservation not found",
+                status = 404,
+                detail = "No reservation exists for this order.",
+                code = "RESERVATION_NOT_FOUND"
+            })));
+        var client = CreateClient(handler);
+
+        var result = await client.GetReservationByOrderAsync(
+            new ProductReservationLookupRequest(orderId, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsReservationMissing);
+        Assert.Equal(ProductReservationFailure.ReservationNotFound, result.Failure);
+        Assert.Equal("No reservation exists for this order.", result.Detail);
+    }
+
+    [Fact]
+    public async Task LookupRejectsMalformedSuccessfulResponse()
+    {
+        var handler = new StubHandler((_, _) => Task.FromResult(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"status\":\"reserved\"}")
+            }));
+        var client = CreateClient(handler);
+
+        var result = await client.GetReservationByOrderAsync(
+            new ProductReservationLookupRequest(Guid.NewGuid(), null),
+            CancellationToken.None);
+
+        Assert.Equal(ProductReservationFailure.InvalidResponse, result.Failure);
+    }
+
+    [Fact]
     public async Task ReserveMapsProductBusinessProblemDetails()
     {
         var productId = Guid.NewGuid();

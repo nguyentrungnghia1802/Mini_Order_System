@@ -25,6 +25,12 @@ public sealed class OrderApplicationService(
             request.CustomerEmail!.Trim(),
             now);
 
+        foreach (var item in request.Items!)
+        {
+            order.AddInventoryRequestItem(
+                OrderInventoryRequestItem.Create(item.ProductId, item.Quantity));
+        }
+
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
 

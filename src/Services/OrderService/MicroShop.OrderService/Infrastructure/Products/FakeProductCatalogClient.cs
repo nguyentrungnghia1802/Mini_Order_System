@@ -112,4 +112,21 @@ public sealed class FakeProductCatalogClient : IProductCatalogClient, IProductIn
             null,
             false));
     }
+
+    public Task<ProductReservationLookupResult> GetReservationByOrderAsync(
+        ProductReservationLookupRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new ProductReservationLookupResult(
+            ProductReservationFailure.ReservationNotFound,
+            null,
+            null,
+            null,
+            [],
+            0,
+            null,
+            null,
+            "The deterministic fake Product catalog does not persist reservations."));
+    }
 }

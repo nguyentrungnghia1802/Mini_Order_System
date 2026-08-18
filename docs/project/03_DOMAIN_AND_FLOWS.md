@@ -257,6 +257,14 @@ Flow:
 
 Because reserve is idempotent by order ID, a controlled reconciliation may repeat the same request and receive the existing result.
 
+### Controlled reconciliation
+
+Order persists the original Product ID/quantity intent before the remote reservation call. A local/manual operator can call the Order-native `POST /internal/v1/reconciliation/orders/{orderId}` path for an `inventory_unknown` or `cancellation_pending` order. The handler queries Product by the stable Order ID and records an audit row containing the operation, before/after Order states, reservation identity/state, outcome, detail, trace ID, and UTC timestamp.
+
+For `inventory_unknown`, a reserved response is accepted only when every Product ID, quantity, currency, product snapshot, subtotal, and total matches the persisted intent and Order limits. A matching reservation transitions the Order to `confirmed` and writes the `OrderConfirmedV1` outbox row in the same Order database save. A confirmed absent or already released reservation transitions to `rejected`; a dependency outage, malformed response, or mismatch leaves the Order in `inventory_unknown` and records a conflict/pending audit instead.
+
+For `cancellation_pending`, an absent or released reservation is safely treated as already compensated. A still-reserved reservation receives the idempotent Product release command once; only a known successful release transitions the Order to `cancelled`. Unknown release outcomes remain `cancellation_pending`. The Gateway does not expose this internal route.
+
 ## 14. Duplicate reservation request flow
 
 Given Product Service receives the same `orderId` again:

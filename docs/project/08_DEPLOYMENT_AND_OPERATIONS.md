@@ -431,10 +431,22 @@ If database migration is destructive, restore from backup rather than improvisin
 ### Order is `inventory_unknown`
 
 - do not manually mark confirmed immediately;
-- query Product reservation by order ID;
-- if identical reservation exists, reconcile Order from authoritative snapshot;
-- if no reservation and Product is healthy, retry same idempotent reservation;
-- record reconciliation evidence.
+- keep the Order Service and Product Service available and query Product through `GET /internal/v1/inventory/reservations/by-order/{orderId}`;
+- call the Order-native `POST /internal/v1/reconciliation/orders/{orderId}` manual path;
+- if an identical `reserved` response exists, the handler verifies the stored Product ID/quantity intent, Product snapshots, currency, subtotals, total, and order limit before confirming;
+- if Product returns `404 RESERVATION_NOT_FOUND` or a known `released` reservation, the handler rejects the Order safely without adding an outbox event;
+- if Product is unavailable, the response is `503` and the Order remains `inventory_unknown`; retry the same controlled reconciliation later;
+- if the response is malformed or mismatched, stop and investigate the audit row rather than guessing;
+- inspect `order_reconciliation_audits` by `order_id` and retain the trace ID and reservation ID in the incident note.
+
+### Order is `cancellation_pending`
+
+- do not send repeated blind release commands from a shell;
+- call `POST /internal/v1/reconciliation/orders/{orderId}`;
+- an absent or already `released` Product reservation is safely recorded and moves the Order to `cancelled`;
+- a `reserved` response causes one idempotent Product release attempt; only a known successful release moves the Order to `cancelled`;
+- dependency/timeout/invalid outcomes remain `cancellation_pending` and produce an audit row for the next controlled attempt;
+- the reconciliation route is not routed by the public Gateway and has no browser UI in the baseline.
 
 ### Confirmed order has no notification
 

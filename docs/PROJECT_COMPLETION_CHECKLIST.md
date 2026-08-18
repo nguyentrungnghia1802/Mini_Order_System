@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.3 outbox operations plus Notification inbox hardening, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.4 outbox operations, Notification inbox hardening, and controlled reconciliation, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -45,7 +45,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Remaining Phase 7.4-7.6 reconciliation and resilience policies.
+- Remaining Phase 7.5-7.6 resilience policies and the final gate.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 7.4 — add internal reconciliation for `inventory_unknown` and `cancellation_pending`.
+Phase 7.5 — add bounded shutdown/resilience policies and readiness transitions.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -88,6 +88,16 @@ Phase 7.4 — add internal reconciliation for `inventory_unknown` and `cancellat
 | Concurrent duplicate redelivery | `[x]` | Eight independent PostgreSQL contexts process one MessageId concurrently; the inbox primary key and source-message unique index leave one inbox row and one Notification. |
 | Restart and retry policy | `[x]` | Notification retry count/delay are bounded/configurable; RabbitMQ integration publishes, restarts the Notification host, redelivers the same MessageId, and verifies no duplicate side effect. |
 | Retention decision | `[x]` | No cleanup worker is justified for the small demo database; retained inbox/notification history follows the documented demo retention policy and production personal-data retention remains deployment-specific. |
+
+## Phase 7.4 — Controlled reconciliation
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Internal/manual route | `[x]` | Order maps `POST /internal/v1/reconciliation/orders/{orderId}`; Gateway has no `/internal/*` route. `OrderApiTests.InternalReconciliationRouteRejectsUnknownOrderWhenReservationIsAbsent` passes. |
+| Reservation lookup and intent | `[x]` | Product exposes an order-keyed query; Order persists `order_inventory_request_items` and validates Product reservation identity, state, snapshots, quantities, subtotals, currency, and total before confirmation. |
+| Safe inventory/cancellation outcomes | `[x]` | Known absent/released inventory becomes rejected; matching inventory becomes confirmed with the outbox; absent/released cancellation becomes cancelled; reserved cancellation uses one idempotent release; unknown outcomes remain pending. |
+| Audit and migration | `[x]` | `OrderReconciliationAudit`, `order_reconciliation_audits`, and `20260818044623_AddOrderReconciliation` are Order-owned and use only local foreign keys. |
+| Tests | `[x]` | 55 Order tests pass, including lookup mapping, matching/absent/mismatched inventory, dependency-unavailable pending state, cancellation reconciliation, audit history, and outbox confirmation. |
 
 ## Phase 1 — Product Service foundation
 

@@ -9,6 +9,10 @@ public interface IProductInventoryClient
     Task<ProductReleaseResult> ReleaseAsync(
         ProductReleaseRequest request,
         CancellationToken cancellationToken);
+
+    Task<ProductReservationLookupResult> GetReservationByOrderAsync(
+        ProductReservationLookupRequest request,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ProductReservationRequest(
@@ -19,6 +23,8 @@ public sealed record ProductReservationRequest(
 public sealed record ProductReservationRequestItem(Guid ProductId, int Quantity);
 
 public sealed record ProductReleaseRequest(Guid OrderId, string? TraceParent);
+
+public sealed record ProductReservationLookupRequest(Guid OrderId, string? TraceParent);
 
 public sealed record ProductReservationSnapshot(
     Guid ProductId,
@@ -66,4 +72,20 @@ public sealed record ProductReleaseResult(
     public bool IsSuccess => Failure is ProductReservationFailure.None;
 
     public bool IsAmbiguous => Failure is ProductReservationFailure.OutcomeUnknown;
+}
+
+public sealed record ProductReservationLookupResult(
+    ProductReservationFailure Failure,
+    Guid? ReservationId,
+    string? Status,
+    string? Currency,
+    IReadOnlyList<ProductReservationSnapshot> Items,
+    decimal TotalAmount,
+    DateTimeOffset? CreatedAtUtc,
+    DateTimeOffset? ReleasedAtUtc,
+    string? Detail)
+{
+    public bool IsSuccess => Failure is ProductReservationFailure.None;
+
+    public bool IsReservationMissing => Failure is ProductReservationFailure.ReservationNotFound;
 }

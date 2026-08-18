@@ -1,5 +1,6 @@
 using MassTransit;
 using MicroShop.OrderService.Features.Orders;
+using MicroShop.OrderService.Features.Reconciliation;
 using MicroShop.OrderService.Infrastructure.Database;
 using MicroShop.OrderService.Infrastructure.Messaging;
 using MicroShop.OrderService.Infrastructure.Products;
@@ -118,6 +119,7 @@ builder.Services.AddScoped<IProductInventoryClient>(serviceProvider =>
         : serviceProvider.GetRequiredService<ProductInventoryClient>();
 });
 builder.Services.AddScoped<OrderApplicationService>();
+builder.Services.AddScoped<OrderReconciliationService>();
 var outboxEnabled = !builder.Environment.IsEnvironment("Testing")
     && ParseBool(
         configuration["ORDER_OUTBOX_ENABLED"] ?? configuration["OrderOutbox:Enabled"],
@@ -207,6 +209,7 @@ app.MapGet("/", () => Results.Ok(new
     message = "Order API is available under /api/v1/orders using the configured Product inventory client."
 }));
 OrderEndpoints.MapOrderEndpoints(app);
+ReconciliationEndpoints.MapReconciliationEndpoints(app);
 
 if (!app.Environment.IsProduction())
 {

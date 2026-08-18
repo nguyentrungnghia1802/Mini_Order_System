@@ -301,6 +301,21 @@ Response:
 - `503 PRODUCT_SERVICE_UNAVAILABLE`;
 - `503 INVENTORY_OUTCOME_UNKNOWN` when release outcome is ambiguous.
 
+### `POST /internal/v1/reconciliation/orders/{orderId}`
+
+This Order-native manual/operations endpoint is not exposed through YARP. It is available only on the Order Service boundary in the local learning deployment and accepts no request body.
+
+It is valid only for `inventory_unknown` and `cancellation_pending`. The endpoint queries Product's internal reservation lookup using the Order ID, validates the response against the Order's persisted Product ID/quantity intent, applies a safe state transition when the outcome is known, and records reconciliation audit history.
+
+Responses:
+
+- `200` with `{ order, operation, outcome, changed, reservationStatus, reservationId, reconciledAtUtc }` when reconciliation completes as `confirmed`, `rejected`, or `cancelled`;
+- `404 ORDER_NOT_FOUND`;
+- `409 RECONCILIATION_STATE_CONFLICT` or `RECONCILIATION_CONFLICT` when the state/remote snapshot cannot be reconciled safely;
+- `503 RECONCILIATION_DEPENDENCY_UNAVAILABLE` or `RECONCILIATION_RELEASE_UNKNOWN` when Product outcome remains unavailable.
+
+The endpoint never reads Product tables directly and never treats a timeout as proof that a reservation is absent.
+
 ## 8. Notification endpoints
 
 Notification Service may run a small HTTP read API alongside the consumer.

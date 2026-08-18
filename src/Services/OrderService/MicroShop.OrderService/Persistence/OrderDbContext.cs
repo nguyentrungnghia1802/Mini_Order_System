@@ -10,7 +10,11 @@ public sealed class OrderDbContext(DbContextOptions<OrderDbContext> options) : D
 
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
+    public DbSet<OrderInventoryRequestItem> InventoryRequestItems => Set<OrderInventoryRequestItem>();
+
     public DbSet<OrderStateHistory> OrderStateHistory => Set<OrderStateHistory>();
+
+    public DbSet<OrderReconciliationAudit> ReconciliationAudits => Set<OrderReconciliationAudit>();
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
@@ -18,7 +22,9 @@ public sealed class OrderDbContext(DbContextOptions<OrderDbContext> options) : D
     {
         modelBuilder.ApplyConfiguration(new OrderConfiguration());
         modelBuilder.ApplyConfiguration(new OrderItemConfiguration());
+        modelBuilder.ApplyConfiguration(new OrderInventoryRequestItemConfiguration());
         modelBuilder.ApplyConfiguration(new OrderStateHistoryConfiguration());
+        modelBuilder.ApplyConfiguration(new OrderReconciliationAuditConfiguration());
         modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
     }
 }

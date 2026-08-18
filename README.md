@@ -10,6 +10,8 @@ Phase 7.2 adds structured outbox backlog logs, configurable readiness thresholds
 
 Phase 7.3 makes Notification inbox handling explicit and restart-safe: `ConsumedMessage` plus generated Notification commit in one transaction, concurrent duplicate MessageIds are suppressed by database constraints, bounded retry is configurable, and RabbitMQ redelivery across a Notification host restart is covered by integration tests. Inbox/notification cleanup is intentionally deferred because no production retention policy is in scope.
 
+Phase 7.4 adds a controlled Order-native reconciliation path at `/internal/v1/reconciliation/orders/{orderId}`. It queries Product's reservation by Order ID, verifies persisted inventory intent against Product-authoritative snapshots before confirming, safely rejects known absent/released reservations, reconciles `cancellation_pending` without blind repeated release, and records an audit row for each outcome. The path is intentionally excluded from the public Gateway and is for local/manual operations only.
+
 ## Target architecture
 
 ```text

@@ -209,6 +209,50 @@ public sealed class OrderApiTests(OrderDatabaseFixture fixture) : IClassFixture<
         Assert.Equal("VALIDATION_ERROR", await ReadProblemCodeAsync(response));
     }
 
+    [Fact]
+    public async Task InternalReconciliationRouteRejectsUnknownOrderWhenReservationIsAbsent()
+    {
+        var productId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        await using (var seedContext = fixture.CreateDbContext())
+        {
+            var order = Order.Create(
+                orderId,
+                "Manual Reconciliation",
+                $"{orderId:N}@example.com",
+                now);
+            order.AddInventoryRequestItem(OrderInventoryRequestItem.Create(productId, 1));
+            order.RecordFailure("INVENTORY_OUTCOME_UNKNOWN", "Reservation outcome is unknown.", now);
+            order.TransitionTo(
+                OrderStatuses.InventoryUnknown,
+                "INVENTORY_OUTCOME_UNKNOWN",
+                "seed",
+                now);
+            seedContext.Orders.Add(order);
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var response = await fixture.Client.PostAsync(
+            $"/internal/v1/reconciliation/orders/{orderId:D}",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("inventory", body.RootElement.GetProperty("operation").GetString());
+        Assert.Equal("rejected", body.RootElement.GetProperty("outcome").GetString());
+        Assert.Equal(
+            OrderStatuses.Rejected,
+            body.RootElement.GetProperty("order").GetProperty("status").GetString());
+
+        await using var verification = fixture.CreateDbContext();
+        var persisted = await verification.Orders
+            .Include(order => order.ReconciliationAudits)
+            .SingleAsync(order => order.Id == orderId);
+        Assert.Equal(OrderStatuses.Rejected, persisted.Status);
+        Assert.Single(persisted.ReconciliationAudits);
+    }
+
     private async Task<OrderResponseDto> CreateSuccessAsync(string email)
     {
         var request = new CreateOrderRequestDto(

@@ -226,10 +226,17 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
         };
     }
 
-    private sealed class StubProductInventoryClient(ProductReservationResult reservation)
+    private sealed class StubProductInventoryClient(
+        ProductReservationResult reservation,
+        ProductReservationLookupResult? lookup = null,
+        ProductReleaseResult? release = null)
         : IProductInventoryClient
     {
         public ProductReservationRequest? ReserveRequest { get; private set; }
+
+        public ProductReservationLookupRequest? LookupRequest { get; private set; }
+
+        public ProductReleaseRequest? ReleaseRequest { get; private set; }
 
         public Task<ProductReservationResult> ReserveAsync(
             ProductReservationRequest request,
@@ -245,11 +252,30 @@ public sealed class OrderOrchestrationTests(OrderDatabaseFixture fixture)
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(new ProductReleaseResult(
+            ReleaseRequest = request;
+            return Task.FromResult(release ?? new ProductReleaseResult(
                 ProductReservationFailure.None,
                 Guid.NewGuid(),
                 null,
                 false));
+        }
+
+        public Task<ProductReservationLookupResult> GetReservationByOrderAsync(
+            ProductReservationLookupRequest request,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LookupRequest = request;
+            return Task.FromResult(lookup ?? new ProductReservationLookupResult(
+                ProductReservationFailure.ReservationNotFound,
+                null,
+                null,
+                null,
+                [],
+                0,
+                null,
+                null,
+                "No reservation was configured for this test."));
         }
     }
 
