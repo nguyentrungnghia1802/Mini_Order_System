@@ -366,7 +366,7 @@ Response:
 
 These contracts are service-to-service only.
 
-The Product Service implementation now exposes the two reservation commands below on its native port. They are not routed by Gateway and must not be called by Angular. Gateway integration tests verify rejection without forwarding.
+The Product Service implementation now exposes the reservation commands and controlled lookup below on its native port. They are not routed by Gateway and must not be called by Angular. Gateway integration tests verify rejection without forwarding.
 
 ### `POST /internal/v1/inventory/reservations`
 
@@ -442,7 +442,7 @@ Errors:
 - `404 RESERVATION_NOT_FOUND`;
 - `409 RESERVATION_STATE_CONFLICT`.
 
-A repeated release returns `200` with `idempotentReplay: true`.
+A repeated release returns `200` with `idempotentReplay: true`. Order may retry this same order-keyed operation once by default after a transient transport failure; reserve is deliberately not automatically retried because a lost response may represent a committed stock change.
 
 ### Optional `GET /internal/v1/inventory/reservations/by-order/{orderId}`
 

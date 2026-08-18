@@ -4,6 +4,7 @@ using MicroShop.NotificationService.Features.Notifications;
 using MicroShop.NotificationService.Infrastructure.Database;
 using MicroShop.NotificationService.Infrastructure.Messaging;
 using MicroShop.NotificationService.Persistence;
+using MicroShop.ServiceDefaults;
 using MicroShop.ServiceDefaults.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -109,6 +110,13 @@ builder.Services.AddOptions<RabbitMqOptions>()
     .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "RabbitMQ username is required.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "RabbitMQ password is required.")
     .ValidateOnStart();
+builder.Services.AddOptions<MassTransitHostOptions>()
+    .Configure<IOptions<MicroShopHostOptions>>((options, hostOptions) =>
+    {
+        options.WaitUntilStarted = true;
+        options.StartTimeout = hostOptions.Value.ShutdownTimeout;
+        options.StopTimeout = hostOptions.Value.ShutdownTimeout;
+    });
 builder.Services.AddMassTransit(massTransit =>
 {
     massTransit.AddConsumer<OrderConfirmedConsumer>();

@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.4 outbox operations, Notification inbox hardening, and controlled reconciliation, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.6 outbox operations, Notification inbox hardening, controlled reconciliation, bounded resilience, and validation gates, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -45,7 +45,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Remaining Phase 7.5-7.6 resilience policies and the final gate.
+- Phase 8 observability, E2E/failure-injection automation, security/deployment review, and final completion gate.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 7.5 — add bounded shutdown/resilience policies and readiness transitions.
+Phase 8.1–8.3 — add consistent structured logging, W3C/OpenTelemetry tracing, and metrics/health instrumentation.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -97,7 +97,26 @@ Phase 7.5 — add bounded shutdown/resilience policies and readiness transitions
 | Reservation lookup and intent | `[x]` | Product exposes an order-keyed query; Order persists `order_inventory_request_items` and validates Product reservation identity, state, snapshots, quantities, subtotals, currency, and total before confirmation. |
 | Safe inventory/cancellation outcomes | `[x]` | Known absent/released inventory becomes rejected; matching inventory becomes confirmed with the outbox; absent/released cancellation becomes cancelled; reserved cancellation uses one idempotent release; unknown outcomes remain pending. |
 | Audit and migration | `[x]` | `OrderReconciliationAudit`, `order_reconciliation_audits`, and `20260818044623_AddOrderReconciliation` are Order-owned and use only local foreign keys. |
-| Tests | `[x]` | 55 Order tests pass, including lookup mapping, matching/absent/mismatched inventory, dependency-unavailable pending state, cancellation reconciliation, audit history, and outbox confirmation. |
+| Tests | `[x]` | 60 Order tests pass, including lookup mapping, matching/absent/mismatched inventory, dependency-unavailable pending state, cancellation reconciliation, safe Product-client retries, audit history, and outbox confirmation. |
+
+## Phase 7.5 — Resilience policies
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Product timeout and safe retries | `[x]` | `ProductServiceOptions` validates a 1–5 second timeout. `ProductInventoryClient` retries only order-keyed idempotent release and read-only lookup operations, with bounded count/delay and one shared operation timeout; reserve remains single-attempt. |
+| Circuit-breaker decision | `[x]` | No circuit breaker is justified for the learning baseline: bounded timeout/retry, explicit ambiguous states, outbox durability, reconciliation, and readiness provide the required controls without adding untuned state. |
+| Graceful/consumer shutdown | `[x]` | `ServiceDefaultsExtensions` bounds `HostOptions.ShutdownTimeout`; Order and Notification bind MassTransit start/stop timeouts to it. `MICROSHOP_SHUTDOWN_TIMEOUT_MS` is documented and Compose-wired. |
+| Cancellation and readiness | `[x]` | Product client preserves caller cancellation; `ApplicationLifecycleHealthCheck` marks readiness unhealthy on `ApplicationStopping` while `/health/live` remains process-only. `ServiceReadinessTests` passes. |
+| Tests | `[x]` | Full .NET suite passes 108 tests: 1 Architecture, 2 Contracts, 15 Notification, 9 Gateway, 60 Order, and 21 Product. |
+
+## Phase 7.6 — Phase 7 validation gate
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Outbox/broker durability | `[x]` | RabbitMQ outage/recovery and outbox lease/restart tests prove confirmed Order durability, eventual publish, and no lost event in outbox mode. |
+| Notification idempotency | `[x]` | Concurrent duplicate and process-restart redelivery tests leave one consumed-message row and one Notification. |
+| Reconciliation | `[x]` | Inventory-unknown and cancellation-pending reconciliation tests prove controlled known/unknown outcomes and audit history. |
+| Shutdown gate | `[x]` | Bounded shutdown-option and readiness-transition tests pass; Compose configuration validates with the new environment settings. |
 
 ## Phase 1 — Product Service foundation
 

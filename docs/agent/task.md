@@ -1,6 +1,6 @@
 # Mini Order System — Project Completion Tasks
 
-Last reviewed: 2026-08-17.
+Last reviewed: 2026-08-18.
 
 This file is the canonical execution checklist for completing **Mini Order System / MicroShop**.
 
@@ -1001,28 +1001,43 @@ Evidence for 7.4:
 
 - Files: `Features/Reconciliation/OrderReconciliationService.cs`, `Features/Reconciliation/ReconciliationEndpoints.cs`, `Infrastructure/Products/ProductInventoryClient.cs`, `Persistence/Entities/OrderInventoryRequestItem.cs`, `Persistence/Entities/OrderReconciliationAudit.cs`, `Persistence/Migrations/20260818044623_AddOrderReconciliation.cs`, and `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md`.
 - Behavior: `POST /internal/v1/reconciliation/orders/{orderId}` is an Order-native manual path and is not mapped by the Gateway. It queries Product's order-keyed reservation state, matches the persisted inventory intent against Product-authoritative snapshots before confirming, rejects a known absent/released reservation safely, records every outcome in `order_reconciliation_audits`, and handles both `inventory_unknown` and `cancellation_pending` without blind repeated compensation.
-- Tests: `ProductInventoryClientTests` covers lookup request/response/error mapping; `OrderReconciliationTests` covers matching reservation confirmation plus outbox, absent reservation rejection, cancellation with absent reservation, cancellation after release, dependency-unavailable pending state, and mismatch conflict; `OrderApiTests.InternalReconciliationRouteRejectsUnknownOrderWhenReservationIsAbsent` covers the internal HTTP route. The Order suite has 55 passing tests.
+- Tests: `ProductInventoryClientTests` covers lookup request/response/error mapping; `OrderReconciliationTests` covers matching reservation confirmation plus outbox, absent reservation rejection, cancellation with absent reservation, cancellation after release, dependency-unavailable pending state, and mismatch conflict; `OrderApiTests.InternalReconciliationRouteRejectsUnknownOrderWhenReservationIsAbsent` covers the internal HTTP route. The Order suite has 60 passing tests after adding the resilience cases.
 - Commands: `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `dotnet build tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore`; `git diff --check`.
 - Notes: The migration adds only Order-owned request-intent and audit tables with local foreign keys. Confirming through reconciliation writes the Order, audit, and transactional outbox in the same save; dependency or snapshot conflicts leave the ambiguous state intact for a later controlled retry.
 
 ## 7.5 Resilience policies
 
-- [ ] Review Product timeout.
-- [ ] Add bounded retry only where idempotency makes it safe.
-- [ ] Add circuit breaker only if justified.
-- [ ] Add graceful shutdown for services.
-- [ ] Add bounded consumer shutdown.
-- [ ] Add cancellation token propagation.
-- [ ] Add readiness transitions during shutdown.
+- [x] Review Product timeout.
+- [x] Add bounded retry only where idempotency makes it safe.
+- [x] Add circuit breaker only if justified.
+- [x] Add graceful shutdown for services.
+- [x] Add bounded consumer shutdown.
+- [x] Add cancellation token propagation.
+- [x] Add readiness transitions during shutdown.
+
+Evidence for 7.5:
+
+- Files: `src/BuildingBlocks/MicroShop.ServiceDefaults/ServiceDefaultsExtensions.cs`, Order `Infrastructure/Products/ProductInventoryClient.cs`, `ProductServiceOptions.cs`, Order/Notification `Program.cs`, `.env.example`, `deploy/compose.yaml`, `tests/MicroShop.OrderService.Tests/ProductInventoryClientTests.cs`, and `tests/MicroShop.Gateway.Tests/ServiceReadinessTests.cs`.
+- Timeout/retry policy: Product timeout remains validated at 1–5000 ms. Reserve is never automatically retried because a lost response can represent a committed stock change; only the order-keyed idempotent release and read-only reservation lookup retry transient transport/408/429/5xx failures within the same linked timeout. Retry count is bounded to 0–3 and delay to 10–2000 ms (defaults: 1 and 100 ms). No circuit breaker is added because the baseline already has bounded dependency calls, explicit ambiguous states, outbox durability, and reconciliation.
+- Shutdown/consumer policy: `MICROSHOP_SHUTDOWN_TIMEOUT_MS` is bounded to 1–60 seconds (default 10 seconds), configures `HostOptions`, and ties Order/Notification MassTransit start/stop timeouts to the same bound. Application stopping makes readiness unhealthy while liveness remains process-only.
+- Tests: `ProductInventoryClientTests` covers safe release/lookup retry, reserve no-retry, malformed/business no-retry behavior, timeout and caller cancellation; `ServiceReadinessTests` covers stopping readiness and bounded host options. The full solution has 108 passing .NET tests.
+- Commands: `dotnet restore MicroShop.sln`; `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`; `docker compose --env-file .env.example -f deploy/compose.yaml config`.
+- Notes: Phase 7.5 changes process configuration and HTTP behavior only; no database ownership or cross-service schema is added. Existing outbox, Notification inbox, and reconciliation evidence remains the durability/recovery boundary.
 
 ## 7.6 Phase 7 validation gate
 
-- [ ] No confirmed Order event is lost during RabbitMQ outage in outbox mode.
-- [ ] Outbox survives service restart.
-- [ ] Duplicate publish/redelivery creates one Notification.
-- [ ] Unknown inventory outcomes can be reconciled.
-- [ ] Cancellation pending can be reconciled.
-- [ ] Graceful shutdown is bounded and tested.
+- [x] No confirmed Order event is lost during RabbitMQ outage in outbox mode.
+- [x] Outbox survives service restart.
+- [x] Duplicate publish/redelivery creates one Notification.
+- [x] Unknown inventory outcomes can be reconciled.
+- [x] Cancellation pending can be reconciled.
+- [x] Graceful shutdown is bounded and tested.
+
+Evidence for 7.6:
+
+- `OrderOutboxRabbitMqTests.RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox` proves confirmed Order plus pending outbox durability and recovery after RabbitMQ returns.
+- `OutboxDispatcherTests` proves lease-expiry recovery/restart safety; Notification RabbitMQ integration proves duplicate delivery and process restart leave one Notification; `OrderReconciliationTests` proves `inventory_unknown` and `cancellation_pending` controlled outcomes.
+- `ServiceReadinessTests` plus Product client timeout/cancellation tests prove bounded shutdown/readiness transition and cancellation propagation. Full .NET gate: 108 tests passed; Compose config validation passed.
 
 ---
 

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Gateway/MicroShop.Gateway/MicroShop.Gateway.csproj" />
+    <ProjectReference Include="../../src/BuildingBlocks/MicroShop.ServiceDefaults/MicroShop.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

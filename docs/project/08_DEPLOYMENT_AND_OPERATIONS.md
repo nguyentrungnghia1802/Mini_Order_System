@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.3 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, and Notification inbox idempotency. Browser Playwright coverage and Phase 7.4-7.6 reconciliation/resilience gates remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, bounded idempotent release/lookup retry, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.5 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, Notification inbox idempotency, reconciliation, bounded shutdown, and lifecycle readiness transitions. Browser Playwright coverage and the Phase 8 observability/quality work remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ The system must not be described as production-ready merely because it runs in D
 
 ## Phase 7.1 outbox status
 
-Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The backlog/readiness policy and RabbitMQ outage exercise are implemented in Phase 7.2; Notification inbox idempotency is implemented in Phase 7.3; reconciliation and shutdown/resilience gates remain Phase 7.4-7.6 work.
+Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The backlog/readiness policy and RabbitMQ outage exercise are implemented in Phase 7.2; Notification inbox idempotency is implemented in Phase 7.3; reconciliation is implemented in Phase 7.4; shutdown/resilience policy and lifecycle readiness are implemented in Phase 7.5.
 
 ## Phase 7.2 outbox operations
 
@@ -92,6 +92,13 @@ The current Gateway configuration reads `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_UR
 - RabbitMQ connection;
 - bounded consumer retry/concurrency (`NOTIFICATION_CONSUMER_RETRY_COUNT`, `NOTIFICATION_CONSUMER_RETRY_DELAY_MS`);
 - HTTP read API settings.
+
+### Shared process resilience
+
+- `MICROSHOP_SHUTDOWN_TIMEOUT_MS` bounds host shutdown between 1 and 60 seconds (default 10 seconds);
+- `PRODUCT_SERVICE_TIMEOUT_MS` remains bounded to at most 5 seconds;
+- `PRODUCT_SERVICE_SAFE_RETRY_COUNT` and `PRODUCT_SERVICE_SAFE_RETRY_DELAY_MS` control only the Order client's idempotent release and read-only reservation lookup retries (defaults: 1 and 100 ms);
+- Product reservation creation is not automatically retried because a lost response can represent a committed stock change.
 
 ### Web
 
@@ -274,6 +281,14 @@ Whether Order readiness fails when Product Service is down is a deliberate decis
 
 Product readiness is implemented with an EF Core database health check. A missing Product database password/connection configuration fails startup validation rather than silently selecting another service database.
 
+### Shutdown behavior
+
+`MICROSHOP_SHUTDOWN_TIMEOUT_MS` is parsed and bounded to 1–60 seconds, with a 10-second default. The value configures the generic host shutdown timeout and, for Order/Notification, MassTransit startup and consumer-stop timeouts. Notification keeps its durable endpoint/prefetch policy and bounded retry; shutdown cancellation is passed through the host and consumer pipeline so the process stops without an unbounded drain.
+
+The shared lifecycle health check observes `IHostApplicationLifetime.ApplicationStopping`: `/health/ready` returns unhealthy during shutdown, while `/health/live` remains a process-liveness signal. This prevents a terminating instance from receiving new traffic without making liveness imply dependency health. The bounded timeout and transition are covered by `ServiceReadinessTests`; Product-client tests cover caller cancellation and the single-attempt reserve policy.
+
+No circuit breaker is enabled in this learning baseline. The Product dependency already has an explicit five-second cap, bounded retry only for idempotent release/lookup operations, explicit ambiguous outcomes, durable outbox/reconciliation paths, and readiness signals. Adding a circuit breaker would add state and tuning without a demonstrated failure mode; it can be revisited with measured traffic.
+
 ## 11. Observability
 
 Minimum:
@@ -424,7 +439,7 @@ If database migration is destructive, restore from backup rather than improvisin
 - check Product Service liveness/readiness;
 - check Product DB;
 - check Order typed-client DNS/address;
-- inspect timeout/circuit state;
+- inspect Product timeout and bounded retry configuration (`PRODUCT_SERVICE_TIMEOUT_MS`, `PRODUCT_SERVICE_SAFE_RETRY_COUNT`, `PRODUCT_SERVICE_SAFE_RETRY_DELAY_MS`);
 - use trace ID;
 - inspect whether an inventory reservation exists for affected order.
 
@@ -444,7 +459,7 @@ If database migration is destructive, restore from backup rather than improvisin
 - do not send repeated blind release commands from a shell;
 - call `POST /internal/v1/reconciliation/orders/{orderId}`;
 - an absent or already `released` Product reservation is safely recorded and moves the Order to `cancelled`;
-- a `reserved` response causes one idempotent Product release attempt; only a known successful release moves the Order to `cancelled`;
+- a `reserved` response causes one idempotent Product release operation, with only its bounded transport retry; only a known successful release moves the Order to `cancelled`;
 - dependency/timeout/invalid outcomes remain `cancellation_pending` and produce an audit row for the next controlled attempt;
 - the reconciliation route is not routed by the public Gateway and has no browser UI in the baseline.
 

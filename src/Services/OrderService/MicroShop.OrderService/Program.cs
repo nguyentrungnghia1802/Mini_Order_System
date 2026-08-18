@@ -5,6 +5,7 @@ using MicroShop.OrderService.Infrastructure.Database;
 using MicroShop.OrderService.Infrastructure.Messaging;
 using MicroShop.OrderService.Infrastructure.Products;
 using MicroShop.OrderService.Persistence;
+using MicroShop.ServiceDefaults;
 using MicroShop.ServiceDefaults.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -43,6 +44,13 @@ builder.Services.AddOptions<RabbitMqOptions>()
     .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "RabbitMQ username is required.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "RabbitMQ password is required.")
     .ValidateOnStart();
+builder.Services.AddOptions<MassTransitHostOptions>()
+    .Configure<IOptions<MicroShopHostOptions>>((options, hostOptions) =>
+    {
+        options.WaitUntilStarted = true;
+        options.StartTimeout = hostOptions.Value.ShutdownTimeout;
+        options.StopTimeout = hostOptions.Value.ShutdownTimeout;
+    });
 builder.Services.AddMassTransit(massTransit =>
 {
     if (useInMemoryMessaging)
@@ -91,6 +99,14 @@ builder.Services.AddOptions<ProductServiceOptions>()
             configuration["PRODUCT_SERVICE_TIMEOUT_MS"]
                 ?? configuration["ProductService:TimeoutMilliseconds"],
             options.TimeoutMilliseconds);
+        options.SafeRetryCount = ParseInt(
+            configuration["PRODUCT_SERVICE_SAFE_RETRY_COUNT"]
+                ?? configuration["ProductService:SafeRetryCount"],
+            options.SafeRetryCount);
+        options.SafeRetryDelayMilliseconds = ParseInt(
+            configuration["PRODUCT_SERVICE_SAFE_RETRY_DELAY_MS"]
+                ?? configuration["ProductService:SafeRetryDelayMilliseconds"],
+            options.SafeRetryDelayMilliseconds);
         options.UseFakeClient = ParseBool(
             configuration["ORDER_PRODUCT_USE_FAKE"]
                 ?? configuration["ProductService:UseFakeClient"],
@@ -103,6 +119,10 @@ builder.Services.AddOptions<ProductServiceOptions>()
     }, "Product Service URL must be an absolute HTTP or HTTPS URL.")
     .Validate(options => options.TimeoutMilliseconds is >= 1 and <= 5_000,
         "Product Service timeout must be between 1 and 5000 milliseconds.")
+    .Validate(options => options.SafeRetryCount is >= 0 and <= 3,
+        "Product Service safe retry count must be between 0 and 3.")
+    .Validate(options => options.SafeRetryDelayMilliseconds is >= 10 and <= 2_000,
+        "Product Service safe retry delay must be between 10 and 2000 milliseconds.")
     .ValidateOnStart();
 builder.Services.AddHttpClient<ProductInventoryClient>((serviceProvider, httpClient) =>
 {

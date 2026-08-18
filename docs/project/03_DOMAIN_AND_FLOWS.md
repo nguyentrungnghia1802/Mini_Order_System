@@ -263,7 +263,7 @@ Order persists the original Product ID/quantity intent before the remote reserva
 
 For `inventory_unknown`, a reserved response is accepted only when every Product ID, quantity, currency, product snapshot, subtotal, and total matches the persisted intent and Order limits. A matching reservation transitions the Order to `confirmed` and writes the `OrderConfirmedV1` outbox row in the same Order database save. A confirmed absent or already released reservation transitions to `rejected`; a dependency outage, malformed response, or mismatch leaves the Order in `inventory_unknown` and records a conflict/pending audit instead.
 
-For `cancellation_pending`, an absent or released reservation is safely treated as already compensated. A still-reserved reservation receives the idempotent Product release command once; only a known successful release transitions the Order to `cancelled`. Unknown release outcomes remain `cancellation_pending`. The Gateway does not expose this internal route.
+For `cancellation_pending`, an absent or released reservation is safely treated as already compensated. A still-reserved reservation receives one idempotent Product release operation; the typed client may make only its configured bounded transport retry for that same `orderId`, while a later user cancellation request never starts another operation. Only a known successful release transitions the Order to `cancelled`. Unknown release outcomes remain `cancellation_pending`. The Gateway does not expose this internal route.
 
 ## 14. Duplicate reservation request flow
 
@@ -293,7 +293,7 @@ Canonical item set comparison sorts by product ID and compares quantity; request
 6. Product Service finds and locks reservation/items/products, restores quantities, marks released, and commits.
 7. Order Service changes order to `cancelled`.
 8. API returns current order.
-9. Repeated cancellation returns the current cancelled state or a stable conflict without another release call.
+9. Repeated cancellation returns the current cancelled state or a stable conflict without starting another release operation; a transient retry inside the original idempotent operation remains bounded by the Product-client timeout.
 
 If the release response is lost, Order Service uses `cancellation_pending`, not a false success.
 

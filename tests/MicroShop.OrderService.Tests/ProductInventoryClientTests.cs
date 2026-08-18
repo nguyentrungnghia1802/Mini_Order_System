@@ -101,6 +101,47 @@ public sealed class ProductInventoryClientTests
     }
 
     [Fact]
+    public async Task ReleaseRetriesTransientHttpFailureWithSameOrderIdentity()
+    {
+        var orderId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        var attempts = 0;
+        var handler = new StubHandler((request, _) =>
+        {
+            Assert.Equal(
+                $"http://product.test/internal/v1/inventory/reservations/{orderId:D}/release",
+                request.RequestUri!.ToString());
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                throw new HttpRequestException("transient connection failure");
+            }
+
+            return Task.FromResult(JsonResponse(
+                HttpStatusCode.OK,
+                new
+                {
+                    orderId,
+                    reservationId,
+                    status = "released",
+                    idempotentReplay = false,
+                    releasedAtUtc = DateTimeOffset.UtcNow
+                }));
+        });
+        var client = CreateClient(
+            handler,
+            safeRetryCount: 1,
+            safeRetryDelayMilliseconds: 10);
+
+        var result = await client.ReleaseAsync(
+            new ProductReleaseRequest(orderId, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, attempts);
+        Assert.Equal(reservationId, result.ReservationId);
+    }
+
+    [Fact]
     public async Task LookupSendsOrderIdentityAndParsesReservedReservation()
     {
         var orderId = Guid.NewGuid();
@@ -155,6 +196,61 @@ public sealed class ProductInventoryClientTests
         Assert.Equal(createdAtUtc, result.CreatedAtUtc);
         Assert.Equal(250_000m, result.TotalAmount);
         Assert.Equal(productId, Assert.Single(result.Items).ProductId);
+    }
+
+    [Fact]
+    public async Task LookupRetriesTransientServerResponse()
+    {
+        var orderId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var attempts = 0;
+        var handler = new StubHandler((request, _) =>
+        {
+            Assert.Equal(
+                $"http://product.test/internal/v1/inventory/reservations/by-order/{orderId:D}",
+                request.RequestUri!.ToString());
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
+            return Task.FromResult(JsonResponse(
+                HttpStatusCode.OK,
+                new
+                {
+                    reservationId,
+                    orderId,
+                    status = "reserved",
+                    currency = "VND",
+                    totalAmount = 250_000m,
+                    items = new[]
+                    {
+                        new
+                        {
+                            productId,
+                            productName = "Keyboard",
+                            unitPrice = 125_000m,
+                            quantity = 2,
+                            subtotal = 250_000m
+                        }
+                    },
+                    createdAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1),
+                    releasedAtUtc = (DateTimeOffset?)null
+                }));
+        });
+        var client = CreateClient(
+            handler,
+            safeRetryCount: 1,
+            safeRetryDelayMilliseconds: 10);
+
+        var result = await client.GetReservationByOrderAsync(
+            new ProductReservationLookupRequest(orderId, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, attempts);
+        Assert.Equal(reservationId, result.ReservationId);
     }
 
     [Fact]
@@ -248,6 +344,28 @@ public sealed class ProductInventoryClientTests
     }
 
     [Fact]
+    public async Task ReserveDoesNotRetryAfterTransientFailure()
+    {
+        var attempts = 0;
+        var handler = new StubHandler((_, _) =>
+        {
+            Interlocked.Increment(ref attempts);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        });
+        var client = CreateClient(
+            handler,
+            safeRetryCount: 1,
+            safeRetryDelayMilliseconds: 10);
+
+        var result = await client.ReserveAsync(
+            new ProductReservationRequest(Guid.NewGuid(), [new(Guid.NewGuid(), 1)], null),
+            CancellationToken.None);
+
+        Assert.Equal(ProductReservationFailure.DependencyUnavailable, result.Failure);
+        Assert.Equal(1, attempts);
+    }
+
+    [Fact]
     public async Task ReserveMapsTimeoutToAmbiguousOutcome()
     {
         var handler = new StubHandler(async (_, cancellationToken) =>
@@ -301,6 +419,28 @@ public sealed class ProductInventoryClientTests
     }
 
     [Fact]
+    public async Task ReleasePreservesCallerCancellationDuringRetryableOperation()
+    {
+        var attempts = 0;
+        var handler = new StubHandler((_, _) =>
+        {
+            Interlocked.Increment(ref attempts);
+            throw new HttpRequestException("transient connection failure");
+        });
+        var client = CreateClient(
+            handler,
+            timeoutMilliseconds: 5_000,
+            safeRetryCount: 1,
+            safeRetryDelayMilliseconds: 10);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.ReleaseAsync(
+            new ProductReleaseRequest(Guid.NewGuid(), null),
+            cancellation.Token));
+    }
+
+    [Fact]
     public async Task ReserveRejectsMalformedSuccessfulResponse()
     {
         var handler = new StubHandler((_, _) => Task.FromResult(
@@ -319,7 +459,9 @@ public sealed class ProductInventoryClientTests
 
     private static ProductInventoryClient CreateClient(
         HttpMessageHandler handler,
-        int timeoutMilliseconds = 5_000)
+        int timeoutMilliseconds = 5_000,
+        int safeRetryCount = 1,
+        int safeRetryDelayMilliseconds = 100)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -330,7 +472,9 @@ public sealed class ProductInventoryClientTests
             Options.Create(new ProductServiceOptions
             {
                 BaseUrl = "http://product.test",
-                TimeoutMilliseconds = timeoutMilliseconds
+                TimeoutMilliseconds = timeoutMilliseconds,
+                SafeRetryCount = safeRetryCount,
+                SafeRetryDelayMilliseconds = safeRetryDelayMilliseconds
             }),
             NullLogger<ProductInventoryClient>.Instance);
     }

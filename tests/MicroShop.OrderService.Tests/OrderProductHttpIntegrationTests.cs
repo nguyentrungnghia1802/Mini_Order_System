@@ -206,7 +206,7 @@ public sealed class OrderProductHttpIntegrationTests(OrderDatabaseFixture fixtur
     }
 
     [Fact]
-    public async Task AmbiguousCancellationLeavesPendingAndDoesNotBlindlyReleaseAgain()
+    public async Task AmbiguousCancellationRetriesIdempotentReleaseButDoesNotStartAnotherCancellation()
     {
         var productId = Guid.NewGuid();
         var releaseCalls = 0;
@@ -265,7 +265,7 @@ public sealed class OrderProductHttpIntegrationTests(OrderDatabaseFixture fixtur
             content: null);
         Assert.Equal(HttpStatusCode.Conflict, repeatedResponse.StatusCode);
         Assert.Equal("ORDER_STATE_CONFLICT", (await repeatedResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
-        Assert.Equal(1, releaseCalls);
+        Assert.Equal(2, releaseCalls);
 
         await using var dbContext = fixture.CreateDbContext();
         var order = await dbContext.Orders

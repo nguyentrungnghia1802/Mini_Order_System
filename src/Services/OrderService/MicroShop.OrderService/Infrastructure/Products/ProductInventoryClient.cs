@@ -90,49 +90,96 @@ public sealed partial class ProductInventoryClient(
         ProductReleaseRequest request,
         CancellationToken cancellationToken)
     {
-        using var httpRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            $"internal/v1/inventory/reservations/{request.OrderId:D}/release");
-        AddTraceParent(httpRequest, request.TraceParent);
-
         using var timeout = new CancellationTokenSource(serviceOptions.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeout.Token);
 
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            using var response = await httpClient.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                linkedCancellation.Token);
-            var body = await response.Content.ReadAsStringAsync(linkedCancellation.Token);
-            if (response.IsSuccessStatusCode)
+            try
             {
-                return ParseReleaseResponse(request.OrderId, body);
-            }
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"internal/v1/inventory/reservations/{request.OrderId:D}/release");
+                AddTraceParent(httpRequest, request.TraceParent);
 
-            return MapReleaseProblem(response.StatusCode, body);
-        }
-        catch (OperationCanceledException) when (
-            !cancellationToken.IsCancellationRequested
-            && timeout.IsCancellationRequested)
-        {
-            ReleaseTimedOut(request.OrderId);
-            return new ProductReleaseResult(
-                ProductReservationFailure.OutcomeUnknown,
-                null,
-                "The Product release outcome could not be determined before the timeout.",
-                false);
-        }
-        catch (HttpRequestException exception)
-        {
-            ReleaseUnavailable(exception, request.OrderId);
-            return new ProductReleaseResult(
-                ProductReservationFailure.DependencyUnavailable,
-                null,
-                "The Product Service is unavailable.",
-                false);
+                using var response = await httpClient.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    linkedCancellation.Token);
+                var body = await response.Content.ReadAsStringAsync(linkedCancellation.Token);
+                if (IsTransient(response.StatusCode)
+                    && attempt < serviceOptions.SafeRetryCount)
+                {
+                    await DelayBeforeRetryAsync(
+                        request.OrderId,
+                        attempt + 1,
+                        linkedCancellation.Token);
+                    continue;
+                }
+
+                return response.IsSuccessStatusCode
+                    ? ParseReleaseResponse(request.OrderId, body)
+                    : MapReleaseProblem(response.StatusCode, body);
+            }
+            catch (OperationCanceledException) when (
+                !cancellationToken.IsCancellationRequested
+                && timeout.IsCancellationRequested)
+            {
+                ReleaseTimedOut(request.OrderId);
+                return new ProductReleaseResult(
+                    ProductReservationFailure.OutcomeUnknown,
+                    null,
+                    "The Product release outcome could not be determined before the timeout.",
+                    false);
+            }
+            catch (HttpRequestException exception)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (timeout.IsCancellationRequested)
+                {
+                    ReleaseTimedOut(request.OrderId);
+                    return new ProductReleaseResult(
+                        ProductReservationFailure.OutcomeUnknown,
+                        null,
+                        "The Product release outcome could not be determined before the timeout.",
+                        false);
+                }
+
+                if (attempt < serviceOptions.SafeRetryCount
+                    && !linkedCancellation.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await DelayBeforeRetryAsync(
+                            request.OrderId,
+                            attempt + 1,
+                            linkedCancellation.Token);
+                    }
+                    catch (OperationCanceledException) when (
+                        !cancellationToken.IsCancellationRequested
+                        && timeout.IsCancellationRequested)
+                    {
+                        ReleaseTimedOut(request.OrderId);
+                        return new ProductReleaseResult(
+                            ProductReservationFailure.OutcomeUnknown,
+                            null,
+                            "The Product release outcome could not be determined before the timeout.",
+                            false);
+                    }
+
+                    continue;
+                }
+
+                ReleaseUnavailable(exception, request.OrderId);
+                return new ProductReleaseResult(
+                    ProductReservationFailure.DependencyUnavailable,
+                    null,
+                    "The Product Service is unavailable.",
+                    false);
+            }
         }
     }
 
@@ -140,60 +187,133 @@ public sealed partial class ProductInventoryClient(
         ProductReservationLookupRequest request,
         CancellationToken cancellationToken)
     {
-        using var httpRequest = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"internal/v1/inventory/reservations/by-order/{request.OrderId:D}");
-        AddTraceParent(httpRequest, request.TraceParent);
-
         using var timeout = new CancellationTokenSource(serviceOptions.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeout.Token);
 
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            using var response = await httpClient.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                linkedCancellation.Token);
-            var body = await response.Content.ReadAsStringAsync(linkedCancellation.Token);
-            if (response.IsSuccessStatusCode)
+            try
             {
-                return ParseReservationLookupResponse(request.OrderId, body);
-            }
+                using var httpRequest = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"internal/v1/inventory/reservations/by-order/{request.OrderId:D}");
+                AddTraceParent(httpRequest, request.TraceParent);
 
-            return MapReservationLookupProblem(response.StatusCode, body);
+                using var response = await httpClient.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    linkedCancellation.Token);
+                var body = await response.Content.ReadAsStringAsync(linkedCancellation.Token);
+                if (IsTransient(response.StatusCode)
+                    && attempt < serviceOptions.SafeRetryCount)
+                {
+                    await DelayBeforeRetryAsync(
+                        request.OrderId,
+                        attempt + 1,
+                        linkedCancellation.Token);
+                    continue;
+                }
+
+                return response.IsSuccessStatusCode
+                    ? ParseReservationLookupResponse(request.OrderId, body)
+                    : MapReservationLookupProblem(response.StatusCode, body);
+            }
+            catch (OperationCanceledException) when (
+                !cancellationToken.IsCancellationRequested
+                && timeout.IsCancellationRequested)
+            {
+                ReservationLookupTimedOut(request.OrderId);
+                return new ProductReservationLookupResult(
+                    ProductReservationFailure.OutcomeUnknown,
+                    null,
+                    null,
+                    null,
+                    [],
+                    0,
+                    null,
+                    null,
+                    "The Product reservation lookup outcome could not be determined before the timeout.");
+            }
+            catch (HttpRequestException exception)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (timeout.IsCancellationRequested)
+                {
+                    ReservationLookupTimedOut(request.OrderId);
+                    return new ProductReservationLookupResult(
+                        ProductReservationFailure.OutcomeUnknown,
+                        null,
+                        null,
+                        null,
+                        [],
+                        0,
+                        null,
+                        null,
+                        "The Product reservation lookup outcome could not be determined before the timeout.");
+                }
+
+                if (attempt < serviceOptions.SafeRetryCount
+                    && !linkedCancellation.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await DelayBeforeRetryAsync(
+                            request.OrderId,
+                            attempt + 1,
+                            linkedCancellation.Token);
+                    }
+                    catch (OperationCanceledException) when (
+                        !cancellationToken.IsCancellationRequested
+                        && timeout.IsCancellationRequested)
+                    {
+                        ReservationLookupTimedOut(request.OrderId);
+                        return new ProductReservationLookupResult(
+                            ProductReservationFailure.OutcomeUnknown,
+                            null,
+                            null,
+                            null,
+                            [],
+                            0,
+                            null,
+                            null,
+                            "The Product reservation lookup outcome could not be determined before the timeout.");
+                    }
+
+                    continue;
+                }
+
+                ReservationLookupUnavailable(exception, request.OrderId);
+                return new ProductReservationLookupResult(
+                    ProductReservationFailure.DependencyUnavailable,
+                    null,
+                    null,
+                    null,
+                    [],
+                    0,
+                    null,
+                    null,
+                    "The Product Service is unavailable.");
+            }
         }
-        catch (OperationCanceledException) when (
-            !cancellationToken.IsCancellationRequested
-            && timeout.IsCancellationRequested)
-        {
-            ReservationLookupTimedOut(request.OrderId);
-            return new ProductReservationLookupResult(
-                ProductReservationFailure.OutcomeUnknown,
-                null,
-                null,
-                null,
-                [],
-                0,
-                null,
-                null,
-                "The Product reservation lookup outcome could not be determined before the timeout.");
-        }
-        catch (HttpRequestException exception)
-        {
-            ReservationLookupUnavailable(exception, request.OrderId);
-            return new ProductReservationLookupResult(
-                ProductReservationFailure.DependencyUnavailable,
-                null,
-                null,
-                null,
-                [],
-                0,
-                null,
-                null,
-                "The Product Service is unavailable.");
-        }
+    }
+
+    private async Task DelayBeforeRetryAsync(
+        Guid orderId,
+        int attempt,
+        CancellationToken cancellationToken)
+    {
+        IdempotentOperationRetrying(orderId, attempt);
+        await Task.Delay(serviceOptions.SafeRetryDelay, cancellationToken);
+    }
+
+    private static bool IsTransient(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            || (int)statusCode >= 500;
     }
 
     private static ProductReservationResult ParseReservationResponse(
@@ -477,6 +597,12 @@ public sealed partial class ProductInventoryClient(
             request.Headers.TryAddWithoutValidation("traceparent", traceParent);
         }
     }
+
+    [LoggerMessage(
+        EventId = 3107,
+        Level = LogLevel.Information,
+        Message = "Retrying idempotent Product Service operation for order {OrderId}; attempt {Attempt}")]
+    private partial void IdempotentOperationRetrying(Guid orderId, int attempt);
 
     private sealed record ProductReservationResponseDto(
         Guid ReservationId,
