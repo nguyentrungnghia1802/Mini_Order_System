@@ -1061,6 +1061,7 @@ Evidence for 8.1:
 - `MicroShop.ServiceDefaults` configures JSON console scopes and shared `MicroShopRequestLog`, `MicroShopLogging`, and service identity helpers. Product, Order, Notification, and Gateway all register the shared defaults and request middleware.
 - Domain/background logs use bounded identifiers and stable codes such as `ORDER_CONFIRMED`, `INVENTORY_RESERVATION_RESULT`, `ORDER_OUTBOX_PUBLISH_FAILED`, and `NOTIFICATION_CONSUMED`; customer request bodies and credentials are not logged. Compose logs show `service.name`, `deployment.environment`, `trace.id`, `span.id`, `order.id`, `reservation.id`, and `message.id` on the relevant operations.
 - Validation: `tests/MicroShop.Gateway.Tests/ObservabilityTests.cs`, full .NET suite (111 tests passed), `docker compose ... config`, and the confirmed-order Compose smoke with trace root `11111111111111111111111111111111` and Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c`.
+- Implementation commit: `78a112c67c119274c16a050a69089332235b2b01` (`feat(observability): add telemetry foundation`).
 
 ## 8.2 Distributed tracing
 
@@ -1077,6 +1078,7 @@ Evidence for 8.2:
 - Gateway preserves the incoming W3C parent; Order creates a Product client span and forwards its W3C context; the outbox dispatcher creates a producer span and stores the propagated context in the RabbitMQ message; Notification creates a linked consumer span.
 - `OpenTelemetry.Extensions.Hosting`, ASP.NET Core/HTTP instrumentation, and OTLP exporter registration are centralized in `MicroShop.ServiceDefaults`. `OTEL_EXPORTER_OTLP_ENDPOINT` is optional and empty by default, so local operation remains independent of an external collector.
 - `ObservabilityTests` verifies W3C identity and consumer-span parentage. Compose smoke evidence: trace root `11111111111111111111111111111111` is present in Gateway `/api/orders` request logs, Order confirmation/Product reservation logs, Order outbox producer scopes, and Notification consumer logs for Message `29dabbca-e878-4646-bce9-98511b37ea45`.
+- Implementation commit: `78a112c67c119274c16a050a69089332235b2b01` (`feat(observability): add telemetry foundation`).
 
 ## 8.3 Metrics and health
 
@@ -1096,6 +1098,7 @@ Evidence for 8.3:
 - `MicroShopTelemetry` registers bounded counters for HTTP/dependency/order/reservation/notification/outbox outcomes and observable outbox pending/dead-letter gauges. Labels are limited to operation/result values; identifiers are kept in logs, not metric dimensions.
 - `ServiceDefaultsExtensions` registers ASP.NET Core and custom meters. `ApplicationLifecycleHealthCheck` keeps liveness process-only and makes readiness unhealthy during shutdown; dependency checks remain readiness signals.
 - `ObservabilityTests` verifies the custom instrument names and bounded tags. `ServiceReadinessTests` covers lifecycle behavior; Release build and full .NET suite passed 111 tests; Compose `config`, image rebuild, startup, health checks, and API smoke passed.
+- Implementation commit: `78a112c67c119274c16a050a69089332235b2b01` (`feat(observability): add telemetry foundation`).
 
 ## 8.4 Centralized log integration
 
