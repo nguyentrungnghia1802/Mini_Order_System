@@ -368,7 +368,7 @@ One Notification DB transaction:
 - insert notification when new;
 - commit.
 
-The implementation uses one EF Core `SaveChangesAsync` graph for the `ConsumedMessage` and generated `Notification`. A duplicate message ID returns without another side effect; a concurrent unique-key race is treated as an idempotent duplicate while other database failures remain retryable.
+The implementation uses one explicit EF Core database transaction for the `ConsumedMessage` and generated `Notification` graph. A duplicate message ID returns without another side effect; a concurrent unique-key race is rolled back and treated as an idempotent duplicate while other database failures remain retryable. PostgreSQL Testcontainers tests verify rollback, concurrent delivery, and process restart/redelivery behavior.
 
 ## 9. Concurrency strategy
 

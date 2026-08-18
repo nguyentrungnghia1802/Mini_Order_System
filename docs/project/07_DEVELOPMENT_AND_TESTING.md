@@ -290,6 +290,10 @@ The current `MicroShop.NotificationService.Tests` project starts PostgreSQL 17 a
 - publisher completion is independent of a stopped Notification consumer;
 - a queued message survives Notification host restart and is consumed after restart.
 
+- concurrent duplicate redelivery through independent PostgreSQL contexts creates one inbox row and one Notification;
+- a failed Notification insert rolls back the consumed-message insert;
+- a Notification process restart between redelivery attempts preserves idempotency.
+
 The integration fixture uses a disposable RabbitMQ container because the current infrastructure Compose intentionally keeps AMQP port 5672 private. The consumer uses only the Notification connection and EF model; full application-container Compose and Angular E2E remain later gates.
 
 ### Gateway integration tests
@@ -303,7 +307,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 88 passing tests: 1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 45 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, publisher independence, restart, and queued recovery; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order suite covers direct-publish demonstration isolation plus transactional outbox identity, claim, bounded retry/dead-letter, lease recovery, and RabbitMQ outage/recovery.
+The current `MicroShop.Gateway.Tests` project contains 7 passing tests. The full .NET solution contains 91 passing tests: 1 Architecture, 2 Contracts, 15 Notification, 7 Gateway, 45 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, concurrent duplicate redelivery, transaction rollback, publisher independence, queued restart, and process restart between redelivery attempts; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes; the Order suite covers direct-publish demonstration isolation plus transactional outbox identity, claim, bounded retry/dead-letter, lease recovery, and RabbitMQ outage/recovery.
 
 ### Contract tests
 

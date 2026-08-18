@@ -971,11 +971,20 @@ Evidence for 7.2:
 
 ## 7.3 Inbox/idempotency hardening
 
-- [ ] Ensure consumed-message insert and Notification creation share one transaction.
-- [ ] Test duplicate redelivery under concurrency.
-- [ ] Test consumer process restart between attempts.
-- [ ] Verify unique constraints prevent duplicate side effects.
-- [ ] Add cleanup/retention policy only if justified.
+- [x] Ensure consumed-message insert and Notification creation share one transaction.
+- [x] Test duplicate redelivery under concurrency.
+- [x] Test consumer process restart between attempts.
+- [x] Verify unique constraints prevent duplicate side effects.
+- [x] Add cleanup/retention policy only if justified.
+
+Evidence for 7.3:
+
+- Files: `src/Services/NotificationService/MicroShop.NotificationService/Features/Messaging/OrderConfirmedConsumer.cs`, `Infrastructure/Messaging/NotificationMessagingOptions.cs`, `Program.cs`, `tests/MicroShop.NotificationService.Tests/NotificationConsumerTests.cs`, and `tests/MicroShop.NotificationService.Tests/NotificationMessagingIntegrationTests.cs`.
+- Transaction: `OrderConfirmedNotificationHandler` starts one Notification database transaction, adds `ConsumedMessage` plus its generated `Notification`, commits together, and rolls back a concurrent unique-key loser. A deliberately oversized customer email test proves a failed notification write leaves no consumed-message row.
+- Idempotency: eight independent PostgreSQL contexts deliver the same MessageId concurrently; the `consumed_messages` primary key and `notifications.source_message_id` unique index leave exactly one inbox row and one notification. The RabbitMQ integration test publishes, restarts the Notification host, redelivers the same MessageId, and verifies one durable side effect.
+- Restart/retry configuration: Notification retry count and delay are bounded and configurable with `NOTIFICATION_CONSUMER_RETRY_COUNT` and `NOTIFICATION_CONSUMER_RETRY_DELAY_MS`; default is three attempts with 250 ms intervals.
+- Retention: no cleanup job is justified for the small learning/demo database. Notification and consumed-message history remain retained according to the existing demo database policy; any production personal-data retention remains a future deployment concern.
+- Tests: `dotnet test tests/MicroShop.NotificationService.Tests/MicroShop.NotificationService.Tests.csproj --configuration Release --no-restore` passes with 15 tests, including concurrent duplicate, transaction rollback, RabbitMQ duplicate delivery, error-queue retry, queued restart, and process restart between redelivery attempts.
 
 ## 7.4 Reconciliation
 

@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MicroShop.NotificationService.Tests;
 
@@ -91,6 +94,30 @@ public sealed class NotificationMessagingIntegrationTests(
     }
 
     [Fact]
+    public async Task ConsumerProcessRestartBetweenRedeliveryAttemptsPreservesIdempotency()
+    {
+        var initialService = await StartNotificationServiceAsync();
+        await using var publisher = await rabbitMq.StartPublisherBusAsync();
+        var message = CreateMessage();
+
+        await PublishAsync(publisher.PublishEndpoint, message);
+        await WaitForNotificationAsync(message.MessageId);
+
+        await initialService.StopAsync();
+        await initialService.DisposeAsync();
+
+        await using var restartedService = await StartNotificationServiceAsync();
+        await PublishAsync(publisher.PublishEndpoint, message);
+        await WaitForQueueDepthAsync(0, TimeSpan.FromSeconds(10));
+        await Task.Delay(TimeSpan.FromMilliseconds(300));
+        await using var verificationContext = database.CreateDbContext();
+        Assert.Equal(1, await verificationContext.ConsumedMessages.CountAsync(
+            consumed => consumed.MessageId == message.MessageId));
+        Assert.Equal(1, await verificationContext.Notifications.CountAsync(
+            candidate => candidate.SourceMessageId == message.MessageId));
+    }
+
+    [Fact]
     public async Task PublishingDoesNotWaitForStoppedNotificationService()
     {
         await using var publisher = await rabbitMq.StartPublisherBusAsync();
@@ -112,9 +139,12 @@ public sealed class NotificationMessagingIntegrationTests(
 
     private async Task<NotificationRabbitServiceHost> StartNotificationServiceAsync()
     {
+        var rabbitConfiguration = rabbitMq.CreateApplicationConfiguration()
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+
         var factory = new NotificationRabbitApiFactory(
             database.ConnectionString,
-            rabbitMq.CreateApplicationConfiguration());
+            rabbitConfiguration);
         var client = factory.CreateClient();
         try
         {
@@ -142,6 +172,24 @@ public sealed class NotificationMessagingIntegrationTests(
             await factory.DisposeAsync();
             throw;
         }
+    }
+
+    private async Task WaitForQueueDepthAsync(uint expected, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow.Add(timeout);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            if (await rabbitMq.GetQueueMessageCountAsync(
+                    RabbitMqMessagingFixture.NotificationEndpointName) == expected)
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            $"RabbitMQ queue '{RabbitMqMessagingFixture.NotificationEndpointName}' did not reach depth {expected}.");
     }
 
     private async Task<Notification> WaitForNotificationAsync(Guid sourceMessageId)
@@ -204,6 +252,11 @@ public sealed class NotificationRabbitApiFactory(
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.ConfigureLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.AddConsole();
+        });
         builder.ConfigureAppConfiguration((_, configurationBuilder) =>
         {
             var configuration = rabbitConfiguration.ToDictionary(
@@ -222,6 +275,13 @@ public sealed class NotificationRabbitServiceHost(
     : IAsyncDisposable
 {
     private int disposed;
+
+    public async Task StopAsync()
+    {
+        var applicationLifetime = factory.Services.GetRequiredService<IHostApplicationLifetime>();
+        applicationLifetime.StopApplication();
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+    }
 
     public async ValueTask DisposeAsync()
     {

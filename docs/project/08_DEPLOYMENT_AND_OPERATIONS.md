@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1/7.2 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, and RabbitMQ outage recovery. Browser Playwright coverage and Phase 7.3-7.6 operations/reconciliation/resilience gates remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.3 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, and Notification inbox idempotency. Browser Playwright coverage and Phase 7.4-7.6 reconciliation/resilience gates remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ The system must not be described as production-ready merely because it runs in D
 
 ## Phase 7.1 outbox status
 
-Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The backlog/readiness policy and RabbitMQ outage exercise are implemented in Phase 7.2; reconciliation and shutdown/resilience gates remain Phase 7.3-7.6 work.
+Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The backlog/readiness policy and RabbitMQ outage exercise are implemented in Phase 7.2; Notification inbox idempotency is implemented in Phase 7.3; reconciliation and shutdown/resilience gates remain Phase 7.4-7.6 work.
 
 ## Phase 7.2 outbox operations
 
@@ -55,6 +55,10 @@ The command prints a summary and at most 20 pending/dead-lettered rows. It does 
 
 The automated evidence is `OrderOutboxRabbitMqTests.RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox`, which uses disposable PostgreSQL/RabbitMQ Testcontainers and proves the same sequence without touching the local Compose volumes.
 
+## Phase 7.3 Notification inbox operations
+
+Notification handles one broker delivery by inserting the durable `ConsumedMessage` inbox row and generated Notification in one PostgreSQL transaction. A duplicate MessageId returns without a new side effect; a concurrent unique-key loser rolls back and is acknowledged as an idempotent duplicate. The consumer retry count and delay are bounded and configurable. The baseline retains inbox and notification history for the life of the demo database; no cleanup worker is enabled because a retention policy for customer data is a deployment decision outside this learning slice.
+
 ## 2. Configuration model
 
 Each process receives only required configuration.
@@ -86,7 +90,7 @@ The current Gateway configuration reads `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_UR
 
 - Notification DB connection;
 - RabbitMQ connection;
-- consumer retry/concurrency;
+- bounded consumer retry/concurrency (`NOTIFICATION_CONSUMER_RETRY_COUNT`, `NOTIFICATION_CONSUMER_RETRY_DELAY_MS`);
 - HTTP read API settings.
 
 ### Web

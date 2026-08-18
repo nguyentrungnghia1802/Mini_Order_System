@@ -120,7 +120,7 @@ Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `dep
 
 Learning objective: DB/broker dual-write, idempotency, and recovery.
 
-Phase 7 status: partial. Phase 7.1 implements the Order-owned transactional outbox and lease-based dispatcher. Confirmation writes `orders` and `outbox_messages` atomically; the dispatcher publishes stable event IDs with trace context, uses `FOR UPDATE SKIP LOCKED`, retries with bounded exponential backoff, recovers expired leases, and dead-letters after the configured maximum. Phase 7.2 adds structured backlog logs, configurable readiness policy, read-only operator status/recovery procedures, and a Testcontainers RabbitMQ outage/recovery proof. Phase 7.3-7.6 remain for concurrent inbox/restart hardening, inventory/cancellation reconciliation, shutdown, and the final gate.
+Phase 7 status: partial. Phase 7.1 implements the Order-owned transactional outbox and lease-based dispatcher. Confirmation writes `orders` and `outbox_messages` atomically; the dispatcher publishes stable event IDs with trace context, uses `FOR UPDATE SKIP LOCKED`, retries with bounded exponential backoff, recovers expired leases, and dead-letters after the configured maximum. Phase 7.2 adds structured backlog logs, configurable readiness policy, read-only operator status/recovery procedures, and a Testcontainers RabbitMQ outage/recovery proof. Phase 7.3 hardens the Notification inbox with an explicit transaction, database-enforced duplicate suppression, concurrent redelivery coverage, bounded retry configuration, and process restart/redelivery evidence. Phase 7.4-7.6 remain for inventory/cancellation reconciliation, shutdown, and the final gate.
 
 ### Phase 8: Observability and quality
 

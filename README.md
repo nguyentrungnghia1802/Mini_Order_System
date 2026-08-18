@@ -8,6 +8,8 @@ Phase 0 bootstrap is implemented. Product has its own PostgreSQL model/migration
 
 Phase 7.2 adds structured outbox backlog logs, configurable readiness thresholds, read-only operator status queries, a recovery runbook, and a RabbitMQ outage/recovery test proving durable confirmation and backlog drain.
 
+Phase 7.3 makes Notification inbox handling explicit and restart-safe: `ConsumedMessage` plus generated Notification commit in one transaction, concurrent duplicate MessageIds are suppressed by database constraints, bounded retry is configurable, and RabbitMQ redelivery across a Notification host restart is covered by integration tests. Inbox/notification cleanup is intentionally deferred because no production retention policy is in scope.
+
 ## Target architecture
 
 ```text
@@ -120,6 +122,8 @@ dotnet run --project src/Services/NotificationService/MicroShop.NotificationServ
 ```
 
 The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen now uses the Gateway API with bounded polling, manual refresh, and explicit loading/empty/error states. The Compose HTTP smoke flow confirms a seeded Order and eventual Notification delivery; browser Playwright coverage remains a later roadmap task, and broker recovery behavior is covered in the RabbitMQ Testcontainers suite.
+
+Notification consumer retry is bounded and configurable with `NOTIFICATION_CONSUMER_RETRY_COUNT` and `NOTIFICATION_CONSUMER_RETRY_DELAY_MS` (defaults: 3 and 250 ms). Concurrent duplicate delivery is protected by the `consumed_messages` primary key and unique `notifications.source_message_id`; the test suite also verifies transaction rollback and idempotency across a Notification host restart.
 
 For the current Gateway slice, run the native Gateway after Product, Order, and Notification and use the public routes below. Destination addresses can be overridden with `PRODUCT_SERVICE_URL`, `ORDER_SERVICE_URL`, and `NOTIFICATION_SERVICE_URL`; Angular uses the same-origin Gateway paths and should not call service-native ports as a browser fallback.
 

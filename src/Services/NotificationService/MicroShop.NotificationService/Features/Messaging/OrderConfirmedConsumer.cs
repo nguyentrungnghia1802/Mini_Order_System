@@ -38,12 +38,15 @@ public sealed partial class OrderConfirmedNotificationHandler(
         consumedMessage.AttachNotification(notification);
         dbContext.ConsumedMessages.Add(consumedMessage);
 
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
+            await transaction.RollbackAsync(CancellationToken.None);
             LogConcurrentDuplicate(exception, messageId, message.OrderId);
         }
     }

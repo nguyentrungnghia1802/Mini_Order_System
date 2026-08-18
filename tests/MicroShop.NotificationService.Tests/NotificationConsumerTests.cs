@@ -67,6 +67,47 @@ public sealed class NotificationConsumerTests(NotificationDatabaseFixture fixtur
     }
 
     [Fact]
+    public async Task SuppressesConcurrentDuplicateDeliveryByDatabaseConstraints()
+    {
+        var message = CreateMessage();
+        var handlers = Enumerable.Range(0, 8)
+            .Select(_ => ConsumeWithIndependentContextAsync(message))
+            .ToArray();
+
+        await Task.WhenAll(handlers);
+
+        await using var verificationContext = fixture.CreateDbContext();
+        Assert.Equal(1, await verificationContext.ConsumedMessages.CountAsync(
+            candidate => candidate.MessageId == message.MessageId));
+        Assert.Equal(1, await verificationContext.Notifications.CountAsync(
+            candidate => candidate.SourceMessageId == message.MessageId));
+    }
+
+    [Fact]
+    public async Task RollsBackConsumedMessageWhenNotificationWriteFails()
+    {
+        var message = CreateMessage() with
+        {
+            CustomerEmail = new string('x', 321) + "@example.com"
+        };
+
+        await using (var dbContext = fixture.CreateDbContext())
+        {
+            await Assert.ThrowsAsync<DbUpdateException>(() => CreateHandler(dbContext).HandleAsync(
+                message,
+                message.MessageId,
+                null,
+                CancellationToken.None));
+        }
+
+        await using var verificationContext = fixture.CreateDbContext();
+        Assert.False(await verificationContext.ConsumedMessages.AnyAsync(
+            candidate => candidate.MessageId == message.MessageId));
+        Assert.False(await verificationContext.Notifications.AnyAsync(
+            candidate => candidate.SourceMessageId == message.MessageId));
+    }
+
+    [Fact]
     public async Task RejectsUnsupportedSchemaBeforeWritingSideEffects()
     {
         var message = CreateMessage() with { SchemaVersion = 2 };
@@ -91,6 +132,16 @@ public sealed class NotificationConsumerTests(NotificationDatabaseFixture fixtur
         return new OrderConfirmedNotificationHandler(
             dbContext,
             NullLogger<OrderConfirmedNotificationHandler>.Instance);
+    }
+
+    private async Task ConsumeWithIndependentContextAsync(OrderConfirmedV1 message)
+    {
+        await using var dbContext = fixture.CreateDbContext();
+        await CreateHandler(dbContext).HandleAsync(
+            message,
+            message.MessageId,
+            "00-concurrent-duplicate",
+            CancellationToken.None);
     }
 
     private static OrderConfirmedV1 CreateMessage()

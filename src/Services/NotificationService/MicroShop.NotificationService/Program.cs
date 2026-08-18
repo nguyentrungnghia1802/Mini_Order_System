@@ -2,6 +2,7 @@ using MassTransit;
 using MicroShop.NotificationService.Features.Messaging;
 using MicroShop.NotificationService.Features.Notifications;
 using MicroShop.NotificationService.Infrastructure.Database;
+using MicroShop.NotificationService.Infrastructure.Messaging;
 using MicroShop.NotificationService.Persistence;
 using MicroShop.ServiceDefaults.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +62,23 @@ builder.Services.AddDbContext<NotificationDbContext>((serviceProvider, options) 
         npgsqlOptions.MigrationsAssembly(typeof(NotificationDbContext).Assembly.FullName));
 });
 builder.Services.AddScoped<OrderConfirmedNotificationHandler>();
+builder.Services.AddOptions<NotificationMessagingOptions>()
+    .Configure(options =>
+    {
+        options.RetryCount = ParseInt(
+            configuration["NOTIFICATION_CONSUMER_RETRY_COUNT"]
+                ?? configuration["NotificationMessaging:RetryCount"],
+            options.RetryCount);
+        options.RetryDelay = ParseMilliseconds(
+            configuration["NOTIFICATION_CONSUMER_RETRY_DELAY_MS"]
+                ?? configuration["NotificationMessaging:RetryDelayMilliseconds"],
+            options.RetryDelay);
+    })
+    .Validate(options => options.RetryCount is >= 1 and <= 20,
+        "Notification consumer retry count must be between 1 and 20.")
+    .Validate(options => options.RetryDelay > TimeSpan.Zero,
+        "Notification consumer retry delay must be positive.")
+    .ValidateOnStart();
 var useInMemoryMessaging = builder.Environment.IsEnvironment("Testing")
     || ParseBool(
         configuration["RABBITMQ_USE_IN_MEMORY"] ?? configuration["RabbitMq:UseInMemory"],
@@ -98,7 +116,8 @@ builder.Services.AddMassTransit(massTransit =>
     {
         massTransit.UsingInMemory((context, bus) =>
         {
-            bus.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromMilliseconds(250)));
+            var retryOptions = context.GetRequiredService<IOptions<NotificationMessagingOptions>>().Value;
+            bus.UseMessageRetry(retry => retry.Interval(retryOptions.RetryCount, retryOptions.RetryDelay));
             bus.ConfigureEndpoints(context);
         });
         return;
@@ -106,6 +125,7 @@ builder.Services.AddMassTransit(massTransit =>
 
     massTransit.UsingRabbitMq((context, bus) =>
     {
+        var retryOptions = context.GetRequiredService<IOptions<NotificationMessagingOptions>>().Value;
         var rabbitMq = context.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
         bus.Host(rabbitMq.Host, (ushort)rabbitMq.Port, rabbitMq.VirtualHost, host =>
         {
@@ -117,7 +137,7 @@ builder.Services.AddMassTransit(massTransit =>
             endpoint.Durable = true;
             endpoint.AutoDelete = false;
             endpoint.PrefetchCount = 16;
-            endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromMilliseconds(250)));
+            endpoint.UseMessageRetry(retry => retry.Interval(retryOptions.RetryCount, retryOptions.RetryDelay));
             endpoint.ConfigureConsumer<OrderConfirmedConsumer>(context);
         });
     });
@@ -156,6 +176,18 @@ app.Run();
 static int ParsePort(string? value, int fallback)
 {
     return int.TryParse(value, out var port) ? port : fallback;
+}
+
+static int ParseInt(string? value, int fallback)
+{
+    return int.TryParse(value, out var parsed) ? parsed : fallback;
+}
+
+static TimeSpan ParseMilliseconds(string? value, TimeSpan fallback)
+{
+    return int.TryParse(value, out var milliseconds) && milliseconds > 0
+        ? TimeSpan.FromMilliseconds(milliseconds)
+        : fallback;
 }
 
 static bool ParseBool(string? value, bool fallback)

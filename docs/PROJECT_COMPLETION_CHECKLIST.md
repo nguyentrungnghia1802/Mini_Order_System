@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1/7.2 transactional outbox operations, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1-7.3 outbox operations plus Notification inbox hardening, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -45,7 +45,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Remaining Phase 7.3-7.6 inbox concurrency hardening, reconciliation, and resilience policies.
+- Remaining Phase 7.4-7.6 reconciliation and resilience policies.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 7.3 — harden Notification inbox/idempotency behavior under concurrent redelivery and process restart.
+Phase 7.4 — add internal reconciliation for `inventory_unknown` and `cancellation_pending`.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -80,6 +80,15 @@ Phase 7.3 — harden Notification inbox/idempotency behavior under concurrent re
 | RabbitMQ outage/recovery | `[x]` | PostgreSQL/RabbitMQ Testcontainers test confirms confirmed Order durability while RabbitMQ is stopped, readiness within policy, lease/retry recovery, and eventual publish after broker/dispatcher recovery. |
 | Metrics scope | `[x]` | No metrics provider exists in the baseline; health data and structured backlog logs are implemented, with the metrics surface explicitly deferred to Phase 8.3. |
 
+## Phase 7.3 — Notification inbox/idempotency hardening
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Atomic consumer transaction | `[x]` | `OrderConfirmedNotificationHandler` commits `ConsumedMessage` and generated Notification in one explicit Notification DB transaction; oversized notification persistence failure rolls back both rows. |
+| Concurrent duplicate redelivery | `[x]` | Eight independent PostgreSQL contexts process one MessageId concurrently; the inbox primary key and source-message unique index leave one inbox row and one Notification. |
+| Restart and retry policy | `[x]` | Notification retry count/delay are bounded/configurable; RabbitMQ integration publishes, restarts the Notification host, redelivers the same MessageId, and verifies no duplicate side effect. |
+| Retention decision | `[x]` | No cleanup worker is justified for the small demo database; retained inbox/notification history follows the documented demo retention policy and production personal-data retention remains deployment-specific. |
+
 ## Phase 1 — Product Service foundation
 
 | Area | Status | Verified evidence |
@@ -102,7 +111,7 @@ Phase 7.3 — harden Notification inbox/idempotency behavior under concurrent re
 | Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 44 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and outbox/direct-publish behavior. |
+| Order foundation tests | `[x]` | 45 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and outbox/direct-publish behavior. |
 | Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; the combined Angular suite has 21 tests. |
 | Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
 
@@ -131,7 +140,7 @@ Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 87 .NET tests pass (1 Architecture, 2 Contracts, 12 Notification, 7 Gateway, 44 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: 91 .NET tests pass (1 Architecture, 2 Contracts, 15 Notification, 7 Gateway, 45 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
 
 ## Phase 5 — RabbitMQ and Notification foundation (partial)
 
@@ -140,7 +149,7 @@ Gateway evidence:
 | Shared `OrderConfirmedV1` contract | `[x]` | Versioned passive records and two JSON compatibility tests are implemented in `MicroShop.Contracts`. |
 | RabbitMQ/MassTransit transport foundation | `[x]` | RabbitMQ management Compose service, environment-bound credentials/options, Order bus registration, durable Notification endpoint, bounded retry, framework error queue, bus readiness health, and real RabbitMQ Testcontainers integration coverage are implemented. |
 | Direct `OrderConfirmedV1` publish milestone | `[x]` | Order publishes after the confirmed DB commit with explicit message/correlation IDs and traceparent propagation; the direct-publish failure window is tested and documented. |
-| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records transactionally, and suppresses duplicate message IDs; 12 Notification tests pass, including real RabbitMQ publish/consume and recovery coverage. |
+| Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records in one explicit transaction, suppresses concurrent duplicate message IDs, and supports bounded configurable retry; 15 Notification tests pass, including real RabbitMQ publish/consume, rollback, concurrent duplicate, and process-restart redelivery coverage. |
 | Notification read API and Gateway route | `[x]` | Filtered/paginated `GET /api/v1/notifications`, idempotent mark-as-read, OpenAPI, and tested `/api/notifications/*` Gateway transform are implemented. |
 | Notification Angular UI | `[x]` | `/notifications` route, same-origin client, list/empty/error/loading states, bounded polling, manual refresh, eventual-consistency guidance, and mark-as-read are implemented; 21 Angular tests pass overall. |
 | Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API/UI, duplicate suppression, retry/error queue, publisher independence, restart, and queued recovery are verified; full Compose eventual-flow validation remains. |
