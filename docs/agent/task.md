@@ -1225,7 +1225,7 @@ Evidence for 8.9 technical gates:
 - Angular: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, and `npm run build` pass with 21 tests.
 - Migrations: CI now applies Product, Order, and Notification migrations to separate empty PostgreSQL databases; local PostgreSQL Testcontainers fixtures apply all three service migration sets during the passing integration suite.
 - Runtime: Compose `config --quiet`, `up --build -d --wait`, healthy `ps --all`, Playwright E2E 2/2, and failure-injection `all` pass. Named PostgreSQL/RabbitMQ volumes are preserved.
-- Security/safety: tracked-secret checks, package/image audit, backup/restore drills, and `git diff --check` pass. `codex/phase8-final-gate` was pushed and fast-forward merged/pushed to `main` at `fb430b860a54d1d7ee9b16d683911a7cb0834cdd`; the final-proof branch contains the active-SDK wrapper fix and is ready for final delivery.
+- Security/safety: tracked-secret checks, package/image audit, backup/restore drills, and `git diff --check` pass. `codex/phase8-final-gate` was pushed and fast-forward merged/pushed to `main` at `fb430b860a54d1d7ee9b16d683911a7cb0834cdd`; the active-SDK wrapper fix was committed as `0ddad6d`, and final delivery was completed on `main` at `7bd2619a2f30203fab36061a390d02a566848a27`.
 
 ---
 
