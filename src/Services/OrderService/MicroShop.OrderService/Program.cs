@@ -141,12 +141,28 @@ builder.Services.AddOptions<OutboxOptions>()
         options.RetryMaxDelay = ParseMilliseconds(
             configuration["ORDER_OUTBOX_RETRY_MAX_DELAY_MS"] ?? configuration["OrderOutbox:RetryMaxDelayMilliseconds"],
             options.RetryMaxDelay);
+        options.MaxPendingMessages = ParseInt(
+            configuration["ORDER_OUTBOX_MAX_PENDING_MESSAGES"] ?? configuration["OrderOutbox:MaxPendingMessages"],
+            options.MaxPendingMessages);
+        options.MaxPendingAge = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_MAX_PENDING_AGE_MS"] ?? configuration["OrderOutbox:MaxPendingAgeMilliseconds"],
+            options.MaxPendingAge);
+        options.BacklogLogInterval = ParseMilliseconds(
+            configuration["ORDER_OUTBOX_BACKLOG_LOG_INTERVAL_MS"] ?? configuration["OrderOutbox:BacklogLogIntervalMilliseconds"],
+            options.BacklogLogInterval);
+        options.FailReadinessOnDeadLettered = ParseBool(
+            configuration["ORDER_OUTBOX_FAIL_READINESS_ON_DEAD_LETTERED"]
+                ?? configuration["OrderOutbox:FailReadinessOnDeadLettered"],
+            options.FailReadinessOnDeadLettered);
     })
     .Validate(options => options.MaxAttempts is >= 1 and <= 100, "Order outbox max attempts must be between 1 and 100.")
     .Validate(options => options.PollInterval >= TimeSpan.FromMilliseconds(50), "Order outbox poll interval must be at least 50 milliseconds.")
     .Validate(options => options.LeaseDuration >= TimeSpan.FromSeconds(1), "Order outbox lease duration must be at least 1 second.")
     .Validate(options => options.RetryBaseDelay > TimeSpan.Zero, "Order outbox retry base delay must be positive.")
     .Validate(options => options.RetryMaxDelay >= options.RetryBaseDelay, "Order outbox retry max delay must not be lower than the base delay.")
+    .Validate(options => options.MaxPendingMessages is >= 1 and <= 1_000_000, "Order outbox max pending messages must be between 1 and 1000000.")
+    .Validate(options => options.MaxPendingAge > TimeSpan.Zero, "Order outbox max pending age must be positive.")
+    .Validate(options => options.BacklogLogInterval >= TimeSpan.FromSeconds(1), "Order outbox backlog log interval must be at least 1 second.")
     .ValidateOnStart();
 builder.Services.AddScoped<IOrderOutboxWriter, OrderOutboxWriter>();
 builder.Services.AddScoped<IOrderConfirmedMessageTransport, MassTransitOrderConfirmedMessageTransport>();
@@ -172,9 +188,11 @@ builder.Services.AddDbContext<OrderDbContext>((serviceProvider, options) =>
     options.UseNpgsql(database.BuildConnectionString(), npgsqlOptions =>
         npgsqlOptions.MigrationsAssembly(typeof(OrderDbContext).Assembly.FullName));
 });
-builder.Services.AddHealthChecks().AddDbContextCheck<OrderDbContext>("order-database");
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddDbContextCheck<OrderDbContext>("order-database");
 if (outboxEnabled)
 {
+    healthChecks.AddCheck<OrderOutboxHealthCheck>("order-outbox");
     builder.Services.AddHostedService<OutboxDispatcher>();
 }
 

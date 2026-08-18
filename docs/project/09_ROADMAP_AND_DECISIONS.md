@@ -120,7 +120,7 @@ Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `dep
 
 Learning objective: DB/broker dual-write, idempotency, and recovery.
 
-Phase 7 status: partial. Phase 7.1 implements the Order-owned transactional outbox and lease-based dispatcher. Confirmation writes `orders` and `outbox_messages` atomically; the dispatcher publishes stable event IDs with trace context, uses `FOR UPDATE SKIP LOCKED`, retries with bounded exponential backoff, recovers expired leases, and dead-letters after the configured maximum. Phase 7.2-7.6 remain for operational backlog/readiness/metrics, RabbitMQ outage/recovery evidence, concurrent inbox/restart hardening, inventory/cancellation reconciliation, shutdown, and the final gate.
+Phase 7 status: partial. Phase 7.1 implements the Order-owned transactional outbox and lease-based dispatcher. Confirmation writes `orders` and `outbox_messages` atomically; the dispatcher publishes stable event IDs with trace context, uses `FOR UPDATE SKIP LOCKED`, retries with bounded exponential backoff, recovers expired leases, and dead-letters after the configured maximum. Phase 7.2 adds structured backlog logs, configurable readiness policy, read-only operator status/recovery procedures, and a Testcontainers RabbitMQ outage/recovery proof. Phase 7.3-7.6 remain for concurrent inbox/restart hardening, inventory/cancellation reconciliation, shutdown, and the final gate.
 
 ### Phase 8: Observability and quality
 
@@ -152,7 +152,7 @@ The project is "complete for learning" at the end of Phase 8. Phase 9 and busine
 
 | ID | Issue | Impact | Planned control |
 | --- | --- | --- | --- |
-| TD-001 | Direct publish after DB commit in early phase | Historical lost-notification window | Phase 7.1 transactional outbox implemented; Phase 7.2 outage/readiness evidence remains |
+| TD-001 | Direct publish after DB commit in early phase | Historical lost-notification window | Phase 7.1 transactional outbox implemented; Phase 7.2 outage/readiness evidence passes |
 | TD-002 | No public order idempotency key | Browser retry may duplicate orders | Disable duplicate UI submit; optional extension |
 | TD-003 | No automated reconciliation initially | `inventory_unknown` requires manual inspection | Phase 7 helper/job |
 | TD-004 | No authentication | Public demo operator writes are unsafe | Local-only baseline; optional Phase 9 |

@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1 verifies durable outbox persistence and lease/retry behavior. Browser Playwright coverage and Phase 7.2-7.6 operations/reconciliation/resilience gates remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1/7.2 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, and RabbitMQ outage recovery. Browser Playwright coverage and Phase 7.3-7.6 operations/reconciliation/resilience gates remain deferred.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -18,7 +18,42 @@ The system must not be described as production-ready merely because it runs in D
 
 ## Phase 7.1 outbox status
 
-Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The operational backlog/readiness/metrics policy, RabbitMQ outage Compose exercise, reconciliation, and shutdown/resilience gates remain Phase 7.2-7.6 work.
+Order confirmation writes the `orders` state and its `outbox_messages` event in one database save. `OutboxDispatcher` claims pending rows with PostgreSQL leases, publishes `OrderConfirmedV1` with the stable outbox MessageId and trace context, retries with bounded backoff, reclaims expired leases after restart, and marks exhausted messages dead-lettered. The backlog/readiness policy and RabbitMQ outage exercise are implemented in Phase 7.2; reconciliation and shutdown/resilience gates remain Phase 7.3-7.6 work.
+
+## Phase 7.2 outbox operations
+
+`OutboxDispatcher` emits a structured backlog log at the configured interval with pending count, oldest pending age, and dead-letter count. Order `/health/ready` includes an outbox health check when outbox mode is enabled:
+
+- pending count above `ORDER_OUTBOX_MAX_PENDING_MESSAGES` is unhealthy;
+- oldest pending age above `ORDER_OUTBOX_MAX_PENDING_AGE_MS` is unhealthy;
+- dead-lettered rows are degraded by default and unhealthy when `ORDER_OUTBOX_FAIL_READINESS_ON_DEAD_LETTERED=true`;
+- a pending backlog within policy does not fail readiness merely because RabbitMQ is unavailable—the Order database is the durability boundary for confirmation.
+
+The baseline has no metrics provider or metrics endpoint, so Phase 7.2 uses health data and structured logs. The metrics surface remains owned by Phase 8.3.
+
+### Outbox operator query
+
+Use the read-only wrapper from the repository root:
+
+```powershell
+./scripts/db-outbox-status.ps1 -EnvFile .env
+```
+
+```bash
+./scripts/db-outbox-status.sh .env
+```
+
+The command prints a summary and at most 20 pending/dead-lettered rows. It does not update, delete, or replay messages. The equivalent SQL is kept in both scripts so an operator can review the exact query before running it.
+
+### RabbitMQ outage recovery
+
+1. Keep Order and PostgreSQL running; do not delete the Order database or Compose volumes.
+2. During the outage, verify `/health/ready`, the confirmed Order row, and a pending row with `db-outbox-status`.
+3. Restore RabbitMQ and wait for its health check. If the MassTransit connection does not reconnect, restart only `order-service` so a new dispatcher can reclaim expired leases.
+4. Re-run the read-only status query until pending count is zero and inspect any dead-lettered rows before taking further action.
+5. Verify the Notification consumer and read API for the recovered Order; retain dead-letter/error details for diagnosis rather than deleting them.
+
+The automated evidence is `OrderOutboxRabbitMqTests.RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox`, which uses disposable PostgreSQL/RabbitMQ Testcontainers and proves the same sequence without touching the local Compose volumes.
 
 ## 2. Configuration model
 

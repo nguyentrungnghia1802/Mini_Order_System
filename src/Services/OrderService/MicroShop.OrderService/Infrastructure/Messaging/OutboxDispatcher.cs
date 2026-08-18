@@ -12,6 +12,7 @@ public sealed class OutboxDispatcher : BackgroundService
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxDispatcher> _logger;
     private readonly string _workerId = $"{Environment.MachineName}:{Guid.NewGuid():N}";
+    private DateTimeOffset _lastBacklogLogAtUtc = DateTimeOffset.MinValue;
 
     public OutboxDispatcher(
         IServiceScopeFactory scopeFactory,
@@ -70,7 +71,9 @@ public sealed class OutboxDispatcher : BackgroundService
         {
             try
             {
-                if (!await DispatchOnceAsync(stoppingToken))
+                var handled = await DispatchOnceAsync(stoppingToken);
+                await LogBacklogIfDueAsync(stoppingToken);
+                if (!handled)
                 {
                     await Task.Delay(_options.PollInterval, stoppingToken);
                 }
@@ -85,6 +88,25 @@ public sealed class OutboxDispatcher : BackgroundService
                 await Task.Delay(_options.PollInterval, stoppingToken);
             }
         }
+    }
+
+    private async Task LogBacklogIfDueAsync(CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastBacklogLogAtUtc < _options.BacklogLogInterval)
+        {
+            return;
+        }
+
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        var summary = await OutboxBacklogQuery.ReadAsync(dbContext, cancellationToken);
+        _lastBacklogLogAtUtc = now;
+        OutboxLog.Backlog(
+            _logger,
+            summary.PendingCount,
+            summary.OldestPendingAge(now)?.TotalSeconds ?? 0,
+            summary.DeadLetteredCount);
     }
 
     private async Task<ClaimResult> ClaimNextAsync(CancellationToken cancellationToken)
@@ -244,4 +266,14 @@ internal static partial class OutboxLog
         Level = LogLevel.Warning,
         Message = "Order outbox message {MessageId} could not be updated after a failed publish because its lease was lost.")]
     public static partial void FailedPublishLeaseLost(ILogger logger, Guid messageId);
+
+    [LoggerMessage(
+        EventId = 7005,
+        Level = LogLevel.Information,
+        Message = "Order outbox backlog: {PendingCount} pending message(s), oldest age {OldestPendingAgeSeconds} second(s), {DeadLetteredCount} dead-lettered message(s).")]
+    public static partial void Backlog(
+        ILogger logger,
+        int pendingCount,
+        double oldestPendingAgeSeconds,
+        int deadLetteredCount);
 }

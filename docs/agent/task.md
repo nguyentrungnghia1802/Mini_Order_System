@@ -951,14 +951,23 @@ Evidence for 7.1:
 
 ## 7.2 Outbox operations
 
-- [ ] Add outbox backlog logs.
-- [ ] Add outbox readiness/health policy.
-- [ ] Add outbox metrics if metrics exist.
-- [ ] Add operator query or documented SQL for pending outbox.
-- [ ] Add recovery procedure.
-- [ ] Add RabbitMQ outage test.
-- [ ] Verify Order confirmation remains durable when RabbitMQ is unavailable.
-- [ ] Verify backlog drains after RabbitMQ recovers.
+- [x] Add outbox backlog logs.
+- [x] Add outbox readiness/health policy.
+- [x] Add outbox metrics if metrics exist.
+- [x] Add operator query or documented SQL for pending outbox.
+- [x] Add recovery procedure.
+- [x] Add RabbitMQ outage test.
+- [x] Verify Order confirmation remains durable when RabbitMQ is unavailable.
+- [x] Verify backlog drains after RabbitMQ recovers.
+
+Evidence for 7.2:
+
+- Files: `Infrastructure/Messaging/OutboxBacklog.cs`, `OutboxDispatcher.cs`, `OutboxOptions.cs`, `Program.cs`, `scripts/db-outbox-status.ps1`, `scripts/db-outbox-status.sh`, `scripts/README.md`, `deploy/compose.yaml`, and `tests/MicroShop.OrderService.Tests/OrderOutboxRabbitMqTests.cs`.
+- Operations: the dispatcher emits structured backlog summaries with pending count, oldest age, and dead-letter count; `/health/ready` includes an Order outbox policy check. Configurable thresholds are `ORDER_OUTBOX_MAX_PENDING_MESSAGES`, `ORDER_OUTBOX_MAX_PENDING_AGE_MS`, `ORDER_OUTBOX_BACKLOG_LOG_INTERVAL_MS`, and `ORDER_OUTBOX_FAIL_READINESS_ON_DEAD_LETTERED`. A pending backlog within policy remains ready during a RabbitMQ outage because confirmation durability is provided by the Order database outbox; excessive backlog or configured dead-letter policy returns unhealthy.
+- Metrics: no metrics provider or endpoint exists in the current baseline, so no separate metric was added outside the roadmap. Structured logs and health data are the operational signals for this slice; Phase 8.3 owns the future metrics surface.
+- Operator query/recovery: the read-only status wrappers show aggregate backlog/dead-letter state and the first 20 actionable rows. The runbook is documented in `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md`; it never deletes or edits outbox records.
+- Test: `OrderOutboxRabbitMqTests.RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox` uses RabbitMQ and PostgreSQL Testcontainers, stops RabbitMQ before confirmation, verifies `confirmed` plus an un-published outbox row and HTTP readiness, restarts the dispatcher after lease expiry, and verifies the row is published with a retry attempt.
+- Commands: `dotnet test tests/MicroShop.OrderService.Tests/MicroShop.OrderService.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~OrderOutboxRabbitMqTests`; `./scripts/db-outbox-status.ps1 -EnvFile .env.example`; `docker compose --env-file .env.example -f deploy/compose.yaml config`.
 
 ## 7.3 Inbox/idempotency hardening
 

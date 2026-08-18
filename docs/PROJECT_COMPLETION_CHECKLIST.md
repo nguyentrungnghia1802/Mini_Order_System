@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1 transactional outbox, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, and Phase 7.1/7.2 transactional outbox operations, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -45,7 +45,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Remaining Phase 7.2-7.6 outbox operations, outage/recovery gate, inbox concurrency hardening, reconciliation, and resilience policies.
+- Remaining Phase 7.3-7.6 inbox concurrency hardening, reconciliation, and resilience policies.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -53,7 +53,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 7.2 — add outbox operations/readiness/backlog evidence and the RabbitMQ outage/recovery test.
+Phase 7.3 — harden Notification inbox/idempotency behavior under concurrent redelivery and process restart.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -70,6 +70,15 @@ Phase 7.2 — add outbox operations/readiness/backlog evidence and the RabbitMQ 
 | Atomic confirmation write | `[x]` | `OrderApplicationService` adds the serialized `OrderConfirmedV1` row before the same `SaveChangesAsync` that confirms the Order; no production DI registration remains for the direct broker publisher. |
 | Dispatcher and recovery state | `[x]` | `OutboxDispatcher` uses PostgreSQL `FOR UPDATE SKIP LOCKED`, leases, bounded exponential backoff, stable MessageId/correlation/traceparent publication, lease-expiry recovery, and dead-lettering at the configured maximum. |
 | Phase 7.1 tests | `[x]` | 44 Order tests pass, including atomic outbox persistence, direct-publish demonstration isolation, stable-ID success, concurrent claim, retry/dead-letter, and restart/lease recovery. |
+
+## Phase 7.2 — Outbox operations
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Backlog logging and readiness | `[x]` | `OutboxDispatcher` emits pending/oldest/dead-letter summaries; `OrderOutboxHealthCheck` applies configurable pending count/age and dead-letter policy to `/health/ready`. |
+| Operator status and recovery | `[x]` | Read-only `scripts/db-outbox-status.ps1/.sh` report backlog and actionable rows; recovery steps are documented in `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md` without deleting outbox data. |
+| RabbitMQ outage/recovery | `[x]` | PostgreSQL/RabbitMQ Testcontainers test confirms confirmed Order durability while RabbitMQ is stopped, readiness within policy, lease/retry recovery, and eventual publish after broker/dispatcher recovery. |
+| Metrics scope | `[x]` | No metrics provider exists in the baseline; health data and structured backlog logs are implemented, with the metrics surface explicitly deferred to Phase 8.3. |
 
 ## Phase 1 — Product Service foundation
 
