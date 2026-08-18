@@ -200,15 +200,9 @@ function Run-RabbitMqStopped {
 }
 
 function Run-IntegrationTests {
-    $sdkDirectory = 'C:\WINDOWS\TEMP\microshop-dotnet-sdk-10.0.302'
-    $dotnetCommand = 'dotnet'
-    if (Test-Path (Join-Path $sdkDirectory 'dotnet.exe')) {
-        $env:DOTNET_ROOT = $sdkDirectory
-        $env:Path = "$sdkDirectory;$env:Path"
-        $dotnetCommand = Join-Path $sdkDirectory 'dotnet.exe'
-    }
-    elseif (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-        throw "The pinned Windows SDK was not found at $sdkDirectory and dotnet is not available on PATH."
+    $dotnetCommand = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
+    if ([string]::IsNullOrWhiteSpace($dotnetCommand)) {
+        throw 'dotnet is not available on PATH for the integration-test filters.'
     }
 
     $testCases = @(
