@@ -1114,6 +1114,7 @@ Evidence for 8.4:
 - No external Log Monitoring System was supplied or added to the baseline scope. All .NET services emit collector-neutral JSON to stdout, and `OTEL_EXPORTER_OTLP_ENDPOINT` can connect an existing OTLP-capable collector without changing service code or Compose topology.
 - Local Docker log search was verified by trace root `11111111111111111111111111111111` and Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c` across Gateway, Order, Product, outbox, and Notification logs. `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md` documents fields, query strategy, optional endpoint configuration, and leakage rules.
 - `scripts/e2e-compose.ps1`, `scripts/failure-injection.ps1`, and the full Compose smoke preserve independent local operation; logs contain bounded identifiers and stable codes, not credentials, tokens, or full customer payloads.
+- Implementation commit: `6cf66ef975c532aff707bd8c3f21c050b37b0032` (`test(e2e): automate Compose quality gates`).
 
 ## 8.5 End-to-end automation
 
@@ -1134,6 +1135,7 @@ Evidence for 8.5:
 - `web/microshop-ui/playwright.config.ts` pins a Chromium project, Compose base URL override, serial execution for stateful demo data, bounded polling-compatible timeouts, and failure artifacts. `package.json` adds `e2e` and `e2e:install` scripts; `package-lock.json` pins `@playwright/test` 1.62.1.
 - `web/microshop-ui/e2e/microshop.spec.ts` covers catalog display, UI create/update, confirmed checkout, Order detail, bounded Notification polling, cancellation, Product stock restoration, insufficient stock, and a dependency-failure UI response without creating an Order.
 - `scripts/e2e-compose.ps1/.sh` validates/builds/starts the full stack and runs the browser suite without removing containers or volumes. Validation: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, `npm run build`, and Compose Playwright run passed; 2 Playwright tests passed.
+- Implementation commit: `6cf66ef975c532aff707bd8c3f21c050b37b0032` (`test(e2e): automate Compose quality gates`).
 
 ## 8.6 Failure-injection automation
 
@@ -1150,6 +1152,7 @@ Evidence for 8.6:
 - `scripts/failure-injection.ps1` provides `all`, per-service, and integration-test scenarios. It stops/starts only named services, expects bounded downstream failure when Product is stopped, verifies durable confirmed Orders while Notification/RabbitMQ are stopped, and polls for recovery after restart. `scripts/failure-injection.sh` delegates to the same harness when `pwsh` is available.
 - The integration scenario runs `PublishesDuplicateEventWithOneDurableNotification` and `MovesUnsupportedMessageToErrorQueueAfterBoundedRetry` (2 passed), `ConcurrentLastStockReservationsAllowOnlyOneSuccess` (1 passed), and `RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox` (1 passed).
 - Local validation: Product stopped, Notification stopped, RabbitMQ stopped, and integration-test scenarios each passed; all named containers and volumes were preserved.
+- Implementation commit: `6cf66ef975c532aff707bd8c3f21c050b37b0032` (`test(e2e): automate Compose quality gates`).
 
 ## 8.7 Security and deployment review
 
