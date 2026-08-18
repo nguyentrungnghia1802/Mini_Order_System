@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, bounded idempotent release/lookup retry, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.5 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, Notification inbox idempotency, reconciliation, bounded shutdown, and lifecycle readiness transitions. Browser Playwright coverage and the Phase 8 observability/quality work remain deferred.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, bounded idempotent release/lookup retry, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.6 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, Notification inbox idempotency, reconciliation, bounded shutdown, lifecycle readiness transitions, observability, Playwright Compose E2E, and non-destructive failure-injection recovery checks.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -325,7 +325,7 @@ Local operator signals remain:
 | `microshop.order.outbox.failures` | Outbox publish failures |
 | `microshop.notification.consume.results` | New/duplicate/failed OrderConfirmedV1 consumption |
 
-Metrics are optional for baseline but names/labels should avoid unbounded customer/order IDs.
+Metrics are optional for baseline but names/labels should avoid unbounded customer/order IDs. The local provider and bounded instruments are implemented; an external collector remains optional.
 
 ## 13. Logging operations
 

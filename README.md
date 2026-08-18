@@ -14,7 +14,7 @@ Phase 7.4 adds a controlled Order-native reconciliation path at `/internal/v1/re
 
 Phase 7.5 adds bounded resilience policies: Product calls retain an explicit timeout of at most five seconds, reserve never retries an ambiguous command, and only the order-keyed idempotent release operation plus the read-only reservation lookup use a configurable safe retry (`PRODUCT_SERVICE_SAFE_RETRY_COUNT`, default 1; delay default 100 ms). All .NET hosts use a bounded shutdown timeout (`MICROSHOP_SHUTDOWN_TIMEOUT_MS`, default 10 seconds); MassTransit startup/consumer stop is tied to that bound, cancellation tokens propagate through dependency calls, and `/health/ready` becomes unhealthy during shutdown while `/health/live` remains a liveness signal.
 
-Phase 8.1–8.3 now adds the observability core: every .NET host uses JSON console scopes with `service.name`, environment, W3C trace/span IDs, and bounded entity identifiers; ASP.NET Core and HttpClient OpenTelemetry tracing/metrics are registered centrally; Order, Product inventory, Product dependency, outbox, and Notification outcomes emit low-cardinality meters; and an optional `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP export without requiring a collector for local operation. The default Compose stack remains limited to the planned services and does not add an observability backend.
+Phase 8.1–8.6 now covers the observability core plus quality automation: every .NET host uses JSON console scopes with `service.name`, environment, W3C trace/span IDs, and bounded entity identifiers; ASP.NET Core and HttpClient OpenTelemetry tracing/metrics are registered centrally; Order, Product inventory, Product dependency, outbox, and Notification outcomes emit low-cardinality meters; and an optional `OTEL_EXPORTER_OTLP_ENDPOINT` enables OTLP export without requiring a collector for local operation. Playwright runs a real Compose browser flow for catalog management, checkout, confirmation, eventual Notification, cancellation/stock restoration, insufficient stock, and dependency UI behavior. Non-destructive failure-injection wrappers cover stopped services, RabbitMQ/outbox recovery, duplicate/error-queue behavior, and concurrent last-stock protection. The default Compose stack remains limited to the planned services and does not add an observability backend.
 
 ## Target architecture
 
@@ -58,6 +58,15 @@ docker compose --env-file .env -f deploy/compose.yaml config
 docker compose --env-file .env -f deploy/compose.yaml up --build -d
 docker compose --env-file .env -f deploy/compose.yaml ps --all
 ```
+
+Run the browser and failure-injection gates after the stack is healthy:
+
+```powershell
+./scripts/e2e-compose.ps1 -EnvFile .env
+./scripts/failure-injection.ps1 -Scenario all -EnvFile .env
+```
+
+The wrappers preserve containers and named volumes. Playwright uses Chromium and bounded polling; the failure harness creates uniquely named demo data and only stops/starts named services. `npm run e2e:install` installs the local browser binary when running Playwright directly from `web/microshop-ui`.
 
 The base Compose file starts PostgreSQL, RabbitMQ, three migration one-shots, Product, Order, Notification, Gateway, and Web. PostgreSQL initialization creates separate logical databases and users for Product, Order, and Notification; application services wait for their own migration one-shot and dependency health. Only Web `http://localhost:8080` and RabbitMQ management `http://localhost:15672` are published by default. The Web container proxies `/api/*` to the private Gateway. Existing PostgreSQL/RabbitMQ volumes are retained by normal `docker compose down`.
 
@@ -129,7 +138,7 @@ $env:NOTIFICATION_DB_PASSWORD = "<local-password>"
 dotnet run --project src/Services/NotificationService/MicroShop.NotificationService -- --migrate
 ```
 
-The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen now uses the Gateway API with bounded polling, manual refresh, and explicit loading/empty/error states. The Compose HTTP smoke flow confirms a seeded Order and eventual Notification delivery; browser Playwright coverage remains a later roadmap task, and broker recovery behavior is covered in the RabbitMQ Testcontainers suite.
+The Notification runtime consumes `OrderConfirmedV1` through its durable MassTransit endpoint, stores `ConsumedMessage` and the generated Notification in one owned PostgreSQL transaction, suppresses duplicate message IDs, and exposes `/api/v1/notifications` for filtered/paginated reads plus optional mark-as-read. The Angular Notification screen now uses the Gateway API with bounded polling, manual refresh, and explicit loading/empty/error states. The Compose HTTP smoke flow and Playwright suite confirm Order/Notification delivery; broker recovery behavior is covered by both the RabbitMQ Testcontainers suite and the non-destructive failure-injection harness.
 
 Notification consumer retry is bounded and configurable with `NOTIFICATION_CONSUMER_RETRY_COUNT` and `NOTIFICATION_CONSUMER_RETRY_DELAY_MS` (defaults: 3 and 250 ms). Concurrent duplicate delivery is protected by the `consumed_messages` primary key and unique `notifications.source_message_id`; the test suite also verifies transaction rollback and idempotency across a Notification host restart.
 

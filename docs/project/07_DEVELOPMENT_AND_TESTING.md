@@ -507,4 +507,22 @@ This is an extension, not a dependency of Mini Order System.
 
 `MicroShop.ServiceDefaults` configures JSON console logging scopes, W3C activity IDs, ASP.NET Core request instrumentation, HttpClient tracing, a shared ActivitySource/Meter, and optional OTLP export through `OTEL_EXPORTER_OTLP_ENDPOINT`. `UseMicroShopRequestObservability` records only method, endpoint, status, duration, trace/span IDs, service/environment, and bounded route IDs; it does not log request bodies, query payloads, credentials, or tokens. Order/Product/Notification code adds low-cardinality outcome metrics and stable event codes while retaining Order, Reservation, and Message IDs in relevant logs.
 
-`ObservabilityTests` verifies service identity registration, W3C parent/consumer span relationships, and bounded operation/result metric tags. Gateway route tests continue to verify incoming `traceparent` reaches the downstream route; Order Product-client integration tests verify the same context reaches Product; Notification RabbitMQ integration tests verify durable publish/consume behavior used by the consumer span boundary. The cross-service trace/log walkthrough remains a Phase 8 final-gate check.
+`ObservabilityTests` verifies service identity registration, W3C parent/consumer span relationships, and bounded operation/result metric tags. Gateway route tests continue to verify incoming `traceparent` reaches the downstream route; Order Product-client integration tests verify the same context reaches Product; Notification RabbitMQ integration tests verify durable publish/consume behavior used by the consumer span boundary. A Compose smoke with trace root `11111111111111111111111111111111` was verified across Gateway, Order, Product, outbox/RabbitMQ, and Notification.
+
+### Playwright Compose E2E
+
+The browser suite lives in `web/microshop-ui/e2e/microshop.spec.ts` and runs against the published Web container at `http://127.0.0.1:8080` by default. It uses Chromium, serializes the stateful demo flow, creates a unique Product through the UI, updates it, completes checkout, polls Notification through the Gateway with a bounded timeout, cancels the Order, verifies stock restoration, verifies insufficient stock, and separately verifies the dependency-failure UI without creating an Order. Install dependencies and the browser once, then run:
+
+```powershell
+Push-Location web/microshop-ui
+npm ci
+npm run e2e:install
+npm run e2e
+Pop-Location
+```
+
+For the complete build/start/browser workflow use `scripts/e2e-compose.ps1` or `.sh`. The wrapper does not remove containers or named volumes.
+
+### Failure-injection gate
+
+`scripts/failure-injection.ps1` is the executable local harness. It stops Product, Notification, or RabbitMQ one at a time, checks the expected bounded failure/durability behavior, restarts the named dependency, and polls for recovery. The integration-test scenario runs the duplicate-message/error-queue, concurrent-last-stock, and RabbitMQ outbox recovery tests. Use `-Scenario product-stopped`, `notification-stopped`, `rabbitmq-stopped`, or `integration-tests` while diagnosing; `-Scenario all` runs the complete gate. The `.sh` entry point delegates to the same harness when `pwsh` is available.

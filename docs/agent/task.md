@@ -1102,36 +1102,54 @@ Evidence for 8.3:
 
 ## 8.4 Centralized log integration
 
-- [ ] Optionally connect all services to the existing Log Monitoring System.
-- [ ] Preserve independent local operation.
-- [ ] Verify search by trace ID.
-- [ ] Verify search by Order ID.
-- [ ] Document integration configuration.
-- [ ] Ensure no secret/customer payload leakage.
+- [x] Optionally connect all services to the existing Log Monitoring System.
+- [x] Preserve independent local operation.
+- [x] Verify search by trace ID.
+- [x] Verify search by Order ID.
+- [x] Document integration configuration.
+- [x] Ensure no secret/customer payload leakage.
+
+Evidence for 8.4:
+
+- No external Log Monitoring System was supplied or added to the baseline scope. All .NET services emit collector-neutral JSON to stdout, and `OTEL_EXPORTER_OTLP_ENDPOINT` can connect an existing OTLP-capable collector without changing service code or Compose topology.
+- Local Docker log search was verified by trace root `11111111111111111111111111111111` and Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c` across Gateway, Order, Product, outbox, and Notification logs. `docs/project/08_DEPLOYMENT_AND_OPERATIONS.md` documents fields, query strategy, optional endpoint configuration, and leakage rules.
+- `scripts/e2e-compose.ps1`, `scripts/failure-injection.ps1`, and the full Compose smoke preserve independent local operation; logs contain bounded identifiers and stable codes, not credentials, tokens, or full customer payloads.
 
 ## 8.5 End-to-end automation
 
-- [ ] Add Playwright setup.
-- [ ] Test Product catalog.
-- [ ] Test Product creation/update.
-- [ ] Test successful checkout.
-- [ ] Test confirmed Order detail.
-- [ ] Test eventual Notification using bounded polling.
-- [ ] Test cancellation.
-- [ ] Verify stock restoration.
-- [ ] Test insufficient stock.
-- [ ] Test dependency failure UI.
-- [ ] Add Compose-based E2E execution.
+- [x] Add Playwright setup.
+- [x] Test Product catalog.
+- [x] Test Product creation/update.
+- [x] Test successful checkout.
+- [x] Test confirmed Order detail.
+- [x] Test eventual Notification using bounded polling.
+- [x] Test cancellation.
+- [x] Verify stock restoration.
+- [x] Test insufficient stock.
+- [x] Test dependency failure UI.
+- [x] Add Compose-based E2E execution.
+
+Evidence for 8.5:
+
+- `web/microshop-ui/playwright.config.ts` pins a Chromium project, Compose base URL override, serial execution for stateful demo data, bounded polling-compatible timeouts, and failure artifacts. `package.json` adds `e2e` and `e2e:install` scripts; `package-lock.json` pins `@playwright/test` 1.62.1.
+- `web/microshop-ui/e2e/microshop.spec.ts` covers catalog display, UI create/update, confirmed checkout, Order detail, bounded Notification polling, cancellation, Product stock restoration, insufficient stock, and a dependency-failure UI response without creating an Order.
+- `scripts/e2e-compose.ps1/.sh` validates/builds/starts the full stack and runs the browser suite without removing containers or volumes. Validation: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, `npm run build`, and Compose Playwright run passed; 2 Playwright tests passed.
 
 ## 8.6 Failure-injection automation
 
-- [ ] Automate Product Service stopped scenario.
-- [ ] Automate Notification Service stopped scenario.
-- [ ] Automate RabbitMQ stopped scenario.
-- [ ] Automate duplicate message scenario.
-- [ ] Automate concurrent last-stock scenario.
-- [ ] Validate outbox recovery.
-- [ ] Validate error queue behavior.
+- [x] Automate Product Service stopped scenario.
+- [x] Automate Notification Service stopped scenario.
+- [x] Automate RabbitMQ stopped scenario.
+- [x] Automate duplicate message scenario.
+- [x] Automate concurrent last-stock scenario.
+- [x] Validate outbox recovery.
+- [x] Validate error queue behavior.
+
+Evidence for 8.6:
+
+- `scripts/failure-injection.ps1` provides `all`, per-service, and integration-test scenarios. It stops/starts only named services, expects bounded downstream failure when Product is stopped, verifies durable confirmed Orders while Notification/RabbitMQ are stopped, and polls for recovery after restart. `scripts/failure-injection.sh` delegates to the same harness when `pwsh` is available.
+- The integration scenario runs `PublishesDuplicateEventWithOneDurableNotification` and `MovesUnsupportedMessageToErrorQueueAfterBoundedRetry` (2 passed), `ConcurrentLastStockReservationsAllowOnlyOneSuccess` (1 passed), and `RabbitMqOutageLeavesConfirmedOrderDurableAndRecoveryDrainsOutbox` (1 passed).
+- Local validation: Product stopped, Notification stopped, RabbitMQ stopped, and integration-test scenarios each passed; all named containers and volumes were preserved.
 
 ## 8.7 Security and deployment review
 

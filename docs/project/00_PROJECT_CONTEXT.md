@@ -172,10 +172,10 @@ This status table is updated from verified repository code and runtime checks. T
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
 | RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers cover retry/error queue, duplicate, restart, and queued recovery, while full-stack Compose publish/consume smoke passes |
 | Docker Compose | Full Web/Gateway/Product/Order/Notification stack, three logical databases, migration one-shots, private service ports, and Phase 6.1 runtime image builds implemented |
-| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations plus observability/Compose smoke checks implemented; Playwright E2E and failure-injection automation remain |
+| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations, observability/Compose smoke, Playwright E2E, and non-destructive failure-injection automation implemented; final security/deployment/release audit remains |
 | Deployment | Optional after local completion |
 
-Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, synchronous reservation path, and observability core from the remaining E2E, failure-injection, security/deployment, and final-gate work.
+Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, synchronous reservation path, observability core, browser E2E, and failure-injection evidence from the remaining security/deployment and final-gate work.
 
 ## 10. Main technical constraints
 

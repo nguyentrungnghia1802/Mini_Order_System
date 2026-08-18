@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, Phase 7.1-7.6 outbox operations/Notification inbox hardening/controlled reconciliation/bounded resilience, and Phase 8.1-8.3 structured logs, W3C/OpenTelemetry tracing, metrics, and health instrumentation, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, Phase 7.1-7.6 outbox operations/Notification inbox hardening/controlled reconciliation/bounded resilience, and Phase 8.1-8.6 observability, local log search, Playwright Compose E2E, and failure-injection automation, implemented in the commits recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -38,6 +38,8 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - `docker compose --env-file .env.example -f deploy/compose.yaml ps --all`
 - Full-stack Web/Gateway Product, Order, Notification API smoke through port 8080, including confirmed Order and eventual Notification delivery
 - Compose observability smoke with W3C trace root `11111111111111111111111111111111` crossing Gateway, Order, Product, outbox/RabbitMQ, and Notification; structured logs retained bounded Order/Reservation/Message identifiers
+- `scripts/e2e-compose.ps1 -EnvFile .env.example -SkipInstall`: current Compose images/startup plus 2 Playwright tests passed
+- `scripts/failure-injection.ps1 -Scenario all -EnvFile .env.example`: Product/Notification/RabbitMQ stopped-service recovery plus duplicate/error-queue, concurrent-last-stock, and outbox integration filters passed; containers and volumes preserved
 - `dotnet ef migrations script --project src/Services/ProductService/MicroShop.ProductService --startup-project src/Services/ProductService/MicroShop.ProductService`
 - Product `InitialProductSchema` applied to a fresh PostgreSQL Testcontainer and the local Product database
 - Product seed command executed twice; database remained at four deterministic seed products
@@ -46,7 +48,7 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 ## Deferred and not yet complete
 
 - Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Phase 8.4 centralized-log decision, 8.5 E2E, 8.6 failure-injection automation, 8.7 security/deployment review, 8.8 documentation audit, and 8.9 final completion gate.
+- Phase 8.7 security/deployment review, 8.8 documentation audit, and 8.9 final completion gate.
 - Native Linux/macOS execution of the documented Compose workflow and CI image execution.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
@@ -54,7 +56,7 @@ Security note: Vitest was upgraded to `4.1.10` during verification to remove a c
 
 ## Next recommended slice
 
-Phase 8.4–8.7 — decide/document centralized-log integration, add Playwright Compose E2E and failure-injection automation, then complete the security/deployment review.
+Phase 8.7–8.9 — complete the security/deployment review, perform the documentation audit, and run the final CI/release gate.
 
 ## Phase 6 — Docker Compose completion (partial)
 
@@ -142,6 +144,30 @@ Phase 8.4–8.7 — decide/document centralized-log integration, add Playwright 
 | Shared instruments | `[x]` | `MicroShopTelemetry` provides HTTP/dependency/order/reservation/notification counters plus outbox pending/dead-letter gauges with bounded labels. |
 | Health semantics | `[x]` | Liveness remains process-only; readiness includes dependency/backlog signals and becomes unhealthy during bounded shutdown. |
 | Validation | `[x]` | `ObservabilityTests` and `ServiceReadinessTests` pass; Release build/test and Compose config/rebuild/startup/health/API smoke pass. |
+
+## Phase 8.4 — Local log integration
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Optional external integration | `[x]` | No external Log Monitoring System was supplied or added; JSON stdout and optional OTLP endpoint preserve independent local operation. |
+| Trace/Order search | `[x]` | Docker logs were searched by trace root `11111111111111111111111111111111` and Order `d0e58ba5-9d6a-4a4b-bd8c-aa0be6666c0c` across all participating services. |
+| Leakage policy | `[x]` | Shared middleware/business logs include bounded IDs and stable codes only; payloads, credentials, tokens, and connection strings are excluded and documented in the operations guide. |
+
+## Phase 8.5 — Compose Playwright E2E
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Browser setup | `[x]` | `@playwright/test` 1.62.1, Chromium project, failure artifacts, and `e2e`/`e2e:install` scripts are committed under `web/microshop-ui`. |
+| Business flow coverage | `[x]` | The suite covers catalog, UI Product create/update, confirmed checkout/detail, bounded Notification polling, cancellation, stock restoration, insufficient stock, and dependency UI behavior. |
+| Compose execution | `[x]` | `scripts/e2e-compose.ps1 -EnvFile .env.example -SkipInstall` rebuilt/started the stack and passed 2/2 Playwright tests without removing named volumes. |
+
+## Phase 8.6 — Failure-injection automation
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Stopped-service recovery | `[x]` | The harness passed Product stopped dependency failure, Notification stopped durable Order/recovery, and RabbitMQ stopped outbox recovery scenarios. |
+| Duplicate/concurrency/error queue | `[x]` | Integration filters passed 2 Notification duplicate/error-queue tests, 1 Product concurrent last-stock test, and 1 Order RabbitMQ outbox recovery test. |
+| Safety | `[x]` | The harness only stops/starts named services, creates unique demo data, and preserves containers and Docker volumes. |
 
 ## Phase 1 — Product Service foundation
 

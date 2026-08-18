@@ -66,7 +66,7 @@ jobs:
         run: npm run build
 
   compose:
-    name: Compose infrastructure smoke test
+    name: Compose full-stack smoke test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -75,8 +75,8 @@ jobs:
       - name: Validate Compose configuration
         run: docker compose --env-file .env.example -f deploy/compose.yaml config --quiet
 
-      - name: Start PostgreSQL and RabbitMQ
-        run: docker compose --env-file .env.example -f deploy/compose.yaml up -d --wait
+      - name: Build and start the full stack
+        run: docker compose --env-file .env.example -f deploy/compose.yaml up --build -d --wait
 
       - name: Show service status
         if: always()
@@ -85,6 +85,51 @@ jobs:
       - name: Stop infrastructure without removing volumes
         if: always()
         run: docker compose --env-file .env.example -f deploy/compose.yaml down
+
+  e2e:
+    name: Compose Playwright E2E
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      MICROSHOP_E2E_BASE_URL: http://127.0.0.1:8080
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/microshop-ui/package-lock.json
+
+      - name: Install Angular and Playwright dependencies
+        working-directory: web/microshop-ui
+        run: npm ci
+
+      - name: Install Chromium and Linux dependencies
+        working-directory: web/microshop-ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example -f deploy/compose.yaml config --quiet
+
+      - name: Start full Compose stack
+        run: docker compose --env-file .env.example -f deploy/compose.yaml up --build -d --wait
+
+      - name: Run Playwright E2E
+        working-directory: web/microshop-ui
+        run: npm run e2e
+
+      - name: Show service status and logs
+        if: always()
+        run: |
+          docker compose --env-file .env.example -f deploy/compose.yaml ps --all
+          docker compose --env-file .env.example -f deploy/compose.yaml logs --no-color --tail=200 gateway order-service product-service notification-service
+
+      - name: Stop Compose without removing volumes
+        if: always()
+        run: docker compose --env-file .env.example -f deploy/compose.yaml down --remove-orphans
 
   migrations:
     name: Product migration validation
@@ -180,19 +225,12 @@ jobs:
       - name: Check whitespace errors
         run: git diff --check
 
-  phase-gates:
-    name: Guard deferred image gate
+  container-images:
+    name: Container image build validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Keep image validation explicit
-        shell: bash
-        run: |
-          set -euo pipefail
-          if find . -type f -name Dockerfile -not -path './.git/*' -print -quit | grep -q .; then
-            echo "Dockerfiles now exist; add image build validation before enabling this gate."
-            exit 1
-          fi
-          echo "No application Dockerfiles exist in Phase 0; image validation remains deferred to Phase 6."
+      - name: Build all application images
+        run: docker compose --env-file .env.example -f deploy/compose.yaml build --quiet
