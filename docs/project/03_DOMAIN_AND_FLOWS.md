@@ -106,7 +106,7 @@ The baseline treats a confirmed order as retaining a reservation until cancellat
 | `pending_inventory` | Timeout/ambiguous dependency outcome | `inventory_unknown` | Requires human/test reconciliation |
 | `confirmed` | Release succeeds | `cancelled` | Terminal |
 | `confirmed` | Release result ambiguous | `cancellation_pending` | No repeated blind compensation |
-| `cancellation_pending` | Reconciliation confirms release | `cancelled` | Optional hardening |
+| `cancellation_pending` | Controlled reconciliation confirms release | `cancelled` | Operator/audit-assisted recovery |
 | `rejected` | any normal user action | `rejected` | Terminal |
 | `cancelled` | repeated cancellation | `cancelled` | Idempotent result |
 
@@ -117,9 +117,9 @@ Forbidden examples:
 - `inventory_unknown -> confirmed` without reconciliation;
 - cancellation before confirmation.
 
-### Phase 2 native API behavior
+### Order native API behavior
 
-The implemented Order API creates and commits `pending_inventory`, calls the typed Product reservation client with the same generated order ID, stores Product-authoritative name/price/quantity snapshots, and then commits `confirmed`; known Product failures commit `rejected`, while unavailable or ambiguous results commit `inventory_unknown`. A confirmed order enters `cancellation_pending` before calling Product release, becomes `cancelled` only after a known release, and returns a stable conflict for repeated attempts while release remains unknown. The deterministic fake client is retained only for explicit Phase 2 compatibility tests and does not change Product stock.
+The implemented Order API creates and commits `pending_inventory`, calls the typed Product reservation client with the same generated order ID, stores Product-authoritative name/price/quantity snapshots, and then commits `confirmed`; known Product failures commit `rejected`, while unavailable or ambiguous results commit `inventory_unknown`. A confirmed order enters `cancellation_pending` before calling Product release, becomes `cancelled` only after a known release, and returns a stable conflict for repeated attempts while release remains unknown. Controlled reconciliation can resolve `inventory_unknown` and `cancellation_pending` through an internal operator/audit path. The deterministic fake client is retained only for explicit compatibility tests and does not change Product stock.
 
 ## 7. Notification state
 

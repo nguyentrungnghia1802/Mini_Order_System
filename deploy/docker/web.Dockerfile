@@ -5,7 +5,7 @@ RUN npm ci
 COPY web/microshop-ui/ ./
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.3-alpine3.24 AS runtime
 COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/dist/microshop-ui/browser /usr/share/nginx/html
 EXPOSE 8080

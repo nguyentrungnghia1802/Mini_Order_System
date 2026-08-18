@@ -190,7 +190,12 @@ npm run build
 Then integration/E2E:
 
 ```bash
-docker compose -f deploy/compose.test.yaml up --build --abort-on-container-exit
+docker compose --env-file .env.example -f deploy/compose.yaml config --quiet
+docker compose --env-file .env.example -f deploy/compose.yaml up --build -d --wait
+cd web/microshop-ui
+npm ci
+npx playwright install --with-deps chromium
+npm run e2e
 ```
 
 The current infrastructure, Product migration, and native Order API smoke checks are:
@@ -205,7 +210,7 @@ dotnet ef database update \
   --startup-project src/Services/ProductService/MicroShop.ProductService
 ```
 
-The five application images and full application Compose stack are implemented. The Compose smoke path applies the three migrations, starts all application services, and verifies Web/Gateway Product/Order/Notification routing. `compose.test.yaml`, browser Playwright coverage, and CI image execution remain deferred. CI applies the Product migration to an empty PostgreSQL service database.
+The five application images and full application Compose stack are implemented. The Compose smoke path applies the three migrations, starts all application services, and verifies Web/Gateway Product/Order/Notification routing. Browser Playwright coverage and CI image execution are implemented. CI validates Product, Order, and Notification migrations against empty PostgreSQL service databases, while the Product, Order, and Notification Testcontainers fixtures apply each service migration to fresh databases locally.
 
 The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. The Gateway suite uses a real in-process Kestrel downstream to verify public Product/Order path transforms, trace propagation, CORS/health, stable downstream `502`, and internal-route rejection.
 
@@ -305,7 +310,7 @@ The current `MicroShop.NotificationService.Tests` project starts PostgreSQL 17 a
 - a failed Notification insert rolls back the consumed-message insert;
 - a Notification process restart between redelivery attempts preserves idempotency.
 
-The integration fixture uses a disposable RabbitMQ container because the current infrastructure Compose intentionally keeps AMQP port 5672 private. The consumer uses only the Notification connection and EF model; full application-container Compose and Angular E2E remain later gates.
+The integration fixture uses a disposable RabbitMQ container because the current infrastructure Compose intentionally keeps AMQP port 5672 private. The consumer uses only the Notification connection and EF model; the full application-container Compose and Angular E2E gates are covered separately by `scripts/e2e-compose.ps1/.sh` and the CI `e2e` job.
 
 ### Gateway integration tests
 
@@ -318,7 +323,7 @@ Use `WebApplicationFactory` for the Gateway and a dynamic loopback Kestrel serve
 - stable `502 DOWNSTREAM_UNAVAILABLE` for an unavailable destination;
 - `404 GATEWAY_ROUTE_NOT_FOUND` for `/internal/*` without forwarding.
 
-The current `MicroShop.Gateway.Tests` project contains 9 passing tests, including lifecycle readiness transition and bounded shutdown-option wiring. The full .NET solution contains 108 passing tests: 1 Architecture, 2 Contracts, 15 Notification, 9 Gateway, 60 Order, and 21 Product. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, concurrent duplicate redelivery, transaction rollback, publisher independence, queued restart, and process restart between redelivery attempts; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes and shutdown readiness; the Order suite covers direct-publish demonstration isolation plus transactional outbox identity, claim, bounded retry/dead-letter, lease recovery, RabbitMQ outage/recovery, safe Product-client retries, cancellation, and reconciliation.
+The current `MicroShop.Gateway.Tests` project verifies route transforms, readiness, observability, and bounded shutdown wiring. The full .NET solution contains 111 passing tests across Architecture, Contracts, Gateway, Notification, Order, and Product projects. The contract suite verifies the stable JSON shape for `OrderConfirmedV1`; the Notification suite verifies liveness/readiness, PostgreSQL-backed consumer persistence, filters/pagination, OpenAPI, mark-as-read, real RabbitMQ publish/consume, retry/error queue, duplicate delivery, concurrent duplicate redelivery, transaction rollback, publisher independence, queued restart, and process restart between redelivery attempts; the Gateway suite verifies the Notification public path transform in addition to Product/Order routes, trace propagation, observability, and shutdown readiness; the Order suite covers direct-publish demonstration isolation plus transactional outbox identity, claim, bounded retry/dead-letter, lease recovery, RabbitMQ outage/recovery, safe Product-client retries, cancellation, and reconciliation.
 
 ### Contract tests
 
@@ -388,7 +393,7 @@ Run two requests against stock `1`; verify one success.
 - tests do not share developer databases;
 - parallel tests are enabled only when fixtures are independent;
 - broker endpoint names include test-run identifier when necessary;
-- E2E uses a dedicated Compose project name/volumes.
+- E2E uses unique Product/Order identifiers and preserves the explicitly named local Compose volumes; CI removes containers without `-v` after its run.
 
 ## 12. Definition of done
 

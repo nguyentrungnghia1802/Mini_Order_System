@@ -158,12 +158,12 @@ Package versions should be pinned by the repository and upgraded deliberately. D
 
 ## 9. Current project status
 
-This status table is updated from verified repository code and runtime checks. The implementation is intentionally incremental; a partial Product slice does not imply that the full ordering baseline is complete.
+This status table is updated from verified repository code, automated tests, and runtime checks. Required Phases 0–8 are complete for the learning baseline; optional authentication/authorization remains Phase 9 and is intentionally not started.
 
 | Area | Status |
 | --- | --- |
 | Requirements and boundaries | Specified |
-| Repository | Phase 0 bootstrap, Product/Order/Notification/Gateway/Angular baseline, Phase 7 reliability slices, and Phase 8.1-8.3 observability core implemented; E2E/failure-injection/security/final-gate work remains |
+| Repository | Phase 0 bootstrap, Product/Order/Notification/Gateway/Angular baseline, Phase 7 reliability slices, and Phase 8 observability/quality/security/final-gate work implemented |
 | Gateway | ASP.NET Core/YARP host, public Product/Order/Notification routes, internal-route rejection, W3C request propagation, structured logging, health/metrics instrumentation, and Gateway tests implemented |
 | Product Service | Product domain, PostgreSQL schema/migrations, seed, catalog/create/update API, Product-owned atomic reservation/release API, readiness, OpenAPI, structured logs, Product dependency/reservation telemetry, and PostgreSQL integration tests implemented |
 | Order Service | Order domain/state history/schema, native create/list/detail/cancel/reconciliation APIs, typed Product reservation client, outbox/recovery/reconciliation, bounded timeout/retry/shutdown, structured logs, distributed tracing, outcome/outbox telemetry, and PostgreSQL integration tests implemented |
@@ -172,10 +172,10 @@ This status table is updated from verified repository code and runtime checks. T
 | PostgreSQL databases | Compose creates three logical databases/users; Product, Order, and Notification migrations are implemented independently |
 | RabbitMQ integration | Compose management broker and MassTransit Order publisher/Notification consumer topology implemented; Testcontainers cover retry/error queue, duplicate, restart, and queued recovery, while full-stack Compose publish/consume smoke passes |
 | Docker Compose | Full Web/Gateway/Product/Order/Notification stack, three logical databases, migration one-shots, private service ports, and Phase 6.1 runtime image builds implemented |
-| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers foundations, observability/Compose smoke, Playwright E2E, and non-destructive failure-injection automation implemented; final security/deployment/release audit remains |
+| Tests | Contract, Product, Order, Gateway, and Notification unit/API/PostgreSQL/RabbitMQ Testcontainers suites, observability/Compose smoke, Playwright E2E, failure-injection, dependency/image scanning, and restore drills implemented |
 | Deployment | Optional after local completion |
 
-Documentation must continue to distinguish the verified Product/Gateway/Angular Product, Order, and Notification UI slices, Notification persistence/consumer/read API, RabbitMQ recovery tests, synchronous reservation path, observability core, browser E2E, and failure-injection evidence from the remaining security/deployment and final-gate work.
+Documentation distinguishes verified runtime behavior from the remaining optional Phase 9 work and from production deployment gaps such as authentication, managed infrastructure, and external retention/monitoring policy.
 
 ## 10. Main technical constraints
 
@@ -197,8 +197,8 @@ Documentation must continue to distinguish the verified Product/Gateway/Angular 
 | Risk | Why it matters | Planned control |
 | --- | --- | --- |
 | Order saved but inventory reservation fails | Order and Product databases cannot share one transaction | Use explicit order states and record failure |
-| Inventory reserved but Order database update fails | Reservation may become orphaned | Use compensating release; Phase 7 reconciliation remains planned. The transactional outbox covers confirmed-event publication, not remote inventory reconciliation. |
-| Event publish fails after order confirmation | Notification may be delayed or dead-lettered | Transactional outbox persists the event; bounded dispatch/dead-letter operations and reconciliation remain observable Phase 7 work |
+| Inventory reserved but Order database update fails | Reservation may become orphaned | Use compensating release and the Phase 7 reconciliation route; the transactional outbox covers confirmed-event publication, not remote inventory reconciliation. |
+| Event publish fails after order confirmation | Notification may be delayed or dead-lettered | Transactional outbox persists the event; bounded dispatch/dead-letter operations, readiness, and recovery evidence are implemented. |
 | Duplicate message delivery | RabbitMQ/MassTransit may redeliver | Unique message ID and consumer inbox |
 | Product Service unavailable | Order creation depends on a synchronous call | Timeout, no blind retry for unsafe calls, clear 503 response |
 | Notification Service unavailable | Messages accumulate | Durable queue and readiness/consumer monitoring |

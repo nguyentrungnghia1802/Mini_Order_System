@@ -1,6 +1,6 @@
 # Product Requirements
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-08-18.
 
 ## 1. Scope and terminology
 
@@ -44,111 +44,115 @@ No authentication exists in the first baseline. Shopper and operator are UI mode
 
 ### Product catalog
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-PROD-001 | List active products for the shopper catalog | Partial |
-| FR-PROD-002 | Get one product by ID | Partial |
-| FR-PROD-003 | Create a product with name, optional description, unit price, and initial stock | Partial |
+| FR-PROD-001 | List active products for the shopper catalog | Implemented |
+| FR-PROD-002 | Get one product by ID | Implemented |
+| FR-PROD-003 | Create a product with name, optional description, unit price, and initial stock | Implemented |
 | FR-PROD-004 | Update mutable product fields | Implemented |
 | FR-PROD-005 | Activate or deactivate a product | Implemented |
-| FR-PROD-006 | Reject negative price or stock | Partial |
-| FR-PROD-007 | Hide inactive products from the shopper list while retaining operator visibility | Partial |
-| FR-PROD-008 | Return current available stock | Partial |
-| FR-PROD-009 | Preserve a product after it appears in an order; deletion is not required | Specified |
-| FR-PROD-010 | Support pagination with deterministic ordering for operator lists | Partial |
+| FR-PROD-006 | Reject negative price or stock | Implemented |
+| FR-PROD-007 | Hide inactive products from the shopper list while retaining operator visibility | Implemented |
+| FR-PROD-008 | Return current available stock | Implemented |
+| FR-PROD-009 | Preserve a product after it appears in an order; deletion is not required | Implemented |
+| FR-PROD-010 | Support pagination with deterministic ordering for operator lists | Implemented |
 
 ### Inventory reservation
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-INV-001 | Product Service owns all stock mutations | Specified |
-| FR-INV-002 | Reserve multiple order items atomically within Product Service | Specified |
-| FR-INV-003 | Reject the complete reservation when any product is missing, inactive, or insufficient | Specified |
-| FR-INV-004 | Never partially decrement stock for a failed bulk reservation | Specified |
-| FR-INV-005 | Use `orderId` as an idempotency boundary for one reservation set | Specified |
-| FR-INV-006 | Return authoritative product name and unit price snapshots to Order Service | Specified |
-| FR-INV-007 | Release an active reservation once when an order is cancelled | Specified |
-| FR-INV-008 | Repeated release calls return the already-released result without increasing stock twice | Specified |
-| FR-INV-009 | Prevent available stock from becoming negative under concurrent requests | Specified |
-| FR-INV-010 | Retain reservation history for diagnostics | Specified |
+| FR-INV-001 | Product Service owns all stock mutations | Implemented |
+| FR-INV-002 | Reserve multiple order items atomically within Product Service | Implemented |
+| FR-INV-003 | Reject the complete reservation when any product is missing, inactive, or insufficient | Implemented |
+| FR-INV-004 | Never partially decrement stock for a failed bulk reservation | Implemented |
+| FR-INV-005 | Use `orderId` as an idempotency boundary for one reservation set | Implemented |
+| FR-INV-006 | Return authoritative product name and unit price snapshots to Order Service | Implemented |
+| FR-INV-007 | Release an active reservation once when an order is cancelled | Implemented |
+| FR-INV-008 | Repeated release calls return the already-released result without increasing stock twice | Implemented |
+| FR-INV-009 | Prevent available stock from becoming negative under concurrent requests | Implemented |
+| FR-INV-010 | Retain reservation history for diagnostics | Implemented |
 
 ### Order management
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-ORD-001 | Create an order containing customer name, customer email, and one or more items | Specified |
-| FR-ORD-002 | Generate the order ID in Order Service before inventory reservation | Specified |
-| FR-ORD-003 | Store an initial `pending_inventory` order before calling Product Service | Specified |
-| FR-ORD-004 | Call Product Service synchronously to reserve stock | Specified |
-| FR-ORD-005 | Confirm the order only after Product Service confirms the full reservation | Specified |
-| FR-ORD-006 | Build totals from authoritative product snapshots, never browser prices | Specified |
-| FR-ORD-007 | Mark the order `rejected` when Product Service returns a business rejection | Specified |
-| FR-ORD-008 | Mark the order `inventory_unknown` when the dependency outcome cannot be determined safely | Specified |
-| FR-ORD-009 | List orders in reverse creation order with pagination | Specified |
-| FR-ORD-010 | Get order detail with immutable item snapshots | Specified |
-| FR-ORD-011 | Cancel only a confirmed order | Specified |
-| FR-ORD-012 | Release stock before finalizing normal cancellation | Specified |
-| FR-ORD-013 | Return current state when a repeated cancellation is idempotently safe | Specified |
-| FR-ORD-014 | Publish `OrderConfirmed` only for a confirmed order | Specified |
+| FR-ORD-001 | Create an order containing customer name, customer email, and one or more items | Implemented |
+| FR-ORD-002 | Generate the order ID in Order Service before inventory reservation | Implemented |
+| FR-ORD-003 | Store an initial `pending_inventory` order before calling Product Service | Implemented |
+| FR-ORD-004 | Call Product Service synchronously to reserve stock | Implemented |
+| FR-ORD-005 | Confirm the order only after Product Service confirms the full reservation | Implemented |
+| FR-ORD-006 | Build totals from authoritative product snapshots, never browser prices | Implemented |
+| FR-ORD-007 | Mark the order `rejected` when Product Service returns a business rejection | Implemented |
+| FR-ORD-008 | Mark the order `inventory_unknown` when the dependency outcome cannot be determined safely | Implemented |
+| FR-ORD-009 | List orders in reverse creation order with pagination | Implemented |
+| FR-ORD-010 | Get order detail with immutable item snapshots | Implemented |
+| FR-ORD-011 | Cancel only a confirmed order | Implemented |
+| FR-ORD-012 | Release stock before finalizing normal cancellation | Implemented |
+| FR-ORD-013 | Return current state when a repeated cancellation is idempotently safe | Implemented |
+| FR-ORD-014 | Publish `OrderConfirmed` only for a confirmed order | Implemented |
 | FR-ORD-015 | Publish `OrderCancelled` as an optional extension | Deferred |
 
 ### Messaging and notifications
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-MSG-001 | Order Service publishes an immutable `OrderConfirmed` integration event | Specified |
-| FR-MSG-002 | Event includes all information Notification Service needs | Specified |
-| FR-MSG-003 | Notification Service consumes from a durable RabbitMQ queue | Specified |
-| FR-MSG-004 | One message ID creates at most one persisted notification | Specified |
-| FR-MSG-005 | Notification contains customer destination, order ID, total, and readable text | Specified |
-| FR-MSG-006 | Failed consumers use broker retry and ultimately an error/dead-letter path | Specified |
-| FR-MSG-007 | Order confirmation does not wait for Notification Service | Specified |
-| FR-MSG-008 | Notifications can be listed through a read-only API for demonstration | Specified |
-| FR-MSG-009 | No real external delivery provider is required | Specified |
-| FR-MSG-010 | Message contracts contain no EF entities or service-internal types | Specified |
+| FR-MSG-001 | Order Service publishes an immutable `OrderConfirmed` integration event | Implemented |
+| FR-MSG-002 | Event includes all information Notification Service needs | Implemented |
+| FR-MSG-003 | Notification Service consumes from a durable RabbitMQ queue | Implemented |
+| FR-MSG-004 | One message ID creates at most one persisted notification | Implemented |
+| FR-MSG-005 | Notification contains customer destination, order ID, total, and readable text | Implemented |
+| FR-MSG-006 | Failed consumers use broker retry and ultimately an error/dead-letter path | Implemented |
+| FR-MSG-007 | Order confirmation does not wait for Notification Service | Implemented |
+| FR-MSG-008 | Notifications can be listed through a read-only API for demonstration | Implemented |
+| FR-MSG-009 | No real external delivery provider is required | Implemented |
+| FR-MSG-010 | Message contracts contain no EF entities or service-internal types | Implemented |
 
 ### API Gateway
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-GW-001 | Angular uses one public origin for Product and Order APIs | Specified |
-| FR-GW-002 | Gateway routes product paths to Product Service | Specified |
-| FR-GW-003 | Gateway routes order paths to Order Service | Specified |
-| FR-GW-004 | Gateway routes notification read paths to Notification Service when enabled | Specified |
-| FR-GW-005 | Gateway forwards W3C trace headers | Specified |
-| FR-GW-006 | Gateway exposes its own liveness/readiness endpoints | Specified |
-| FR-GW-007 | Gateway does not contain product/order business rules | Specified |
-| FR-GW-008 | Internal inventory endpoints are not routed publicly | Specified |
+| FR-GW-001 | Angular uses one public origin for Product and Order APIs | Implemented |
+| FR-GW-002 | Gateway routes product paths to Product Service | Implemented |
+| FR-GW-003 | Gateway routes order paths to Order Service | Implemented |
+| FR-GW-004 | Gateway routes notification read paths to Notification Service when enabled | Implemented |
+| FR-GW-005 | Gateway forwards W3C trace headers | Implemented |
+| FR-GW-006 | Gateway exposes its own liveness/readiness endpoints | Implemented |
+| FR-GW-007 | Gateway does not contain product/order business rules | Implemented |
+| FR-GW-008 | Internal inventory endpoints are not routed publicly | Implemented |
 
 ### Angular frontend
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-WEB-001 | Show active product cards/table with price and available stock | Specified |
-| FR-WEB-002 | Let the user select positive quantities within visible stock | Specified |
-| FR-WEB-003 | Collect customer name and valid email using Reactive Forms | Specified |
-| FR-WEB-004 | Submit an order through the Gateway | Specified |
-| FR-WEB-005 | Display confirmed, rejected, dependency-failure, and validation outcomes distinctly | Specified |
-| FR-WEB-006 | Show order list and order detail | Specified |
-| FR-WEB-007 | Allow cancellation only when the API indicates eligibility | Specified |
-| FR-WEB-008 | Show simulated notifications | Specified |
-| FR-WEB-009 | Provide a small operator product form | Specified |
-| FR-WEB-010 | Avoid direct browser calls to internal service addresses | Specified |
-| FR-WEB-011 | Handle loading, empty, retryable error, and offline dependency states | Specified |
-| FR-WEB-012 | Remain usable at 320px width and with keyboard navigation | Specified |
+| FR-WEB-001 | Show active product cards/table with price and available stock | Implemented |
+| FR-WEB-002 | Let the user select positive quantities within visible stock | Implemented |
+| FR-WEB-003 | Collect customer name and valid email using Reactive Forms | Implemented |
+| FR-WEB-004 | Submit an order through the Gateway | Implemented |
+| FR-WEB-005 | Display confirmed, rejected, dependency-failure, and validation outcomes distinctly | Implemented |
+| FR-WEB-006 | Show order list and order detail | Implemented |
+| FR-WEB-007 | Allow cancellation only when the API indicates eligibility | Implemented |
+| FR-WEB-008 | Show simulated notifications | Implemented |
+| FR-WEB-009 | Provide a small operator product form | Implemented |
+| FR-WEB-010 | Avoid direct browser calls to internal service addresses | Implemented |
+| FR-WEB-011 | Handle loading, empty, retryable error, and offline dependency states | Implemented |
+| FR-WEB-012 | Remain usable at 320px width and with keyboard navigation | Implemented |
 
 ### Health and diagnostics
 
-| ID | Requirement | Initial status |
+| ID | Requirement | Verified status |
 | --- | --- | --- |
-| FR-OPS-001 | Every process exposes liveness | Specified |
-| FR-OPS-002 | HTTP services expose readiness including required dependencies | Specified |
-| FR-OPS-003 | Notification readiness checks RabbitMQ and its database | Specified |
-| FR-OPS-004 | Logs include service name, environment, trace ID, and important entity IDs | Specified |
-| FR-OPS-005 | HTTP calls propagate `traceparent` and optional `X-Correlation-ID` | Specified |
-| FR-OPS-006 | Published messages carry trace context and message ID | Specified |
-| FR-OPS-007 | Unexpected errors return safe problem details and are logged once | Specified |
-| FR-OPS-008 | Development configuration allows deliberate dependency shutdown tests | Specified |
+| FR-OPS-001 | Every process exposes liveness | Implemented |
+| FR-OPS-002 | HTTP services expose readiness including required dependencies | Implemented |
+| FR-OPS-003 | Notification readiness checks RabbitMQ and its database | Implemented |
+| FR-OPS-004 | Logs include service name, environment, trace ID, and important entity IDs | Implemented |
+| FR-OPS-005 | HTTP calls propagate `traceparent` and optional `X-Correlation-ID` | Implemented |
+| FR-OPS-006 | Published messages carry trace context and message ID | Implemented |
+| FR-OPS-007 | Unexpected errors return safe problem details and are logged once | Implemented |
+| FR-OPS-008 | Development configuration allows deliberate dependency shutdown tests | Implemented |
+
+### Requirement verification evidence
+
+The verified statuses above were audited against the executable boundaries on 2026-08-18. Product catalog/inventory behavior is covered by the PostgreSQL Testcontainers suite; Order state, authoritative snapshots, cancellation, ambiguity, outbox, reconciliation, and concurrency are covered by the Order suite; Messaging/Notification behavior is covered by the PostgreSQL/RabbitMQ Testcontainers suite; Gateway routes and trace propagation are covered by Gateway tests; Angular behavior is covered by 21 unit tests and the two-test Compose Playwright suite. The Playwright suite also exercises the real Product HTTP path, checkout, eventual Notification polling, cancellation/stock restoration, insufficient stock, and dependency-failure UI. `FR-ORD-015` remains intentionally `Deferred` because `OrderCancelled` is outside the baseline event scope; authentication remains optional Phase 9.
 
 ## 4. Business rules
 

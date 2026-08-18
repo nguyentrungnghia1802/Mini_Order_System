@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Contract sources
 
-Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail/cancel subset through a typed Product inventory client, authoritative reservation snapshots, and explicit `rejected`/`inventory_unknown`/`cancellation_pending` outcomes. Notification Service implements and tests the read/mark-as-read API over its owned database. Gateway implements and tests the public Product/Order/Notification route transforms and internal-route rejection. Angular Product, Order, and Notification API clients and screens use same-origin Gateway paths; full-stack broker recovery and end-to-end behavior remain phase-scoped.
+Runtime status: Product Service implements and tests the catalog/detail/create/update/lifecycle subset below plus the internal inventory reservation/release boundary. Order Service implements and tests the native create/list/detail/cancel/reconciliation subset through a typed Product inventory client, authoritative reservation snapshots, and explicit `rejected`/`inventory_unknown`/`cancellation_pending` outcomes plus transactional outbox publication. Notification Service implements and tests the read/mark-as-read API over its owned database. Gateway implements and tests the public Product/Order/Notification route transforms and internal-route rejection. Angular Product, Order, and Notification API clients and screens use same-origin Gateway paths; full-stack broker recovery, Playwright E2E, and failure-injection behavior are implemented and documented.
 
 Executable contract sources:
 

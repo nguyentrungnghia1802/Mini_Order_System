@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Repository layout
 
-The repository follows this layout, with Product, the Order native API plus synchronous Product-reservation folders, and the Notification persistence/consumer slice populated. Future read/API and end-to-end folders remain intentionally omitted until their owning phase needs them.
+The repository follows this layout, with Product, Order, Notification, Gateway, Angular, Compose, executable operations wrappers, and browser E2E coverage populated. Optional authentication folders and external infrastructure integrations remain intentionally omitted because they are outside the required Phase 0–8 baseline.
 
 Recommended monorepo:
 
@@ -25,11 +25,12 @@ Recommended monorepo:
 |       \-- NotificationService/
 |           \-- MicroShop.NotificationService/
 |-- tests/
-|   |-- MicroShop.ProductService.Tests/
-|   |-- MicroShop.OrderService.Tests/
+|   |-- MicroShop.Architecture.Tests/
+|   |-- MicroShop.Contracts.Tests/
+|   |-- MicroShop.Gateway.Tests/
 |   |-- MicroShop.NotificationService.Tests/
-|   |-- MicroShop.ContractTests/
-|   \-- MicroShop.EndToEndTests/
+|   |-- MicroShop.OrderService.Tests/
+|   \-- MicroShop.ProductService.Tests/
 |-- web/
 |   \-- microshop-ui/
 |-- deploy/
@@ -44,6 +45,10 @@ Recommended monorepo:
 |       |-- web.Dockerfile
 |       \-- nginx.conf
 |-- scripts/
+|   |-- db-migrate-*.ps1/.sh
+|   |-- db-backup.* and db-restore-drill.*
+|   |-- e2e-compose.* and failure-injection.*
+|   \-- security-scan.*
 |-- docs/
 |-- .github/workflows/
 |-- .editorconfig
@@ -52,7 +57,7 @@ Recommended monorepo:
 |-- global.json
 |-- .env.example
 |-- README.md
-\-- AGENTS.md
+\-- docs/agent/AGENT.md
 ```
 
 The exact implementation may separate test or persistence projects later. Start with a small number of projects so service boundaries, not Clean Architecture ceremony, remain visible.
@@ -147,6 +152,8 @@ Current Gateway implementation files are `BootstrapConfiguration.cs`, `Program.c
 Current Notification implementation files are `Features/Messaging/OrderConfirmedConsumer.cs`, `Features/Notifications/NotificationContracts.cs`, `Features/Notifications/NotificationEndpoints.cs`, `Infrastructure/Database/NotificationDatabaseOptions.cs`, `Infrastructure/Messaging/NotificationMessagingOptions.cs`, `Persistence/NotificationDbContext.cs`, `Persistence/Entities/ConsumedMessage.cs`, `Persistence/Entities/Notification.cs`, `Persistence/Configurations/`, and `Persistence/Migrations/`. Notification configures its own PostgreSQL connection, health check, EF migration, durable MassTransit consumer, explicit duplicate-safe transaction, bounded configurable retry, read/mark-as-read API, and OpenAPI. It does not reference Product or Order implementation projects or databases. `tests/MicroShop.NotificationService.Tests/NotificationMessagingIntegrationTests.cs` runs the actual host against RabbitMQ Testcontainers for publish/consume, retry/error queue, duplicate, concurrent redelivery, transaction rollback, process restart between redelivery attempts, and queued recovery behavior. The Angular screen consumes this public boundary only through the Gateway.
 
 Current Angular API boundary files are `web/microshop-ui/src/app/core/api/api.paths.ts`, `api.models.ts`, `product-api.service.ts`, `order-api.service.ts`, `notification-api.service.ts`, `gateway-error.ts`, and `gateway-error.interceptor.ts`. They use same-origin `/api/products`, `/api/orders`, and `/api/notifications` paths only. Product UI components live under `web/microshop-ui/src/app/features/products/`; checkout and Order list/detail components live under `web/microshop-ui/src/app/features/orders/`; the Notification list, bounded polling, and mark-as-read UI lives under `web/microshop-ui/src/app/features/notifications/`.
+
+Current quality/operations entry points are `web/microshop-ui/playwright.config.ts` and `web/microshop-ui/e2e/microshop.spec.ts` for browser automation; `scripts/e2e-compose.ps1/.sh` for a full Compose browser run; `scripts/failure-injection.ps1/.sh` for dependency/recovery scenarios; `scripts/security-scan.ps1/.sh` for dependency and repository-built image scans; and `scripts/db-backup.*` plus `scripts/db-restore-drill.*` for local backup/restore verification. `.github/workflows/ci.yml` is the executable CI source for restore, format, build, test, migrations, Compose, Playwright, image build, security, and repository-safety jobs.
 
 ## 5. Dependency rules
 

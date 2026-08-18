@@ -27,7 +27,7 @@ Exit criteria:
 - infrastructure starts;
 - docs are linked from README.
 
-Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, PostgreSQL/RabbitMQ Compose infrastructure, and Product empty-database migration validation are present and validated locally. Phase 0 CI still does not execute application image builds; the first five application images are now implemented and validated in Phase 6.1.
+Phase 0 implementation status: the solution/projects, strict Angular workspace, version and formatting standards, initial CI, PostgreSQL/RabbitMQ Compose infrastructure, repository safety checks, and empty-database migration validation are present. Docker image build validation is now an explicit CI job and is also covered by the final Compose quality gates.
 
 ### Phase 1: Product Service
 
@@ -52,7 +52,7 @@ Phase 1 status: complete. Product domain/persistence, `InitialProductSchema`, se
 
 Learning objective: separate service ownership and HTTP API boundaries.
 
-Phase 2 status: partial. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, typed Product orchestration, cancellation, optimistic-concurrency rejection, and Angular checkout/list/detail screens are implemented. The 40-test Order suite and 21-test Angular suite pass. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation now uses the Phase 3 typed Product client and orchestration. The exact legacy Angular-with-fake-client wording remains a documented partial gate.
+Phase 2 status: complete. Order domain entities, state transition guard, state-history persistence, `InitialOrderSchema`, PostgreSQL readiness, native create/list/detail API, typed Product orchestration, cancellation, optimistic-concurrency rejection, and Angular checkout/list/detail screens are implemented and tested. The deterministic fake Product client is retained only for explicit compatibility tests; runtime Order creation uses the typed Product client and authoritative Product snapshots. The real Product HTTP path is verified by Order integration tests and the Compose Playwright suite.
 
 ### Phase 3: Synchronous service communication
 
@@ -80,7 +80,7 @@ Phase 3 status: complete. Product-owned reservation entities, migrations, atomic
 
 Learning objective: one entry point and hidden service topology.
 
-Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CORS, request limits, health endpoints, trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by 6 Gateway tests in `569af30`. Angular Product/Order clients and feature screens now use same-origin Gateway paths and map connectivity failures in `f750963`, `185a8cc`, and `20bf3d8`; application-container port isolation and the final Gateway-only validation gate remain incomplete.
+Phase 4 status: complete. YARP Product/Order/Notification clusters, public path transforms, CORS, request limits, health endpoints, W3C trace forwarding, destination validation, stable downstream errors, and internal-route exclusion are implemented and covered by Gateway tests. Angular Product/Order/Notification clients and feature screens use same-origin Gateway paths; Compose keeps service-native ports private by default and the final Gateway-only browser path is verified by Playwright.
 
 ### Phase 5: RabbitMQ and Notification Service
 
@@ -94,7 +94,7 @@ Phase 4 status: partial. YARP Product/Order clusters, public path transforms, CO
 
 Learning objective: asynchronous event-driven communication and at-least-once delivery.
 
-Phase 5 status: contract, transport, direct-publish demonstration, Notification persistence, consumer, read API, Angular UI, broker recovery foundations, and the full-stack Compose order-to-notification smoke path are implemented. `MicroShop.Contracts.Orders.OrderConfirmedV1` is implemented with message/order IDs, customer destination, totals, item snapshots, UTC occurrence time, schema version, and serialization tests. MassTransit RabbitMQ options, bounded retry, durable Notification endpoint, environment credentials, and readiness registration are configured. Notification owns `consumed_messages` and `notifications`, applies its migration, persists both records transactionally, suppresses duplicate message IDs, and exposes filtered/paginated reads plus mark-as-read through its native API and Gateway route. Angular uses the same-origin Gateway Notification client with a bounded polling list, manual refresh, loading/empty/error states, and mark-as-read. RabbitMQ Testcontainers tests verify publish/consume, duplicate suppression, retry/error-queue behavior, publisher independence, service restart, and queued recovery; Compose verifies a seeded confirmed Order becomes a readable Notification. The final Order event path is implemented in Phase 7.1; browser Playwright coverage and the remaining Phase 7 reliability gates are incomplete.
+Phase 5 status: complete. The versioned `OrderConfirmedV1` contract, MassTransit RabbitMQ transport, bounded retry, durable Notification endpoint, owned Notification migration/database, transactional inbox/notification persistence, duplicate suppression, read/mark-as-read API, Angular Notification UI, broker recovery tests, and full-stack order-to-notification smoke are implemented. The final Order event path is hardened by the Phase 7 transactional outbox; Playwright and failure-injection coverage are recorded in Phase 8.
 
 ### Phase 6: Docker Compose completion
 
@@ -107,7 +107,7 @@ Phase 5 status: contract, transport, direct-publish demonstration, Notification 
 
 Learning objective: process isolation, service discovery, and operations.
 
-Phase 6 status: partial. Phase 6.1 implements five multi-stage images under `deploy/docker/`: four SDK-free, non-root ASP.NET runtime images and one Angular build/unprivileged-Nginx image. Phase 6.2–6.5 now wire and validate the full Web/Gateway/Product/Order/Notification/PostgreSQL/RabbitMQ stack, three migration one-shots, health-based startup, private application ports, one-command Windows documentation, migration-all/reset wrappers, and a confirmed Order plus Notification Compose smoke. Native Linux/macOS execution and CI/Playwright stack automation remain validation work.
+Phase 6 status: complete. Phase 6.1 implements five multi-stage images under `deploy/docker/`: four SDK-free, non-root ASP.NET runtime images and one Angular build/unprivileged-Nginx image. Phase 6.2–6.5 wire and validate the full Web/Gateway/Product/Order/Notification/PostgreSQL/RabbitMQ stack, three migration one-shots, health-based startup, private application ports, one-command Windows documentation, migration/all/reset wrappers, and a confirmed Order plus Notification Compose smoke. POSIX wrappers are syntax-reviewed and Ubuntu execution is defined in CI; native macOS execution is not available in this Windows workspace.
 
 ### Phase 7: Reliability hardening
 
@@ -128,7 +128,7 @@ Phase 7 status: complete. Phase 7.1 implements the Order-owned transactional out
 - 8.2 W3C trace propagation through Gateway, Order -> Product, and outbox/RabbitMQ -> Notification is implemented with OpenTelemetry registration and an optional OTLP endpoint;
 - 8.3 shared HTTP/dependency/outcome/outbox metrics plus liveness/readiness semantics are implemented and tested;
 - 8.4 local log-search/integration decision, 8.5 Playwright Compose E2E, and 8.6 failure-injection automation are implemented and validated;
-- 8.7 security/deployment review, 8.8 documentation audit, and 8.9 final CI/release gate remain.
+- 8.7 dependency/image security review, secret/port/HTTPS review, backup/restore instructions and drill, 8.8 documentation audit, and 8.9 final CI/release gate are implemented and validated.
 
 Learning objective: debugging distributed systems.
 
@@ -153,7 +153,7 @@ The project is "complete for learning" at the end of Phase 8. Phase 9 and busine
 | --- | --- | --- | --- |
 | TD-001 | Direct publish after DB commit in early phase | Historical lost-notification window | Phase 7.1 transactional outbox implemented; Phase 7.2 outage/readiness evidence passes |
 | TD-002 | No public order idempotency key | Browser retry may duplicate orders | Disable duplicate UI submit; optional extension |
-| TD-003 | No automated reconciliation initially | `inventory_unknown` requires manual inspection | Phase 7 helper/job |
+| TD-003 | No automatic reconciliation worker | `inventory_unknown`/`cancellation_pending` still require an intentional operator action | Phase 7 controlled internal reconciliation route and audit history |
 | TD-004 | No authentication | Public demo operator writes are unsafe | Local-only baseline; optional Phase 9 |
 | TD-005 | One PostgreSQL server locally | Learner may confuse server with shared DB | Separate DB/user and docs/tests |
 | TD-006 | Shared contracts may grow | Tight coupling | Strict contract-only rule |

@@ -4,7 +4,7 @@ Last reviewed: 2026-08-18.
 
 ## 1. Environment model
 
-The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, bounded idempotent release/lookup retry, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, and Phase 7.1-7.6 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, Notification inbox idempotency, reconciliation, bounded shutdown, lifecycle readiness transitions, observability, Playwright Compose E2E, and non-destructive failure-injection recovery checks.
+The repository now provides a full local Compose stack: Web, Gateway, Product, Order, Notification, PostgreSQL, RabbitMQ, and three explicit migration one-shots. Product includes a Product-owned internal reservation/release API; Order includes a native create/list/detail/cancel API backed at runtime by a typed Product reservation client with explicit timeout, bounded idempotent release/lookup retry, `inventory_unknown`, and `cancellation_pending` handling plus an Order-owned transactional outbox/dispatcher; Notification consumes and reads generated notifications from its own database; Gateway exposes tested Product/Order/Notification public routes and rejects `/internal/*`. The Angular application includes the Notification screen and same-origin Gateway integration. Phase 6.1 supplies buildable non-root application images, Phase 6.2 verifies the Compose order-to-notification smoke flow, Phase 7.1-7.6 verify durable outbox persistence, lease/retry behavior, backlog operations, readiness policy, RabbitMQ outage recovery, Notification inbox idempotency, reconciliation, bounded shutdown, and lifecycle readiness transitions, and Phase 8 verifies telemetry, Playwright Compose E2E, failure-injection recovery, security scanning, backup/restore handling, and the final documentation/release gates.
 
 | Environment | Purpose | Data/integration policy |
 | --- | --- | --- |
@@ -15,6 +15,8 @@ The repository now provides a full local Compose stack: Web, Gateway, Product, O
 | Production | Not a baseline target | Requires authentication, privacy, HA, monitoring, legal review |
 
 The system must not be described as production-ready merely because it runs in Docker.
+
+All current Product, Order, and Notification write APIs are unsecured demonstration endpoints. Authentication, authorization, CSRF/session policy, and secure operator identity remain optional Phase 9 work and are required before accepting real users.
 
 ## Phase 7.1 outbox status
 
@@ -126,6 +128,7 @@ Rules:
 - CI uses secret storage;
 - public demo uses generated credentials;
 - logs and health details do not expose secrets;
+- repository safety CI rejects tracked environment files and common credential formats;
 - rotate any secret shown in screenshots or committed history.
 
 ## 4. Docker images
@@ -151,6 +154,8 @@ Image rules:
 - labels/version metadata optional.
 
 The current implementation maps these images to `deploy/docker/product-service.Dockerfile`, `deploy/docker/order-service.Dockerfile`, `deploy/docker/notification-service.Dockerfile`, `deploy/docker/gateway.Dockerfile`, and `deploy/docker/web.Dockerfile`. The .NET images use SDK `10.0.302` only in the build stage, ASP.NET `10.0` in the runtime stage, UID 1654, and port 8080. The Web image uses Node `24.15.0` only in the build stage and unprivileged Nginx on port 8080. Local Phase 6.1 builds and the Web `/health` smoke check pass; Compose service wiring is 6.2.
+
+Dependency/image scanning is part of the release workflow. NuGet transitive packages and production npm dependencies are audited before the five repository-built application images are scanned for HIGH/CRITICAL findings. Run the same local checks with `scripts/security-scan.ps1/.sh`. PostgreSQL and RabbitMQ remain upstream infrastructure images and require their own image-maintenance policy; this learning baseline does not claim that an upstream image has zero CVEs. The test-only Testcontainers dependency is pinned to `4.14.0`, which resolves the `SSH.NET 2025.1.0` high-severity advisory through `SSH.NET 2026.0.0`.
 
 ## 5. Compose topology
 
@@ -385,6 +390,16 @@ pg_dump -Fc -d microshop_order > order.dump
 pg_dump -Fc -d microshop_notification > notification.dump
 ```
 
+For the Compose environment, prefer the credential-safe wrappers so the dump is created inside the PostgreSQL container and copied as a binary archive without printing a password:
+
+```powershell
+./scripts/db-backup.ps1 -Database product -EnvFile .env
+./scripts/db-backup.ps1 -Database order -EnvFile .env
+./scripts/db-backup.ps1 -Database notification -EnvFile .env
+```
+
+The POSIX equivalent is `./scripts/db-backup.sh product .env` (and the other two database names). The default output directory is ignored `TestResults/backups/`; move any archive containing meaningful data to approved protected storage before cleaning the local workspace.
+
 Back up before migration and before destructive reset.
 
 ### RabbitMQ
@@ -411,6 +426,16 @@ With an Order outbox, unpublished/republishable events remain in Order DB, impro
 
 Restoring databases from different times can create cross-service inconsistency. For a learning demo, back up all service databases in the same maintenance window.
 
+The local restore drill runs `pg_dump` from a live Compose database and restores it into a disposable PostgreSQL container backed by an isolated `tmpfs`. It verifies a service-owned table and removes only the temporary container/archive; it does not drop a Compose database or remove a named Docker volume:
+
+```powershell
+./scripts/db-restore-drill.ps1 -Database product -EnvFile .env.example
+./scripts/db-restore-drill.ps1 -Database order -EnvFile .env.example
+./scripts/db-restore-drill.ps1 -Database notification -EnvFile .env.example
+```
+
+Run this drill before migration/image changes. `scripts/db-restore-drill.sh` is the POSIX entry point when PowerShell 7 (`pwsh`) is installed.
+
 ## 17. Rollback
 
 Application rollback is safe only when old code understands the current schema/event contracts.
@@ -423,6 +448,19 @@ Before deploy:
 - do not roll back one service to an incompatible internal API.
 
 If database migration is destructive, restore from backup rather than improvising reverse SQL.
+
+For the local Compose deployment, keep the previous image references and use an explicit env file to roll back application images only:
+
+```powershell
+$env:PRODUCT_IMAGE='microshop-product-service:<previous>'
+$env:ORDER_IMAGE='microshop-order-service:<previous>'
+$env:NOTIFICATION_IMAGE='microshop-notification-service:<previous>'
+$env:GATEWAY_IMAGE='microshop-gateway:<previous>'
+$env:WEB_IMAGE='microshop-web:<previous>'
+docker compose --env-file .env -f deploy/compose.yaml up -d --wait product-service order-service notification-service gateway web
+```
+
+Do not run a down-revision migration automatically. If the previous image cannot read the current schema or event contract, restore the matching database backup in a maintenance window and verify all three service databases independently before starting the old images.
 
 ## 18. Incident runbooks
 
@@ -515,17 +553,17 @@ Suggested pipeline:
 3. restore dependencies;
 4. format/lint;
 5. build .NET;
-6. test unit;
+6. test unit/integration;
 7. build/test Angular;
-8. start PostgreSQL/RabbitMQ test infrastructure;
-9. run integration/contract tests;
-10. build container images;
-11. run Compose smoke/E2E;
-12. scan dependencies/images;
+8. validate migrations against empty PostgreSQL;
+9. build container images;
+10. run Compose smoke/E2E;
+11. scan dependencies/images;
+12. run repository safety checks;
 13. publish artifacts/images on main/tag;
 14. deploy optional demo with approval.
 
-Database migrations should be validated in CI against an empty database.
+The implemented `.github/workflows/ci.yml` runs the .NET, Angular, migration, Compose smoke, Playwright, container-build, dependency/image-scan, and repository-safety jobs. Database migrations are validated in CI against an empty PostgreSQL database; the three service Testcontainers fixtures provide the same fresh-database coverage for Product, Order, and Notification locally.
 
 ## 20. Production-readiness gaps
 
@@ -537,7 +575,7 @@ Before accepting real users:
 - secure product administration;
 - rate limiting/WAF;
 - managed database/broker or tested operations;
-- backups and restore drill;
+- managed backups and a production restore drill;
 - TLS and secret manager;
 - alerting/SLOs;
 - outbox and reconciliation;

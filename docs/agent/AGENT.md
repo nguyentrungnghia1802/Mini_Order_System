@@ -707,7 +707,7 @@ consumer.failures
 
 Do not use IDs/emails as metric labels.
 
-The existing Log Monitoring System may be integrated during Phase 8, but MicroShop must remain independently runnable.
+No external Log Monitoring System is supplied in this repository. JSON stdout plus optional `OTEL_EXPORTER_OTLP_ENDPOINT` keep MicroShop independently runnable; an existing collector may be integrated later without changing service boundaries.
 
 ---
 
@@ -782,6 +782,10 @@ catalog
 ```
 
 Use bounded polling for eventual results; avoid arbitrary long sleeps.
+
+### Security and deployment checks
+
+For the final Phase 8 gate, run `scripts/security-scan.ps1/.sh` for NuGet/npm production audits and repository-built image scans. Run `scripts/db-backup.*` before a migration or destructive local reset, and run `scripts/db-restore-drill.*` against a disposable PostgreSQL container to verify an archive without deleting Compose databases or volumes. Keep upstream PostgreSQL/RabbitMQ image findings documented separately from repository-built application-image findings.
 
 If a required check cannot run:
 

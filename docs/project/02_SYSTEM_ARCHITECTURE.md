@@ -186,7 +186,7 @@ Baseline implementation options:
 1. direct publish after database commit for first learning milestone;
 2. transactional outbox for the final hardening milestone.
 
-The current final runtime path is the transactional-outbox milestone: Order commits `confirmed` and the serialized `OrderConfirmedV1` outbox row in one Order database save, then a bounded dispatcher publishes it through MassTransit with the stable message/correlation ID and trace context. The direct publisher remains only as a documented/test-only learning demonstration. Publication is at least once, so the Notification consumer's idempotency boundary remains required; the remaining Phase 7 work covers operational backlog/readiness, outage evidence, reconciliation, and resilience.
+The current final runtime path is the transactional-outbox milestone: Order commits `confirmed` and the serialized `OrderConfirmedV1` outbox row in one Order database save, then a bounded dispatcher publishes it through MassTransit with the stable message/correlation ID and trace context. The direct publisher remains only as a documented/test-only learning demonstration. Publication is at least once, so the Notification consumer's idempotency boundary remains required; Phase 7 backlog/readiness, outage evidence, reconciliation, and resilience gates are complete and Phase 8 adds trace/metric/log correlation and executable Compose quality gates.
 
 ### RabbitMQ to Notification Service
 
@@ -204,7 +204,7 @@ If processing throws, MassTransit retry/error behavior applies. Poison messages 
 
 ## 6. Request flow: successful order
 
-The following flow is implemented through the native service boundary and Gateway Product/Order forwarding; Notification publication/consumption remains a later slice.
+The following flow is implemented through the native service boundary, Gateway Product/Order forwarding, and the durable Order-to-Notification path.
 
 ```text
 1. Angular POST /api/orders

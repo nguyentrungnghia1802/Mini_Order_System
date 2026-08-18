@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "chore/**", "feat/**", "fix/**"]
+    branches: [main, "chore/**", "codex/**", "feat/**", "fix/**"]
   pull_request:
 
 permissions:
@@ -132,7 +132,7 @@ jobs:
         run: docker compose --env-file .env.example -f deploy/compose.yaml down --remove-orphans
 
   migrations:
-    name: Product migration validation
+    name: All service migration validation
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -164,12 +164,13 @@ jobs:
         shell: bash
         run: dotnet tool install --tool-path "$RUNNER_TEMP/dotnet-tools" dotnet-ef --version 10.0.10
 
-      - name: Create Order migration database
+      - name: Create Order and Notification migration databases
         shell: bash
         run: >-
           psql -h localhost -U postgres -d microshop_product_ci
           -v ON_ERROR_STOP=1
           -c "CREATE DATABASE microshop_order_ci"
+          -c "CREATE DATABASE microshop_notification_ci"
 
       - name: Apply Product migration to empty PostgreSQL database
         shell: bash
@@ -194,6 +195,18 @@ jobs:
           "$RUNNER_TEMP/dotnet-tools/dotnet-ef" database update
           --project src/Services/OrderService/MicroShop.OrderService
           --startup-project src/Services/OrderService/MicroShop.OrderService
+
+      - name: Apply Notification migration to empty PostgreSQL database
+        shell: bash
+        env:
+          NOTIFICATION_DB_HOST: localhost
+          NOTIFICATION_DB_PORT: 5432
+          NOTIFICATION_DB_NAME: microshop_notification_ci
+          NOTIFICATION_DB_USER: postgres
+        run: >-
+          "$RUNNER_TEMP/dotnet-tools/dotnet-ef" database update
+          --project src/Services/NotificationService/MicroShop.NotificationService
+          --startup-project src/Services/NotificationService/MicroShop.NotificationService
 
   repository-safety:
     name: Repository safety checks
@@ -234,3 +247,89 @@ jobs:
 
       - name: Build all application images
         run: docker compose --env-file .env.example -f deploy/compose.yaml build --quiet
+
+  security:
+    name: Dependency and image vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/microshop-ui/package-lock.json
+
+      - name: Restore .NET packages
+        run: dotnet restore MicroShop.sln
+
+      - name: Audit NuGet packages
+        run: dotnet list MicroShop.sln package --vulnerable --include-transitive --no-restore
+
+      - name: Install Angular dependencies
+        working-directory: web/microshop-ui
+        run: npm ci
+
+      - name: Audit production npm packages
+        working-directory: web/microshop-ui
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build application images
+        run: docker compose --env-file .env.example -f deploy/compose.yaml build --quiet
+
+      - name: Scan Product image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: microshop-product-service:phase6
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan Order image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: microshop-order-service:phase6
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan Notification image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: microshop-notification-service:phase6
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan Gateway image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: microshop-gateway:phase6
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan Web image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: microshop-web:phase6
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH

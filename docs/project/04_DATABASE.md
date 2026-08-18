@@ -18,7 +18,7 @@ src/Services/NotificationService/Persistence/Migrations/
 
 Implemented Product migrations: `20260801194513_InitialProductSchema`, `20260817164457_AddInventoryReservations`, and `20260817164536_AddInventoryReservationConstraints` under `src/Services/ProductService/MicroShop.ProductService/Persistence/Migrations/`. They create only Product-owned `products`, `inventory_reservations`, and `inventory_reservation_items` tables with their indexes, local foreign keys, and check constraints. Phase 7.5 adds no database tables or cross-service references; its retry and shutdown policy is process configuration only.
 
-Implemented Order migration: `20260801204113_InitialOrderSchema` under `src/Services/OrderService/MicroShop.OrderService/Persistence/Migrations/`. It creates only Order Service `orders`, `order_items`, and `order_state_history` with status/amount/quantity constraints and documented query indexes.
+Implemented Order migrations: `20260801204113_InitialOrderSchema`, `20260817203650_AddOrderOutbox`, and `20260818044623_AddOrderReconciliation` under `src/Services/OrderService/MicroShop.OrderService/Persistence/Migrations/`. They create only Order Service `orders`, `order_items`, `order_state_history`, `outbox_messages`, and `order_reconciliation_audits` with status/amount/quantity constraints, local foreign keys, idempotency constraints, and documented query indexes.
 
 Implemented Notification migration: `20260817185808_InitialNotificationSchema` under `src/Services/NotificationService/MicroShop.NotificationService/Persistence/Migrations/`. It creates only Notification Service `consumed_messages` and `notifications`, including the local one-to-one relationship, unique message references, query indexes, and validation checks.
 

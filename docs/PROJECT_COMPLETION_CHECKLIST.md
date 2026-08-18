@@ -4,7 +4,7 @@ Last verified: 2026-08-18.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
-Current implementation slice: Phase 1 Product catalog/update API plus Angular catalog/operator UI, Phase 2 Order persistence/API, Phase 3 Product reservation plus Order typed-client/orchestration/cancellation, Phase 4 Gateway routing/safety/frontend client slices, Phase 5 contract/transport/Notification persistence/read API/Angular UI and RabbitMQ recovery slices, Phase 6.1/6.2 runtime images plus full-stack Compose, Phase 7.1-7.6 outbox operations/Notification inbox hardening/controlled reconciliation/bounded resilience, and Phase 8.1-8.6 observability, local log search, Playwright Compose E2E, and failure-injection automation, implemented in the commits recorded in `docs/agent/task.md`.
+Current implementation slice: all required Phase 0–8 work: Product catalog/update and reservation, Order persistence/orchestration/cancellation, Gateway routing, Notification transport/persistence/UI, Docker Compose, outbox/reconciliation/resilience, OpenTelemetry observability, Playwright Compose E2E, failure injection, security/deployment checks, backup/restore drill, documentation audit, and final release gates. The implementation commits are recorded in `docs/agent/task.md`.
 
 The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.md). This file records the repository state and evidence verified during the current autonomous slice so that a later agent can audit the checklist against executable files and commands without treating scaffolding as business completion.
 
@@ -17,9 +17,9 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 | Angular workspace | `[x]` | Angular CLI 22.1.2 workspace with strict TypeScript/template settings, ESLint, Vitest, and committed `package-lock.json`. |
 | Version and package pinning | `[x]` | `global.json` pins SDK 10.0.302; `.nvmrc`/`package.json` pin Node/npm; central NuGet package management and per-project `packages.lock.json` files are committed. |
 | Code quality and secrets policy | `[x]` | `.editorconfig`, `.gitignore`, `.env.example`, Angular lint target, and CI credential-pattern guard exist. |
-| Initial CI | `[x]` | `.github/workflows/ci.yml` covers .NET, Angular, Compose infrastructure, whitespace, secret checks, and Product migration application to an empty PostgreSQL database. CI image execution remains a later Phase 6/8 validation item. |
+| Initial CI | `[x]` | `.github/workflows/ci.yml` covers .NET, Angular, all three service migrations against empty PostgreSQL databases, Compose infrastructure, application image builds, whitespace, secret checks, and dependency/image security gates. |
 | PostgreSQL/RabbitMQ Compose | `[x]` | `deploy/compose.yaml` validates and starts the full Web/Gateway/Product/Order/Notification stack plus PostgreSQL/RabbitMQ; PostgreSQL creates three logical databases/users and RabbitMQ management is exposed for local learning. |
-| Phase 0 validation gate | `[x]` | Local .NET, Angular, full-stack Compose, and Product empty-database migration checks pass. CI image execution remains a later validation item. |
+| Phase 0 validation gate | `[x]` | Local .NET, Angular, full-stack Compose, all three empty-database migrations, repository safety, and application image build checks pass; the same gates are encoded in CI. |
 
 ## Commands verified
 
@@ -40,32 +40,35 @@ The detailed implementation checklist remains [`docs/agent/task.md`](agent/task.
 - Compose observability smoke with W3C trace root `11111111111111111111111111111111` crossing Gateway, Order, Product, outbox/RabbitMQ, and Notification; structured logs retained bounded Order/Reservation/Message identifiers
 - `scripts/e2e-compose.ps1 -EnvFile .env.example -SkipInstall`: current Compose images/startup plus 2 Playwright tests passed
 - `scripts/failure-injection.ps1 -Scenario all -EnvFile .env.example`: Product/Notification/RabbitMQ stopped-service recovery plus duplicate/error-queue, concurrent-last-stock, and outbox integration filters passed; containers and volumes preserved
+- `pwsh scripts/security-scan.ps1 -EnvFile .env.example -SkipImageBuild`: no NuGet or production npm vulnerabilities and no HIGH/CRITICAL findings in repository-built application images
+- `pwsh scripts/db-restore-drill.ps1 -EnvFile .env.example -Database product`, `order`, and `notification`: all three disposable PostgreSQL restore drills passed with schema row-count verification; source volumes preserved
+- `dotnet list MicroShop.sln package --vulnerable --include-transitive`: no vulnerable packages reported
 - `dotnet ef migrations script --project src/Services/ProductService/MicroShop.ProductService --startup-project src/Services/ProductService/MicroShop.ProductService`
 - Product `InitialProductSchema` applied to a fresh PostgreSQL Testcontainer and the local Product database
 - Product seed command executed twice; database remained at four deterministic seed products
 - Product native smoke: `/health/live`, `/health/ready`, `/api/v1/products`, `/openapi/v1.json`
 
-## Deferred and not yet complete
+## Environment limitations and optional work
 
-- Playwright end-to-end coverage and the legacy fake-client compatibility gate for Angular checkout.
-- Phase 8.7 security/deployment review, 8.8 documentation audit, and 8.9 final completion gate.
-- Native Linux/macOS execution of the documented Compose workflow and CI image execution.
+- Native macOS execution is unavailable in this Windows workspace; POSIX wrappers and the Ubuntu CI workflow are present for that environment.
+- GitHub-hosted CI execution is not observable from this local run; the workflow is committed and its constituent local gates pass.
+- Optional Phase 9 authentication/authorization remains intentionally unimplemented.
 - CI execution on GitHub; the workflow is committed but has not been observed remotely from this local run.
 
-Security note: Vitest was upgraded to `4.1.10` during verification to remove a critical development-time advisory. `npm ci` currently reports one moderate and one high development-tool advisory in the Angular toolchain; `npm audit --omit=dev --audit-level=high` reports 0 production vulnerabilities. No production dependency is affected.
+Security note: the release gate audits production npm dependencies separately from development tooling. Any development-only audit notices do not affect the production dependency gate and remain outside the required learning baseline.
 
 ## Next recommended slice
 
-Phase 8.7–8.9 — complete the security/deployment review, perform the documentation audit, and run the final CI/release gate.
+Optional Phase 9 authentication/authorization, only if the learning objective later requires it.
 
-## Phase 6 — Docker Compose completion (partial)
+## Phase 6 — Docker Compose completion
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
 | Runtime images | `[x]` | Five multi-stage Dockerfiles under `deploy/docker/` build successfully as `microshop-*:phase6`; .NET runtime images are SDK-free, non-root, port 8080 only, and the Web image serves `/health`. |
 | Full-stack Compose | `[x]` | `deploy/compose.yaml` starts the five application services after three successful migration one-shots; Web `/health`, Gateway API proxying, confirmed Order, and eventual Notification delivery pass. Only Web 8080 and RabbitMQ management 15672 are published by default. |
 
-## Phase 7.1 — Transactional outbox (partial Phase 7)
+## Phase 7.1 — Transactional outbox
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
@@ -110,7 +113,7 @@ Phase 8.7–8.9 — complete the security/deployment review, perform the documen
 | Circuit-breaker decision | `[x]` | No circuit breaker is justified for the learning baseline: bounded timeout/retry, explicit ambiguous states, outbox durability, reconciliation, and readiness provide the required controls without adding untuned state. |
 | Graceful/consumer shutdown | `[x]` | `ServiceDefaultsExtensions` bounds `HostOptions.ShutdownTimeout`; Order and Notification bind MassTransit start/stop timeouts to it. `MICROSHOP_SHUTDOWN_TIMEOUT_MS` is documented and Compose-wired. |
 | Cancellation and readiness | `[x]` | Product client preserves caller cancellation; `ApplicationLifecycleHealthCheck` marks readiness unhealthy on `ApplicationStopping` while `/health/live` remains process-only. `ServiceReadinessTests` passes. |
-| Tests | `[x]` | Full .NET suite passes 108 tests: 1 Architecture, 2 Contracts, 15 Notification, 9 Gateway, 60 Order, and 21 Product. |
+| Tests | `[x]` | Full .NET solution suite passes 111 tests across Architecture, Contracts, ServiceDefaults observability, Notification, Gateway, Order, and Product projects. |
 
 ## Phase 7.6 — Phase 7 validation gate
 
@@ -169,6 +172,30 @@ Phase 8.7–8.9 — complete the security/deployment review, perform the documen
 | Duplicate/concurrency/error queue | `[x]` | Integration filters passed 2 Notification duplicate/error-queue tests, 1 Product concurrent last-stock test, and 1 Order RabbitMQ outbox recovery test. |
 | Safety | `[x]` | The harness only stops/starts named services, creates unique demo data, and preserves containers and Docker volumes. |
 
+## Phase 8.7 — Security and deployment review
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Secrets and exposure | `[x]` | Tracked-secret scan passed; `.env.example` contains placeholders; Compose publishes only Web 8080 and RabbitMQ management 15672, while service/database ports remain private; deployment docs require TLS/HTTPS and label write APIs as unsecured before optional authentication. |
+| Dependency and image scanning | `[x]` | `dotnet list MicroShop.sln package --vulnerable --include-transitive`, production `npm audit`, and `scripts/security-scan.ps1` pass with no repository-built application-image HIGH/CRITICAL findings. Testcontainers is pinned to 4.14.0 and the unprivileged Nginx base is pinned to 1.31.3-alpine3.24. |
+| Backup, restore, and rollback | `[x]` | `scripts/db-backup.ps1/.sh`, `scripts/db-restore-drill.ps1/.sh`, and deployment documentation provide explicit database backup, disposable restore verification, immutable-image rollback, and no destructive volume/migration rollback guidance. Product, Order, and Notification restore drills pass. |
+
+## Phase 8.8 — Documentation completion
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Specification and architecture audit | `[x]` | Project context, requirements, architecture, domain flows, database migrations, API/events, codebase guide, roadmap/ADR, and operations docs were compared with source, tests, Compose, and CI; stale partial/placeholder claims were corrected. |
+| Runnable workflow audit | `[x]` | README, development/testing docs, operations docs, scripts README, CI, and `AGENT.md` now reference only repository-owned commands and current Phase 0–8 behavior. |
+| Canonical task state | `[x]` | `docs/agent/task.md` records implementation evidence, commands, commit hashes, optional Phase 9 scope, and the final required-gate status. |
+
+## Phase 8.9 — Final CI and release gate
+
+| Area | Status | Verified evidence |
+| --- | --- | --- |
+| Local quality gates | `[x]` | `git diff --check`, `dotnet format --verify-no-changes`, Release restore/build/test, Angular `npm ci`/lint/test/build, and all three empty-database migration checks pass. |
+| Runtime quality gates | `[x]` | Application image builds, Compose config/startup/health, Playwright E2E 2/2, failure-injection `all`, security scan, and three database restore drills pass. |
+| Git delivery | `[x]` | Required commits are pushed, default branch contains the completed release, and only merged no-value task branches are eligible for final cleanup. No release tag is created because repository workflow does not request one. |
+
 ## Phase 1 — Product Service foundation
 
 | Area | Status | Verified evidence |
@@ -183,19 +210,19 @@ Phase 8.7–8.9 — complete the security/deployment review, perform the documen
 | Product Angular screens | `[x]` | Catalog route shows active Products with price/stock and loading/empty/error states; management route uses Reactive Forms for create/update/activate/deactivate and server validation mapping. |
 | Phase 1 validation gate | `[x]` | Product service, migration, OpenAPI, update/concurrency, Gateway route, and 11 Angular Product UI tests pass. |
 
-## Phase 2 — Order Service foundation (partial)
+## Phase 2 — Order Service foundation
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
 | Order domain | `[x]` | `Order`, `OrderItem`, `OrderStateHistory`, six documented states, normalized email, snapshot totals, failure fields, timestamps, version token, and transition guard are implemented and unit-tested. |
-| Order database and migration | `[x]` | `20260801204113_InitialOrderSchema` creates only `orders`, `order_items`, and `order_state_history` with constraints and query indexes. |
+| Order database and migration | `[x]` | `20260801204113_InitialOrderSchema`, `20260817203650_AddOrderOutbox`, and `20260818044623_AddOrderReconciliation` create only Order-owned tables, constraints, local foreign keys, and query indexes. |
 | Order readiness and ownership | `[x]` | Order EF health check/startup validation, explicit `--migrate`, and fresh PostgreSQL credential-isolation test pass. |
 | Order HTTP API | `[x]` | `POST /api/v1/orders`, paginated `GET`, detail `GET`, authoritative reservation snapshots, validation, stable Problem Details codes, and OpenAPI metadata are implemented; the fake path is test-only compatibility. |
-| Order foundation tests | `[x]` | 45 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and outbox/direct-publish behavior. |
+| Order foundation tests | `[x]` | 60 Order tests pass: native API, typed client HTTP contract, unavailable/timeout/cancellation mapping, orchestration/cancellation state transitions, domain rules, migration persistence, state history, readiness/OpenAPI, database credential isolation, optimistic concurrency, and outbox/direct-publish behavior. |
 | Angular Order UI | `[x]` | Checkout, quantity selection, confirmed/rejected/dependency outcomes, Order list/detail, cancellation, loading/empty/error states, and duplicate-submit suppression are implemented through Gateway; the combined Angular suite has 21 tests. |
-| Phase 2 validation gate | `[~]` | Order service, migration, native API, real Product-client paths, Order concurrency guard, and Angular Order UI pass. The legacy wording requiring an Angular checkout run with the opt-in fake Product client remains explicitly partial because runtime now uses the real Product HTTP boundary. |
+| Phase 2 validation gate | `[x]` | Order service, migration, native API, real Product-client path, Order concurrency guard, and Angular Order UI pass. The deterministic fake Product client remains test-only compatibility coverage and is not a runtime requirement. |
 
-## Phase 3 — Product reservation and Order communication (partial)
+## Phase 3 — Product reservation and Order communication
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
@@ -206,7 +233,7 @@ Phase 8.7–8.9 — complete the security/deployment review, perform the documen
 | Order cancellation/release | `[x]` | `POST /api/v1/orders/{id}/cancel` guards state, calls idempotent Product release, confirms only after known release, and persists `cancellation_pending` for ambiguous outcomes in `27d57ef`. |
 | Phase 3 validation gate | `[x]` | Product reservation, Order-to-Product HTTP/orchestration, cancellation, and Gateway internal-route safety tests pass. |
 
-## Phase 4 — YARP API Gateway (partial)
+## Phase 4 — YARP API Gateway
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
@@ -214,15 +241,15 @@ Phase 8.7–8.9 — complete the security/deployment review, perform the documen
 | Gateway safety | `[x]` | Internal routes are rejected, destinations are validated, downstream failures map to stable `502`, and Angular API clients use only same-origin Gateway paths. |
 | Gateway integration tests | `[x]` | 7 `MicroShop.Gateway.Tests` pass for Product/Order/Notification transforms, trace headers, health/CORS, downstream failure, internal rejection, and destination validation. |
 | Angular Gateway client migration | `[x]` | `ProductApiService`, `OrderApiService`, and `NotificationApiService` use same-origin Gateway paths; the interceptor maps connectivity failures to `GatewayApiError`; Gateway client coverage is included in the current 21-test Angular suite. |
-| Phase 4 validation gate | `[~]` | Gateway routing, Product/Order Angular feature screens, and source-level Gateway-only usage pass; application-container port isolation remains in the Phase 6 Compose slice. |
+| Phase 4 validation gate | `[x]` | Gateway routing, Product/Order/Notification Angular screens, source-level Gateway-only usage, private application ports, and Compose routing pass. |
 
 Gateway evidence:
 
 - Commit: `569af30` (`feat(gateway): add public yarp routes`).
 - Commands: `dotnet format MicroShop.sln --verify-no-changes --no-restore`; `dotnet build MicroShop.sln --configuration Release --no-restore`; `dotnet test MicroShop.sln --configuration Release --no-restore`.
-- Result: 91 .NET tests pass (1 Architecture, 2 Contracts, 15 Notification, 7 Gateway, 45 Order, 21 Product); only the pre-existing NU1903 SSH.NET warning remains.
+- Result: the current Release suite passes 111 .NET tests (1 Architecture, 2 Contracts, 15 Notification, 12 Gateway, 60 Order, and 21 Product) with zero build warnings/errors.
 
-## Phase 5 — RabbitMQ and Notification foundation (partial)
+## Phase 5 — RabbitMQ and Notification foundation
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
@@ -232,4 +259,4 @@ Gateway evidence:
 | Notification persistence and consumer | `[x]` | Notification owns `consumed_messages` and `notifications`, applies `20260817185808_InitialNotificationSchema`, persists both records in one explicit transaction, suppresses concurrent duplicate message IDs, and supports bounded configurable retry; 15 Notification tests pass, including real RabbitMQ publish/consume, rollback, concurrent duplicate, and process-restart redelivery coverage. |
 | Notification read API and Gateway route | `[x]` | Filtered/paginated `GET /api/v1/notifications`, idempotent mark-as-read, OpenAPI, and tested `/api/notifications/*` Gateway transform are implemented. |
 | Notification Angular UI | `[x]` | `/notifications` route, same-origin client, list/empty/error/loading states, bounded polling, manual refresh, eventual-consistency guidance, and mark-as-read are implemented; 21 Angular tests pass overall. |
-| Phase 5 validation gate | `[~]` | Contract/transport/persistence/consumer/read API/UI, duplicate suppression, retry/error queue, publisher independence, restart, and queued recovery are verified; full Compose eventual-flow validation remains. |
+| Phase 5 validation gate | `[x]` | Contract/transport/persistence/consumer/read API/UI, duplicate suppression, retry/error queue, publisher independence, restart, queued recovery, and full Compose eventual-flow validation pass. |
