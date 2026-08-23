@@ -1137,6 +1137,7 @@ Evidence for 8.5:
 - `ProductCatalogComponent`, `ProductManagementComponent`, and `OrderCheckoutComponent` request `limit=100`, the documented Product API maximum, because these baseline screens intentionally render one product list without client-side pagination. Their component tests assert the query strings.
 - `scripts/e2e-compose.ps1/.sh` validates/builds/starts the full stack and runs the browser suite without removing containers or volumes. Validation: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, `npm run build`, and Compose Playwright run passed; 2 Playwright tests passed after a retained-volume run exposed and fixed the default page-size omission.
 - Implementation commit: `6cf66ef975c532aff707bd8c3f21c050b37b0032` (`test(e2e): automate Compose quality gates`).
+- Follow-up retained-volume pagination fix: `587228a74bcc3275100a02467e875a84c9304a6b` (`fix(ui): request complete product lists in demo screens`).
 
 ## 8.6 Failure-injection automation
 
