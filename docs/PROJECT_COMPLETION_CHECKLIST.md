@@ -194,7 +194,7 @@ Optional Phase 9 authentication/authorization, only if the learning objective la
 | --- | --- | --- |
 | Local quality gates | `[x]` | `git diff --check`, `dotnet format --verify-no-changes`, Release restore/build/test, Angular `npm ci`/lint/test/build, and all three empty-database migration checks pass. The Angular component tests also assert the explicit `limit=100` product-list requests. |
 | Runtime quality gates | `[x]` | Application image builds, Compose config/startup/health, Playwright E2E 2/2 after the retained-volume product-list fix, failure-injection `all`, security scan, and three database restore drills pass. |
-| Git delivery | `[x]` | `codex/phase8-final-gate` was pushed and fast-forward merged/pushed to `main` at `fb430b860a54d1d7ee9b16d683911a7cb0834cdd`; the active-SDK wrapper fix was committed as `0ddad6d`, and final delivery was completed on `main` at `7bd2619a2f30203fab36061a390d02a566848a27`. No release tag is created because repository workflow does not request one. |
+| Git delivery | `[x]` | The required Phase 0–8 delivery is on `main`; follow-up branch `codex/fix-e2e-persistent-product-list` was pushed through `29525ca` and fast-forward merged locally after synchronizing `main` with `origin/main`. Final remote SHA is verified during the current delivery; no release tag is created because repository workflow does not request one. |
 
 ## Phase 1 — Product Service foundation
 
