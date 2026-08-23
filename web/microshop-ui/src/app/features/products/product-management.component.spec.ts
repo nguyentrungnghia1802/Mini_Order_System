@@ -119,7 +119,7 @@ describe('ProductManagementComponent', () => {
 
   function flushProductList(products: unknown[]): void {
     const request = httpTesting.expectOne(
-      '/api/products?includeInactive=true'
+      '/api/products?limit=100&includeInactive=true'
     );
     request.flush({
       items: products,

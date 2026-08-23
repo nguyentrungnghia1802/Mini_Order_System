@@ -1134,7 +1134,8 @@ Evidence for 8.5:
 
 - `web/microshop-ui/playwright.config.ts` pins a Chromium project, Compose base URL override, serial execution for stateful demo data, bounded polling-compatible timeouts, and failure artifacts. `package.json` adds `e2e` and `e2e:install` scripts; `package-lock.json` pins `@playwright/test` 1.62.1.
 - `web/microshop-ui/e2e/microshop.spec.ts` covers catalog display, UI create/update, confirmed checkout, Order detail, bounded Notification polling, cancellation, Product stock restoration, insufficient stock, and a dependency-failure UI response without creating an Order.
-- `scripts/e2e-compose.ps1/.sh` validates/builds/starts the full stack and runs the browser suite without removing containers or volumes. Validation: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, `npm run build`, and Compose Playwright run passed; 2 Playwright tests passed.
+- `ProductCatalogComponent`, `ProductManagementComponent`, and `OrderCheckoutComponent` request `limit=100`, the documented Product API maximum, because these baseline screens intentionally render one product list without client-side pagination. Their component tests assert the query strings.
+- `scripts/e2e-compose.ps1/.sh` validates/builds/starts the full stack and runs the browser suite without removing containers or volumes. Validation: `npm ci`, `npm run lint`, `npm run test -- --watch=false`, `npm run build`, and Compose Playwright run passed; 2 Playwright tests passed after a retained-volume run exposed and fixed the default page-size omission.
 - Implementation commit: `6cf66ef975c532aff707bd8c3f21c050b37b0032` (`test(e2e): automate Compose quality gates`).
 
 ## 8.6 Failure-injection automation

@@ -17,6 +17,7 @@ import { GatewayApiError } from '../../core/api/gateway-error';
 import { ProductApiService } from '../../core/api/product-api.service';
 
 type ManagementState = 'loading' | 'ready' | 'error';
+const PRODUCT_LIST_LIMIT = 100;
 type ProductForm = FormGroup<{
   name: FormControl<string>;
   description: FormControl<string>;
@@ -71,17 +72,19 @@ export class ProductManagementComponent implements OnInit {
     this.state.set('loading');
     this.errorMessage.set('');
 
-    this.productApi.list({ includeInactive: true }).subscribe({
-      next: (page) => {
-        this.products.set(page.items);
-        this.state.set('ready');
-      },
-      error: (error: unknown) => {
-        this.products.set([]);
-        this.errorMessage.set(this.describeError(error));
-        this.state.set('error');
-      }
-    });
+    this.productApi
+      .list({ limit: PRODUCT_LIST_LIMIT, includeInactive: true })
+      .subscribe({
+        next: (page) => {
+          this.products.set(page.items);
+          this.state.set('ready');
+        },
+        error: (error: unknown) => {
+          this.products.set([]);
+          this.errorMessage.set(this.describeError(error));
+          this.state.set('error');
+        }
+      });
   }
 
   startCreate(): void {

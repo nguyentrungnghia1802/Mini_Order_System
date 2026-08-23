@@ -7,6 +7,7 @@ import { ProductApiService } from '../../core/api/product-api.service';
 import { ProductResponse } from '../../core/api/api.models';
 
 type CatalogState = 'loading' | 'ready' | 'empty' | 'error';
+const PRODUCT_LIST_LIMIT = 100;
 
 @Component({
   selector: 'app-product-catalog',
@@ -29,7 +30,7 @@ export class ProductCatalogComponent implements OnInit {
     this.state.set('loading');
     this.errorMessage.set('');
 
-    this.productApi.list().subscribe({
+    this.productApi.list({ limit: PRODUCT_LIST_LIMIT }).subscribe({
       next: (page) => {
         this.products.set(page.items);
         this.state.set(page.items.length === 0 ? 'empty' : 'ready');

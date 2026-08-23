@@ -33,7 +33,7 @@ describe('ProductCatalogComponent', () => {
     const fixture = TestBed.createComponent(ProductCatalogComponent);
     fixture.detectChanges();
 
-    const request = httpTesting.expectOne('/api/products');
+    const request = httpTesting.expectOne('/api/products?limit=100');
     request.flush({
       items: [
         {
@@ -65,7 +65,7 @@ describe('ProductCatalogComponent', () => {
     const fixture = TestBed.createComponent(ProductCatalogComponent);
     fixture.detectChanges();
 
-    const request = httpTesting.expectOne('/api/products');
+    const request = httpTesting.expectOne('/api/products?limit=100');
     request.flush({ items: [], page: 1, limit: 20, total: 0, totalPages: 0 });
     fixture.detectChanges();
 
@@ -76,7 +76,7 @@ describe('ProductCatalogComponent', () => {
     const fixture = TestBed.createComponent(ProductCatalogComponent);
     fixture.detectChanges();
 
-    const request = httpTesting.expectOne('/api/products');
+    const request = httpTesting.expectOne('/api/products?limit=100');
     request.flush(
       { code: 'DOWNSTREAM_UNAVAILABLE' },
       { status: 502, statusText: 'Bad Gateway' }

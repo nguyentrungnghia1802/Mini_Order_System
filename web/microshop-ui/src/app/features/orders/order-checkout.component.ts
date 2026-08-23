@@ -19,6 +19,7 @@ import { ProductApiService } from '../../core/api/product-api.service';
 
 type CheckoutState = 'loading' | 'ready' | 'empty' | 'error';
 type CheckoutOutcome = 'none' | 'confirmed' | 'rejected' | 'dependency' | 'error';
+const PRODUCT_LIST_LIMIT = 100;
 
 @Component({
   selector: 'app-order-checkout',
@@ -58,7 +59,7 @@ export class OrderCheckoutComponent implements OnInit {
     this.state.set('loading');
     this.errorMessage.set('');
 
-    this.productApi.list().subscribe({
+    this.productApi.list({ limit: PRODUCT_LIST_LIMIT }).subscribe({
       next: (page) => {
         this.products.set(page.items);
         this.configureQuantityControls(page.items);

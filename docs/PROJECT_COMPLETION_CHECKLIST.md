@@ -1,6 +1,6 @@
 # Verified Completion Snapshot
 
-Last verified: 2026-08-18.
+Last verified: 2026-08-24.
 
 Bootstrap implementation commit: `b2a924d` (`chore(repo): bootstrap Phase 0 standards`).
 
@@ -162,7 +162,7 @@ Optional Phase 9 authentication/authorization, only if the learning objective la
 | --- | --- | --- |
 | Browser setup | `[x]` | `@playwright/test` 1.62.1, Chromium project, failure artifacts, and `e2e`/`e2e:install` scripts are committed under `web/microshop-ui`. |
 | Business flow coverage | `[x]` | The suite covers catalog, UI Product create/update, confirmed checkout/detail, bounded Notification polling, cancellation, stock restoration, insufficient stock, and dependency UI behavior. |
-| Compose execution | `[x]` | `scripts/e2e-compose.ps1 -EnvFile .env.example -SkipInstall` rebuilt/started the stack and passed 2/2 Playwright tests without removing named volumes. |
+| Compose execution | `[x]` | `scripts/e2e-compose.ps1 -EnvFile .env.example -SkipInstall` rebuilt/started the stack and passed 2/2 Playwright tests without removing named volumes. A retained-volume run first exposed the default Product page-size omission; the Angular catalog, management, and Checkout screens now request `limit=100`, and the rerun passed both tests. |
 
 ## Phase 8.6 — Failure-injection automation
 
@@ -192,8 +192,8 @@ Optional Phase 9 authentication/authorization, only if the learning objective la
 
 | Area | Status | Verified evidence |
 | --- | --- | --- |
-| Local quality gates | `[x]` | `git diff --check`, `dotnet format --verify-no-changes`, Release restore/build/test, Angular `npm ci`/lint/test/build, and all three empty-database migration checks pass. |
-| Runtime quality gates | `[x]` | Application image builds, Compose config/startup/health, Playwright E2E 2/2, failure-injection `all`, security scan, and three database restore drills pass. |
+| Local quality gates | `[x]` | `git diff --check`, `dotnet format --verify-no-changes`, Release restore/build/test, Angular `npm ci`/lint/test/build, and all three empty-database migration checks pass. The Angular component tests also assert the explicit `limit=100` product-list requests. |
+| Runtime quality gates | `[x]` | Application image builds, Compose config/startup/health, Playwright E2E 2/2 after the retained-volume product-list fix, failure-injection `all`, security scan, and three database restore drills pass. |
 | Git delivery | `[x]` | `codex/phase8-final-gate` was pushed and fast-forward merged/pushed to `main` at `fb430b860a54d1d7ee9b16d683911a7cb0834cdd`; the active-SDK wrapper fix was committed as `0ddad6d`, and final delivery was completed on `main` at `7bd2619a2f30203fab36061a390d02a566848a27`. No release tag is created because repository workflow does not request one. |
 
 ## Phase 1 — Product Service foundation

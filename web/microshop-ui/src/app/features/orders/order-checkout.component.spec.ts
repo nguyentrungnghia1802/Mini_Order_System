@@ -112,7 +112,7 @@ describe('OrderCheckoutComponent', () => {
   });
 
   function flushProducts(): void {
-    const request = httpTesting.expectOne('/api/products');
+    const request = httpTesting.expectOne('/api/products?limit=100');
     request.flush({
       items: [
         {

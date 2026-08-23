@@ -214,7 +214,7 @@ The five application images and full application Compose stack are implemented. 
 
 The current Order API integration suite applies `20260801204113_InitialOrderSchema` to PostgreSQL Testcontainers and exercises create/list/detail, browser-field rejection, Product business failures, pagination, stable Problem Details, and the typed Product HTTP path. The Gateway suite uses a real in-process Kestrel downstream to verify public Product/Order path transforms, trace propagation, CORS/health, stable downstream `502`, and internal-route rejection.
 
-The Angular workspace now centralizes browser API calls in `ProductApiService` and `OrderApiService`, both using same-origin Gateway paths. Its interceptor maps browser network failures and Gateway `502`/`503`/`504` responses to `GatewayApiError`; the Angular Product catalog/operator UI suite contains 11 passing tests.
+The Angular workspace now centralizes browser API calls in `ProductApiService` and `OrderApiService`, both using same-origin Gateway paths. Its interceptor maps browser network failures and Gateway `502`/`503`/`504` responses to `GatewayApiError`; the Angular Product catalog/operator UI suite contains 21 passing tests. The catalog, Product management, and Checkout screens request the API maximum `limit=100` because they intentionally render one product page without client-side pagination.
 
 The exact scripts become source of truth when repository exists.
 
@@ -516,7 +516,7 @@ This is an extension, not a dependency of Mini Order System.
 
 ### Playwright Compose E2E
 
-The browser suite lives in `web/microshop-ui/e2e/microshop.spec.ts` and runs against the published Web container at `http://127.0.0.1:8080` by default. It uses Chromium, serializes the stateful demo flow, creates a unique Product through the UI, updates it, completes checkout, polls Notification through the Gateway with a bounded timeout, cancels the Order, verifies stock restoration, verifies insufficient stock, and separately verifies the dependency-failure UI without creating an Order. Install dependencies and the browser once, then run:
+The browser suite lives in `web/microshop-ui/e2e/microshop.spec.ts` and runs against the published Web container at `http://127.0.0.1:8080` by default. It uses Chromium, serializes the stateful demo flow, creates a unique Product through the UI, updates it, completes checkout, polls Notification through the Gateway with a bounded timeout, cancels the Order, verifies stock restoration, verifies insufficient stock, and separately verifies the dependency-failure UI without creating an Order. The UI list requests use `limit=100`, matching the documented API maximum so retained local demo records do not hide the product created by the flow. Install dependencies and the browser once, then run:
 
 ```powershell
 Push-Location web/microshop-ui

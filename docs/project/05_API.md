@@ -550,6 +550,8 @@ Angular maps exact paths to Reactive Form controls where possible.
 - empty pages return `items: []`.
 - cursor pagination is unnecessary for the baseline.
 
+The baseline Angular catalog, Product management, and Checkout screens render a single product list without client-side pagination, so they request `limit=100`. This stays within the API contract and prevents retained local demo data beyond the default first 20 records from hiding products needed by the learning flow. True interactive pagination remains outside the baseline scope.
+
 ## 15. Idempotency and retries
 
 ### Internal inventory calls
